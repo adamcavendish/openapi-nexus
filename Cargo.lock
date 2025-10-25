@@ -427,6 +427,7 @@ dependencies = [
  "openapi-generator-ir",
  "openapi-generator-plugin",
  "pretty",
+ "serde",
  "snafu",
  "tracing",
  "utoipa",

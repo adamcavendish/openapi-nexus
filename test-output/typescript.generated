@@ -1,0 +1,14 @@
+/**
+ * Example model generated from OpenAPI
+ */
+export interface ExampleModel {
+  /** Unique identifier */
+  id: string;
+  /** Display name */
+  name?: string;
+}
+/**
+ * Generated API client
+ */
+export class ApiClient {
+}
