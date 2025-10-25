@@ -533,6 +533,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "generate-openapi"
+version = "0.1.0"
+dependencies = [
+ "openapi-generator-petstore-example",
+ "serde_norway",
+ "utoipa",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

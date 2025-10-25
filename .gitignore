@@ -1,1 +1,4 @@
 /target
+petstore-api.yaml
+test-output/
+*.generated

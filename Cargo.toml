@@ -10,6 +10,7 @@ members = [
     "openapi-generator-rust",
     "openapi-generator-plugin",
     "openapi-generator-petstore-example",
+    "scripts",
 ]
 
 [workspace.package]
@@ -52,3 +53,4 @@ openapi-generator-plugin = { path = "openapi-generator-plugin" }
 openapi-generator-rust = { path = "openapi-generator-rust" }
 openapi-generator-transforms = { path = "openapi-generator-transforms" }
 openapi-generator-typescript = { path = "openapi-generator-typescript" }
+openapi-generator-petstore-example = { path = "openapi-generator-petstore-example" }
