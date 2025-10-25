@@ -10,7 +10,6 @@ members = [
     "openapi-generator-rust",
     "openapi-generator-plugin",
     "openapi-generator-petstore-example",
-    "scripts",
 ]
 
 [workspace.package]
