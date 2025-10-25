@@ -74,9 +74,14 @@ impl RustEmitter {
         doc = doc.append(RcDoc::text(struct_line));
 
         // Fields
-        for field in &struct_def.fields {
-            let field_doc = self.emit_field(field)?;
-            doc = doc.append(RcDoc::line().append(field_doc));
+        if !struct_def.fields.is_empty() {
+            let mut field_docs = Vec::new();
+            for field in &struct_def.fields {
+                let field_doc = self.emit_field(field)?;
+                field_docs.push(field_doc);
+            }
+            let fields_doc = RcDoc::intersperse(field_docs, RcDoc::line());
+            doc = doc.append(RcDoc::line().append(fields_doc));
         }
 
         doc = doc.append(RcDoc::text("}"));
@@ -228,8 +233,8 @@ impl RustEmitter {
         // Field definition
         let visibility = self.emit_visibility(&field.visibility);
         let type_expr = self.emit_type_expression(&field.type_expr)?;
-        let field_line = format!("    {}pub {}: {}", visibility, field.name, type_expr.pretty(80).to_string());
-        doc = doc.append(RcDoc::text(field_line));
+        let field_line = format!("    {}pub {}: ", visibility, field.name);
+        doc = doc.append(RcDoc::text(field_line)).append(type_expr);
 
         Ok(doc)
     }

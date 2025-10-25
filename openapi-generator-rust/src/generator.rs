@@ -64,11 +64,13 @@ impl RustGenerator {
         }
     }
 
-    fn schema_to_rust_node(&self, name: &str, _schema: &Schema) -> Result<RustNode, GeneratorError> {
+    fn schema_to_rust_node(&self, name: &str, schema: &Schema) -> Result<RustNode, GeneratorError> {
         let rust_name = name.to_pascal_case();
         
+        // TODO: Implement proper schema-to-Rust conversion based on actual utoipa Schema fields
+        
         // For now, generate a simple struct as a placeholder
-        // TODO: Implement proper schema-to-Rust conversion
+        // TODO: Implement proper schema-to-Rust conversion based on actual utoipa Schema fields
         let struct_def = Struct {
             name: rust_name,
             fields: vec![
@@ -95,6 +97,7 @@ impl RustGenerator {
 
         Ok(RustNode::Struct(struct_def))
     }
+    
 
     fn generate_api_client(&self) -> RustNode {
         let struct_def = Struct {
