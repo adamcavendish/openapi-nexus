@@ -14,3 +14,4 @@ openapi-generator-plugin.workspace = true
 openapi-generator-transforms.workspace = true
 openapi-generator-typescript.workspace = true
 openapi-generator-rust.workspace = true
+utoipa.workspace = true

@@ -31,6 +31,7 @@ serde_yaml = "0.9.34"
 snafu = "0.8.9"
 time = "0.3.44"
 tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 url = "2.5.7"
 utoipa = { version = "5.4.0", features = ["chrono", "config", "openapi_extensions", "time", "ulid", "url", "uuid", "yaml"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "cache", "vendored"] }
