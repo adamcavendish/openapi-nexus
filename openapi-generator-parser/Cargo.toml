@@ -6,6 +6,6 @@ publish = false
 
 [dependencies]
 serde_json.workspace = true
-serde_yaml.workspace = true
+serde_norway.workspace = true
 snafu.workspace = true
 utoipa.workspace = true

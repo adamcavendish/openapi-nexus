@@ -36,7 +36,7 @@ fn parse_json(content: &str) -> Result<OpenApi, Error> {
 }
 
 fn parse_yaml(content: &str) -> Result<OpenApi, Error> {
-    serde_yaml::from_str(content).context(YamlParseSnafu)
+    serde_norway::from_str(content).context(YamlParseSnafu)
 }
 
 /// Parse an OpenAPI specification from a file with validation
