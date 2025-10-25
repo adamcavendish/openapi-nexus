@@ -4,5 +4,7 @@
 //! with custom language generators, transformation passes, and emitters.
 
 pub mod traits;
+pub mod registry;
 
 pub use traits::*;
+pub use registry::*;
