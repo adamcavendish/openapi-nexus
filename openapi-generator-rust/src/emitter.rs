@@ -37,31 +37,314 @@ impl RustEmitter {
             RustNode::TypeAlias(type_alias) => self.emit_type_alias(type_alias),
             RustNode::Function(function) => self.emit_function(function),
             RustNode::Trait(trait_def) => self.emit_trait(trait_def),
+            RustNode::Module(_) => Ok(RcDoc::text("// TODO: Module emission")),
+            RustNode::Import(_) => Ok(RcDoc::text("// TODO: Import emission")),
+            RustNode::Use(_) => Ok(RcDoc::text("// TODO: Use emission")),
         }
     }
 
     fn emit_struct(&self, struct_def: &Struct) -> Result<RcDoc<()>, EmitError> {
-        // TODO: Implement struct emission
-        Ok(RcDoc::text("// TODO: Struct emission"))
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &struct_def.documentation {
+            doc = doc.append(RcDoc::text(format!("/// {}", docs)));
+        }
+
+        // Visibility
+        let visibility = self.emit_visibility(&struct_def.visibility);
+        
+        // Derives
+        if !struct_def.derives.is_empty() {
+            let derives = struct_def.derives.join(", ");
+            doc = doc.append(RcDoc::text(format!("#[derive({})]", derives)));
+        }
+
+        // Struct definition
+        let struct_line = format!("{}struct {} {{", visibility, struct_def.name);
+        doc = doc.append(RcDoc::text(struct_line));
+
+        // Fields
+        for field in &struct_def.fields {
+            let field_doc = self.emit_field(field)?;
+            doc = doc.append(RcDoc::line().append(field_doc));
+        }
+
+        doc = doc.append(RcDoc::text("}"));
+
+        Ok(doc)
     }
 
     fn emit_enum(&self, enum_def: &Enum) -> Result<RcDoc<()>, EmitError> {
-        // TODO: Implement enum emission
-        Ok(RcDoc::text("// TODO: Enum emission"))
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &enum_def.documentation {
+            doc = doc.append(RcDoc::text(format!("/// {}", docs)));
+        }
+
+        // Visibility
+        let visibility = self.emit_visibility(&enum_def.visibility);
+        
+        // Derives
+        if !enum_def.derives.is_empty() {
+            let derives = enum_def.derives.join(", ");
+            doc = doc.append(RcDoc::text(format!("#[derive({})]", derives)));
+        }
+
+        // Enum definition
+        let enum_line = format!("{}enum {} {{", visibility, enum_def.name);
+        doc = doc.append(RcDoc::text(enum_line));
+
+        // Variants
+        for variant in &enum_def.variants {
+            let variant_doc = self.emit_enum_variant(variant)?;
+            doc = doc.append(RcDoc::line().append(variant_doc));
+        }
+
+        doc = doc.append(RcDoc::text("}"));
+
+        Ok(doc)
     }
 
     fn emit_type_alias(&self, type_alias: &TypeAlias) -> Result<RcDoc<()>, EmitError> {
-        // TODO: Implement type alias emission
-        Ok(RcDoc::text("// TODO: Type alias emission"))
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &type_alias.documentation {
+            doc = doc.append(RcDoc::text(format!("/// {}", docs)));
+        }
+
+        // Visibility
+        let visibility = self.emit_visibility(&type_alias.visibility);
+        
+        // Type alias definition
+        let type_expr = self.emit_type_expression(&type_alias.type_expr)?;
+        let alias_line = format!("{}type {} = ", visibility, type_alias.name);
+        doc = doc.append(RcDoc::text(alias_line)).append(type_expr).append(RcDoc::text(";"));
+
+        Ok(doc)
     }
 
     fn emit_function(&self, function: &Function) -> Result<RcDoc<()>, EmitError> {
-        // TODO: Implement function emission
-        Ok(RcDoc::text("// TODO: Function emission"))
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &function.documentation {
+            doc = doc.append(RcDoc::text(format!("/// {}", docs)));
+        }
+
+        // Visibility
+        let visibility = self.emit_visibility(&function.visibility);
+        
+        // Function signature
+        let mut sig = String::new();
+        if function.is_async {
+            sig.push_str("async ");
+        }
+        if function.is_unsafe {
+            sig.push_str("unsafe ");
+        }
+        sig.push_str(&format!("{}fn {}(", visibility, function.name));
+
+        // Parameters
+        let params: Vec<String> = function.parameters.iter()
+            .map(|p| {
+                let mut param = String::new();
+                if p.reference {
+                    param.push_str("&");
+                }
+                if p.mutable {
+                    param.push_str("mut ");
+                }
+                param.push_str(&p.name);
+                param.push_str(": ");
+                // TODO: Add type expression emission
+                param.push_str("T"); // Placeholder
+                param
+            })
+            .collect();
+        sig.push_str(&params.join(", "));
+        sig.push_str(")");
+
+        // Return type
+        if let Some(_return_type) = &function.return_type {
+            sig.push_str(" -> ");
+            // TODO: Add return type emission
+            sig.push_str("T"); // Placeholder
+        }
+
+        sig.push_str(" {");
+        doc = doc.append(RcDoc::text(sig));
+        doc = doc.append(RcDoc::line().append(RcDoc::text("    // TODO: Function body")));
+        doc = doc.append(RcDoc::text("}"));
+
+        Ok(doc)
     }
 
     fn emit_trait(&self, trait_def: &Trait) -> Result<RcDoc<()>, EmitError> {
-        // TODO: Implement trait emission
-        Ok(RcDoc::text("// TODO: Trait emission"))
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &trait_def.documentation {
+            doc = doc.append(RcDoc::text(format!("/// {}", docs)));
+        }
+
+        // Visibility
+        let visibility = self.emit_visibility(&trait_def.visibility);
+        
+        // Trait definition
+        let trait_line = format!("{}trait {} {{", visibility, trait_def.name);
+        doc = doc.append(RcDoc::text(trait_line));
+
+        // Methods
+        for method in &trait_def.methods {
+            let method_doc = self.emit_method(method)?;
+            doc = doc.append(RcDoc::line().append(method_doc));
+        }
+
+        doc = doc.append(RcDoc::text("}"));
+
+        Ok(doc)
+    }
+
+    fn emit_field(&self, field: &Field) -> Result<RcDoc<()>, EmitError> {
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &field.documentation {
+            doc = doc.append(RcDoc::text(format!("    /// {}", docs)));
+        }
+
+        // Field definition
+        let visibility = self.emit_visibility(&field.visibility);
+        let type_expr = self.emit_type_expression(&field.type_expr)?;
+        let field_line = format!("    {}pub {}: {}", visibility, field.name, type_expr.pretty(80).to_string());
+        doc = doc.append(RcDoc::text(field_line));
+
+        Ok(doc)
+    }
+
+    fn emit_enum_variant(&self, variant: &EnumVariant) -> Result<RcDoc<()>, EmitError> {
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &variant.documentation {
+            doc = doc.append(RcDoc::text(format!("    /// {}", docs)));
+        }
+
+        // Variant definition
+        let mut variant_line = format!("    {}", variant.name);
+        if !variant.fields.is_empty() {
+            variant_line.push_str(" {");
+            doc = doc.append(RcDoc::text(variant_line));
+            for field in &variant.fields {
+                let field_doc = self.emit_field(field)?;
+                doc = doc.append(RcDoc::line().append(field_doc));
+            }
+            doc = doc.append(RcDoc::text("    }"));
+        } else {
+            doc = doc.append(RcDoc::text(variant_line));
+        }
+
+        Ok(doc)
+    }
+
+    fn emit_method(&self, method: &Method) -> Result<RcDoc<()>, EmitError> {
+        let mut doc = RcDoc::nil();
+
+        // Documentation comment
+        if let Some(docs) = &method.documentation {
+            doc = doc.append(RcDoc::text(format!("    /// {}", docs)));
+        }
+
+        // Method signature
+        let mut sig = String::new();
+        if method.is_async {
+            sig.push_str("    async ");
+        }
+        if method.is_unsafe {
+            sig.push_str("unsafe ");
+        }
+        sig.push_str(&format!("fn {}(", method.name));
+
+        // Parameters
+        let params: Vec<String> = method.parameters.iter()
+            .map(|p| {
+                let mut param = String::new();
+                if p.reference {
+                    param.push_str("&");
+                }
+                if p.mutable {
+                    param.push_str("mut ");
+                }
+                param.push_str(&p.name);
+                param.push_str(": ");
+                // TODO: Add type expression emission
+                param.push_str("T"); // Placeholder
+                param
+            })
+            .collect();
+        sig.push_str(&params.join(", "));
+        sig.push_str(")");
+
+        // Return type
+        if let Some(_return_type) = &method.return_type {
+            sig.push_str(" -> ");
+            // TODO: Add return type emission
+            sig.push_str("T"); // Placeholder
+        }
+
+        sig.push_str(";");
+        doc = doc.append(RcDoc::text(sig));
+
+        Ok(doc)
+    }
+
+    fn emit_type_expression(&self, type_expr: &TypeExpression) -> Result<RcDoc<()>, EmitError> {
+        match type_expr {
+            TypeExpression::Primitive(primitive) => {
+                let type_name = match primitive {
+                    PrimitiveType::Bool => "bool",
+                    PrimitiveType::I8 => "i8",
+                    PrimitiveType::I16 => "i16",
+                    PrimitiveType::I32 => "i32",
+                    PrimitiveType::I64 => "i64",
+                    PrimitiveType::I128 => "i128",
+                    PrimitiveType::U8 => "u8",
+                    PrimitiveType::U16 => "u16",
+                    PrimitiveType::U32 => "u32",
+                    PrimitiveType::U64 => "u64",
+                    PrimitiveType::U128 => "u128",
+                    PrimitiveType::F32 => "f32",
+                    PrimitiveType::F64 => "f64",
+                    PrimitiveType::Char => "char",
+                    PrimitiveType::String => "String",
+                    PrimitiveType::Str => "&str",
+                    PrimitiveType::Unit => "()",
+                };
+                Ok(RcDoc::text(type_name))
+            }
+            TypeExpression::Option(inner) => {
+                let inner_doc = self.emit_type_expression(inner)?;
+                Ok(RcDoc::text("Option<").append(inner_doc).append(RcDoc::text(">")))
+            }
+            TypeExpression::Vec(inner) => {
+                let inner_doc = self.emit_type_expression(inner)?;
+                Ok(RcDoc::text("Vec<").append(inner_doc).append(RcDoc::text(">")))
+            }
+            TypeExpression::Reference(name) => Ok(RcDoc::text(name.clone())),
+            _ => Ok(RcDoc::text("T")), // Placeholder for complex types
+        }
+    }
+
+    fn emit_visibility(&self, visibility: &Visibility) -> String {
+        match visibility {
+            Visibility::Public => "pub ".to_string(),
+            Visibility::Private => "".to_string(),
+            Visibility::Crate => "pub(crate) ".to_string(),
+            Visibility::Super => "pub(super) ".to_string(),
+            Visibility::In(path) => format!("pub(in {}) ", path),
+        }
     }
 }
