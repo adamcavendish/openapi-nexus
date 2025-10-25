@@ -1,0 +1,15 @@
+[package]
+name = "openapi-generator-typescript"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+heck.workspace = true
+indexmap.workspace = true
+openapi-generator-ir.workspace = true
+openapi-generator-plugin.workspace = true
+pretty.workspace = true
+snafu.workspace = true
+tracing.workspace = true
+utoipa.workspace = true

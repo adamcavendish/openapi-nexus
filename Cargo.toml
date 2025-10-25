@@ -1,0 +1,47 @@
+[workspace]
+resolver = "3"
+members = [
+    "openapi-generator",
+    "openapi-generator-core",
+    "openapi-generator-parser",
+    "openapi-generator-ir",
+    "openapi-generator-transforms",
+    "openapi-generator-typescript",
+    "openapi-generator-rust",
+    "openapi-generator-plugin",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+bytes = "1.10.1"
+chrono = { version = "0.4.42", features = ["serde"] }
+clap = { version = "4.5.50", features = ["derive", "env"] }
+heck = "0.5.0"
+indexmap = "2.2.5"
+pretty = "0.12.5"
+semver = "1.0.27"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+serde_plain = "1.0.2"
+serde_repr = "0.1.20"
+serde_yaml = "0.9.34"
+snafu = "0.8.9"
+time = "0.3.44"
+tracing = "0.1.40"
+url = "2.5.7"
+utoipa = { version = "5.4.0", features = ["chrono", "config", "openapi_extensions", "time", "ulid", "url", "uuid", "yaml"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "cache", "vendored"] }
+uuid = { version = "1.18.1", features = ["v4", "v7", "serde"] }
+
+# Workspace Projects
+openapi-generator = { path = "openapi-generator" }
+openapi-generator-core = { path = "openapi-generator-core" }
+openapi-generator-ir = { path = "openapi-generator-ir" }
+openapi-generator-parser = { path = "openapi-generator-parser" }
+openapi-generator-plugin = { path = "openapi-generator-plugin" }
+openapi-generator-rust = { path = "openapi-generator-rust" }
+openapi-generator-transforms = { path = "openapi-generator-transforms" }
+openapi-generator-typescript = { path = "openapi-generator-typescript" }

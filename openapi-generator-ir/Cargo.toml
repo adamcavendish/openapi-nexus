@@ -1,0 +1,10 @@
+[package]
+name = "openapi-generator-ir"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+indexmap.workspace = true
+serde.workspace = true
+utoipa.workspace = true

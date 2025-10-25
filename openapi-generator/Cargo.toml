@@ -1,0 +1,10 @@
+[package]
+name = "openapi-generator"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+openapi-generator-core.workspace = true
+tracing.workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "openapi-generator-parser"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+serde_json.workspace = true
+serde_yaml.workspace = true
+snafu.workspace = true
+utoipa.workspace = true

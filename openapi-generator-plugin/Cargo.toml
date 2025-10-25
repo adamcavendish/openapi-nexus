@@ -1,0 +1,9 @@
+[package]
+name = "openapi-generator-plugin"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+snafu.workspace = true
+utoipa.workspace = true
