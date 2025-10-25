@@ -6,6 +6,7 @@ use heck::ToPascalCase;
 
 use crate::ast::*;
 use crate::emitter::RustEmitter;
+use crate::type_mapping::TypeMapper;
 
 /// Error type for Rust generation
 #[derive(Debug, Snafu)]
@@ -18,6 +19,7 @@ pub enum GeneratorError {
 /// Rust code generator
 pub struct RustGenerator {
     emitter: RustEmitter,
+    type_mapper: TypeMapper,
 }
 
 impl RustGenerator {
@@ -25,6 +27,7 @@ impl RustGenerator {
     pub fn new() -> Self {
         Self {
             emitter: RustEmitter,
+            type_mapper: TypeMapper,
         }
     }
 

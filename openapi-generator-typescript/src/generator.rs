@@ -5,6 +5,7 @@ use utoipa::openapi::OpenApi;
 
 use crate::ast::*;
 use crate::emitter::TypeScriptEmitter;
+use crate::type_mapping::TypeMapper;
 
 /// Error type for TypeScript generation
 #[derive(Debug, Snafu)]
@@ -17,6 +18,7 @@ pub enum GeneratorError {
 /// TypeScript code generator
 pub struct TypeScriptGenerator {
     emitter: TypeScriptEmitter,
+    type_mapper: TypeMapper,
 }
 
 impl TypeScriptGenerator {
@@ -24,6 +26,7 @@ impl TypeScriptGenerator {
     pub fn new() -> Self {
         Self {
             emitter: TypeScriptEmitter,
+            type_mapper: TypeMapper,
         }
     }
 

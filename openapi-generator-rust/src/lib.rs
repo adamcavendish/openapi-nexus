@@ -6,6 +6,7 @@
 pub mod ast;
 pub mod emitter;
 pub mod generator;
+pub mod type_mapping;
 
 pub use ast::*;
 pub use emitter::*;
