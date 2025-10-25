@@ -3,7 +3,7 @@
 use snafu::prelude::*;
 use utoipa::openapi::OpenApi;
 
-use crate::passes::{TransformPass, TransformError};
+use crate::passes::{TransformError, TransformPass};
 
 /// Pipeline for applying multiple transformation passes
 pub struct TransformPipeline {
@@ -13,9 +13,7 @@ pub struct TransformPipeline {
 impl TransformPipeline {
     /// Create a new transformation pipeline
     pub fn new() -> Self {
-        Self {
-            passes: Vec::new(),
-        }
+        Self { passes: Vec::new() }
     }
 
     /// Add a transformation pass to the pipeline
@@ -30,5 +28,11 @@ impl TransformPipeline {
             pass.transform(openapi)?;
         }
         Ok(())
+    }
+}
+
+impl Default for TransformPipeline {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -31,9 +31,12 @@ impl TypeScriptGenerator {
     pub fn generate(&self, openapi: &OpenApi) -> Result<String, GeneratorError> {
         // TODO: Convert OpenAPI to TypeScript AST
         let nodes = Vec::new();
-        
+
         // Emit the code
-        self.emitter.emit(&nodes)
-            .map_err(|e| GeneratorError::Generic { message: e.to_string() })
+        self.emitter
+            .emit(&nodes)
+            .map_err(|e| GeneratorError::Generic {
+                message: e.to_string(),
+            })
     }
 }

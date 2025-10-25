@@ -1,6 +1,6 @@
 //! Traversal utilities for OpenAPI specifications
 
-use utoipa::openapi::{OpenApi, RefOr};
+use utoipa::openapi::OpenApi;
 
 /// Traverse an OpenAPI specification
 pub struct Traverser;

@@ -20,7 +20,7 @@ impl Utils {
     }
 
     /// Check if a schema is nullable
-    pub fn is_nullable(schema: &Schema) -> bool {
+    pub fn is_nullable(_schema: &Schema) -> bool {
         // Note: OpenAPI 3.1 uses nullable differently than 3.0
         // For now, we'll return false as the nullable field structure may vary
         false

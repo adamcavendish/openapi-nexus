@@ -6,7 +6,10 @@ use snafu::prelude::*;
 #[snafu(visibility(pub))]
 pub enum Error {
     #[snafu(display("Failed to read file '{}': {}", path, source))]
-    FileRead { path: String, source: std::io::Error },
+    FileRead {
+        path: String,
+        source: std::io::Error,
+    },
 
     #[snafu(display("Failed to parse JSON: {}", source))]
     JsonParse { source: serde_json::Error },
@@ -19,4 +22,7 @@ pub enum Error {
 
     #[snafu(display("Invalid OpenAPI specification: {}", message))]
     InvalidSpec { message: String },
+
+    #[snafu(display("Validation error: {}", message))]
+    ValidationError { message: String },
 }

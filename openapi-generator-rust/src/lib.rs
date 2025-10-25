@@ -1,5 +1,5 @@
 //! Rust code generation for OpenAPI specifications
-//! 
+//!
 //! This crate provides Rust AST definitions and code generation
 //! capabilities for OpenAPI 3.1 specifications.
 

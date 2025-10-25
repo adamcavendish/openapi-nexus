@@ -1,7 +1,7 @@
 //! Rust code emitter
 
-use snafu::prelude::*;
 use pretty::RcDoc;
+use snafu::prelude::*;
 
 use crate::ast::*;
 
@@ -20,12 +20,12 @@ impl RustEmitter {
     /// Emit Rust code from AST nodes
     pub fn emit(&self, nodes: &[RustNode]) -> Result<String, EmitError> {
         let mut docs = Vec::new();
-        
+
         for node in nodes {
             let doc = self.emit_node(node)?;
             docs.push(doc);
         }
-        
+
         let combined = RcDoc::intersperse(docs, RcDoc::line());
         Ok(combined.pretty(80).to_string())
     }
