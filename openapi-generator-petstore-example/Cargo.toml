@@ -4,6 +4,14 @@ version.workspace = true
 edition.workspace = true
 publish = false
 
+[[bin]]
+name = "petstore-server"
+path = "src/bin/petstore-server.rs"
+
+[[bin]]
+name = "generate-openapi"
+path = "src/bin/generate-openapi.rs"
+
 [dependencies]
 axum.workspace = true
 axum-extra.workspace = true
