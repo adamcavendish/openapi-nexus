@@ -23,18 +23,18 @@ impl ImportGenerator {
         }
 
         let mut imports = Vec::new();
-        
+
         // Sort dependencies for consistent ordering
         let mut sorted_deps: Vec<_> = dependencies.iter().collect();
         sorted_deps.sort();
-        
+
         for dep in sorted_deps {
-            if let Some(dep_filename) = all_schemas.get(dep) {
-                if dep_filename != filename {
-                    // Generate import statement
-                    let import_statement = self.generate_import_statement(dep, dep_filename);
-                    imports.push(import_statement);
-                }
+            if let Some(dep_filename) = all_schemas.get(dep)
+                && dep_filename != filename
+            {
+                // Generate import statement
+                let import_statement = self.generate_import_statement(dep, dep_filename);
+                imports.push(import_statement);
             }
         }
 
@@ -55,7 +55,7 @@ impl ImportGenerator {
     /// Extract dependencies from a TypeScript AST node
     pub fn extract_dependencies(&self, node: &crate::ast::TsNode) -> HashSet<String> {
         let mut dependencies = HashSet::new();
-        
+
         match node {
             crate::ast::TsNode::Interface(interface) => {
                 for prop in &interface.properties {
@@ -82,7 +82,7 @@ impl ImportGenerator {
             }
             _ => {}
         }
-        
+
         dependencies
     }
 
@@ -113,7 +113,7 @@ impl ImportGenerator {
                 }
             }
             crate::ast::TypeExpression::Object(properties) => {
-                for (_key, type_expr) in properties {
+                for type_expr in properties.values() {
                     self.extract_dependencies_from_type_expr(type_expr, dependencies);
                 }
             }
@@ -138,7 +138,15 @@ impl ImportGenerator {
     fn is_primitive_type(&self, name: &str) -> bool {
         matches!(
             name,
-            "string" | "number" | "boolean" | "any" | "unknown" | "null" | "undefined" | "void" | "object"
+            "string"
+                | "number"
+                | "boolean"
+                | "any"
+                | "unknown"
+                | "null"
+                | "undefined"
+                | "void"
+                | "object"
         )
     }
 }

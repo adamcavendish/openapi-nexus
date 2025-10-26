@@ -296,7 +296,7 @@ impl TypeScriptEmitter {
         }
 
         result.push_str(" {\n");
-        
+
         // Add method implementation based on method name
         match method.name.as_str() {
             "constructor" => {
@@ -339,7 +339,7 @@ impl TypeScriptEmitter {
                 result.push_str("    // TODO: Implement method\n");
             }
         }
-        
+
         result.push_str("  }");
 
         Ok(result)

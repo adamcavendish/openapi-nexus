@@ -12,26 +12,17 @@
 //! - `config` - Configuration types
 //! - `mapping` - Type mapping logic
 //! - `emission` - Code emission and formatting
-//! - `generation` - High-level generation logic
+//! - `generator` - Code generators
 
 pub mod ast;
 pub mod config;
 pub mod core;
 pub mod emission;
-pub mod generation;
-pub mod imports;
+pub mod generator;
 pub mod mapping;
-pub mod templates;
 
 // Re-export main types for convenience
-pub use config::FileConfig as ConfigFileConfig;
+pub use config::FileConfig;
 pub use core::{GeneratorError, TypeScriptGenerator as TypeScriptGeneratorTrait};
-pub use emission::file_generator::{FileConfig, FileGenerator, GeneratedFile};
-pub use generation::TypeScriptGenerator;
-
-// Legacy re-exports for backward compatibility
-pub use ast::{
-    Class, Interface, Method, Parameter, PrimitiveType, Property, TsNode, TypeExpression,
-    Visibility,
-};
-pub use emission::TypeScriptEmitter;
+pub use emission::{FileGenerator, GeneratedFile};
+pub use generator::TypeScriptGenerator;

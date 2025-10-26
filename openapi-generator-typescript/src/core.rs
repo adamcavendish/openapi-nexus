@@ -17,16 +17,3 @@ pub trait TypeScriptGenerator {
         openapi: &utoipa::openapi::OpenApi,
     ) -> Result<Vec<crate::emission::file_generator::GeneratedFile>, GeneratorError>;
 }
-
-/// Configuration for TypeScript generation
-#[derive(Debug, Clone)]
-#[derive(Default)]
-pub struct GeneratorConfig {
-    /// File generation configuration
-    pub file_config: crate::emission::file_generator::FileConfig,
-    /// Type mapping configuration
-    pub type_mapping_config: crate::config::TypeMappingConfig,
-    /// Emission configuration
-    pub emission_config: crate::config::EmissionConfig,
-}
-

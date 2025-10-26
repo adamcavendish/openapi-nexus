@@ -1,18 +1,17 @@
-//! High-level TypeScript code generation
-
-pub mod api_client;
-pub mod schema;
+//! Main TypeScript code generator
 
 use std::collections::HashMap;
+
 use utoipa::openapi::OpenApi;
 
-use crate::core::{GeneratorConfig, GeneratorError};
+use super::api_client::ApiClientGenerator;
+use super::schema::SchemaGenerator;
+use crate::config::GeneratorConfig;
+use crate::core::GeneratorError;
 use crate::emission::{
     TypeScriptEmitter,
     file_generator::{FileGenerator, GeneratedFile},
 };
-use api_client::ApiClientGenerator;
-use schema::SchemaGenerator;
 
 /// Main TypeScript code generator
 pub struct TypeScriptGenerator {
@@ -98,9 +97,12 @@ impl TypeScriptGenerator {
         schemas.insert("ApiClient".to_string(), api_client);
 
         // Generate files using file generator
-        let file_generator = FileGenerator::new(self.config.file_config.clone());
+        let file_generator = FileGenerator::with_package_config(
+            self.config.file_config.clone(),
+            self.config.package_config.clone(),
+        );
         file_generator
-            .generate_files(&schemas)
+            .generate_files(&schemas, openapi)
             .map_err(|e| GeneratorError::Generic {
                 message: format!("File generation error: {}", e),
             })

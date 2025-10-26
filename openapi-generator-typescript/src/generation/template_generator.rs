@@ -13,15 +13,15 @@ impl TemplateGenerator {
         let mut env = Environment::new();
         
         // Load AST templates from embedded strings
-        env.add_template("interface", include_str!("../templates/interface.j2"))?;
-        env.add_template("type_alias", include_str!("../templates/type_alias.j2"))?;
-        env.add_template("enum", include_str!("../templates/enum.j2"))?;
-        env.add_template("class", include_str!("../templates/class.j2"))?;
-        env.add_template("function", include_str!("../templates/function.j2"))?;
+        env.add_template("interface", include_str!("../../templates/interface.j2"))?;
+        env.add_template("type_alias", include_str!("../../templates/type_alias.j2"))?;
+        env.add_template("enum", include_str!("../../templates/enum.j2"))?;
+        env.add_template("class", include_str!("../../templates/class.j2"))?;
+        env.add_template("function", include_str!("../../templates/function.j2"))?;
         
         // Load package templates
-        env.add_template("runtime", include_str!("../templates/runtime.ts.j2"))?;
-        env.add_template("readme", include_str!("../templates/README.md.j2"))?;
+        env.add_template("runtime", include_str!("../../templates/runtime.ts.j2"))?;
+        env.add_template("readme", include_str!("../../templates/README.md.j2"))?;
         
         Ok(Self { env })
     }

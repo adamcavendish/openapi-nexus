@@ -5,6 +5,7 @@ edition.workspace = true
 publish = false
 
 [dependencies]
+chrono.workspace = true
 heck.workspace = true
 indexmap.workspace = true
 minijinja.workspace = true

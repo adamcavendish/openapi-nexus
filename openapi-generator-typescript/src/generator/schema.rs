@@ -25,7 +25,7 @@ impl SchemaGenerator {
     ) -> Result<TsNode, GeneratorError> {
         // Ensure the name is PascalCase for TypeScript interfaces
         let pascal_name = self.to_pascal_case(name);
-        
+
         match schema_ref {
             utoipa::openapi::RefOr::T(schema) => {
                 // Check if this is an object schema with properties
@@ -94,7 +94,7 @@ impl SchemaGenerator {
         match schema {
             utoipa::openapi::Schema::Object(obj_schema) => {
                 let mut variants = Vec::new();
-                
+
                 if let Some(enum_values) = &obj_schema.enum_values {
                     for enum_value in enum_values {
                         // Convert serde_json::Value to string
@@ -102,7 +102,7 @@ impl SchemaGenerator {
                             serde_json::Value::String(s) => s.clone(),
                             _ => enum_value.to_string().trim_matches('"').to_string(),
                         };
-                        
+
                         let variant_name = self.enum_value_to_variant_name(&value_str);
                         let variant = crate::ast::EnumVariant {
                             name: variant_name,
@@ -112,7 +112,7 @@ impl SchemaGenerator {
                         variants.push(variant);
                     }
                 }
-                
+
                 Ok(crate::ast::Enum {
                     name: name.to_string(),
                     variants,
@@ -136,10 +136,10 @@ impl SchemaGenerator {
     /// Convert a string to PascalCase
     fn to_pascal_case(&self, s: &str) -> String {
         // If the string is already PascalCase, return it as-is
-        if s.chars().next().map_or(false, |c| c.is_uppercase()) {
+        if s.chars().next().is_some_and(|c| c.is_uppercase()) {
             return s.to_string();
         }
-        
+
         // Convert first character to uppercase
         let mut chars = s.chars();
         match chars.next() {
@@ -157,12 +157,14 @@ impl SchemaGenerator {
         match schema {
             utoipa::openapi::Schema::Object(obj_schema) => {
                 let mut properties = Vec::new();
-                
+
                 // Extract properties from the object schema
                 for (prop_name, prop_schema) in &obj_schema.properties {
-                    let type_expr = self._type_mapper.map_property_schema_to_typescript_type(prop_schema);
+                    let type_expr = self
+                        ._type_mapper
+                        .map_property_schema_to_typescript_type(prop_schema);
                     let is_required = obj_schema.required.contains(prop_name);
-                    
+
                     let property = Property {
                         name: prop_name.clone(),
                         type_expr,
@@ -171,7 +173,7 @@ impl SchemaGenerator {
                     };
                     properties.push(property);
                 }
-                
+
                 Ok(Interface {
                     name: name.to_string(),
                     properties,
@@ -193,7 +195,6 @@ impl SchemaGenerator {
             }
         }
     }
-
 }
 
 impl Default for SchemaGenerator {

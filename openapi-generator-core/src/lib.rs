@@ -100,8 +100,47 @@ impl CodeGenerator {
             path: language_dir.to_string_lossy().to_string(),
         })?;
 
+        // For TypeScript, organize files with src/ directory structure
+        if language == "typescript" {
+            self.write_typescript_files(&language_dir, files)?;
+        } else {
+            // For other languages, write files directly
+            for file in files {
+                let file_path = language_dir.join(&file.filename);
+                std::fs::write(&file_path, &file.content).context(error::WriteOutputSnafu {
+                    path: file_path.to_string_lossy().to_string(),
+                })?;
+                tracing::info!("Generated file: {:?}", file_path);
+            }
+        }
+        Ok(())
+    }
+
+    fn write_typescript_files<P: AsRef<std::path::Path>>(
+        &self,
+        output_dir: P,
+        files: &[GeneratedFile],
+    ) -> Result<(), error::Error> {
+        let src_dir = output_dir.as_ref().join("src");
+        std::fs::create_dir_all(&src_dir).context(error::WriteOutputSnafu {
+            path: src_dir.to_string_lossy().to_string(),
+        })?;
+
         for file in files {
-            let file_path = language_dir.join(&file.filename);
+            let file_path = match file.file_type {
+                openapi_generator_typescript::emission::file_generator::FileType::PackageJson |
+                openapi_generator_typescript::emission::file_generator::FileType::TsConfig |
+                openapi_generator_typescript::emission::file_generator::FileType::TsConfigEsm |
+                openapi_generator_typescript::emission::file_generator::FileType::Readme => {
+                    // Package files go in the root directory
+                    output_dir.as_ref().join(&file.filename)
+                }
+                _ => {
+                    // All other files go in the src/ directory
+                    src_dir.join(&file.filename)
+                }
+            };
+
             std::fs::write(&file_path, &file.content).context(error::WriteOutputSnafu {
                 path: file_path.to_string_lossy().to_string(),
             })?;

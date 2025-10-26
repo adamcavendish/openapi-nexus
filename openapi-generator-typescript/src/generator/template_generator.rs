@@ -11,57 +11,57 @@ impl TemplateGenerator {
     /// Create a new template generator
     pub fn new() -> Result<Self, minijinja::Error> {
         let mut env = Environment::new();
-        
+
         // Load AST templates from embedded strings
-        env.add_template("interface", include_str!("../templates/interface.j2"))?;
-        env.add_template("type_alias", include_str!("../templates/type_alias.j2"))?;
-        env.add_template("enum", include_str!("../templates/enum.j2"))?;
-        env.add_template("class", include_str!("../templates/class.j2"))?;
-        env.add_template("function", include_str!("../templates/function.j2"))?;
-        
+        env.add_template("interface", include_str!("../../templates/interface.j2"))?;
+        env.add_template("type_alias", include_str!("../../templates/type_alias.j2"))?;
+        env.add_template("enum", include_str!("../../templates/enum.j2"))?;
+        env.add_template("class", include_str!("../../templates/class.j2"))?;
+        env.add_template("function", include_str!("../../templates/function.j2"))?;
+
         // Load package templates
-        env.add_template("runtime", include_str!("../templates/runtime.ts.j2"))?;
-        env.add_template("readme", include_str!("../templates/README.md.j2"))?;
-        
+        env.add_template("runtime", include_str!("../../templates/runtime.ts.j2"))?;
+        env.add_template("readme", include_str!("../../templates/README.md.j2"))?;
+
         Ok(Self { env })
     }
-    
+
     /// Generate interface code
     pub fn generate_interface(&self, data: &InterfaceData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("interface")?;
         template.render(data)
     }
-    
+
     /// Generate type alias code
     pub fn generate_type_alias(&self, data: &TypeAliasData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("type_alias")?;
         template.render(data)
     }
-    
+
     /// Generate enum code
     pub fn generate_enum(&self, data: &EnumData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("enum")?;
         template.render(data)
     }
-    
+
     /// Generate class code
     pub fn generate_class(&self, data: &ClassData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("class")?;
         template.render(data)
     }
-    
+
     /// Generate function code
     pub fn generate_function(&self, data: &FunctionData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("function")?;
         template.render(data)
     }
-    
+
     /// Generate runtime.ts code
     pub fn generate_runtime(&self, data: &RuntimeData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("runtime")?;
         template.render(data)
     }
-    
+
     /// Generate README.md content
     pub fn generate_readme(&self, data: &ReadmeData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("readme")?;
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn test_interface_template() {
         let generator = TemplateGenerator::new().unwrap();
-        
+
         let data = InterfaceData {
             name: "Pet".to_string(),
             documentation: Some("Pet model".to_string()),
@@ -205,7 +205,7 @@ mod tests {
                 },
             ],
         };
-        
+
         let result = generator.generate_interface(&data).unwrap();
         assert!(result.contains("export interface Pet"));
         assert!(result.contains("id?: number"));

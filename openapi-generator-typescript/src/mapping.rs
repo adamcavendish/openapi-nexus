@@ -1,21 +1,14 @@
 //! Type mapping logic for converting OpenAPI types to TypeScript types
 
-use std::collections::HashMap;
-
 use crate::ast::TypeExpression;
 
 /// Type mapper for converting OpenAPI schemas to TypeScript types
-pub struct TypeMapper {
-    /// Cache for resolved schema references
-    _schema_cache: HashMap<String, TypeExpression>,
-}
+pub struct TypeMapper;
 
 impl TypeMapper {
     /// Create a new type mapper
     pub fn new() -> Self {
-        Self {
-            _schema_cache: HashMap::new(),
-        }
+        Self
     }
 
     /// Map a RefOr<Schema> to a TypeScript type expression
@@ -38,7 +31,10 @@ impl TypeMapper {
     }
 
     /// Map a Schema to a TypeScript type expression
-    pub fn map_schema_to_typescript_type(&self, schema: &utoipa::openapi::Schema) -> TypeExpression {
+    pub fn map_schema_to_typescript_type(
+        &self,
+        schema: &utoipa::openapi::Schema,
+    ) -> TypeExpression {
         match schema {
             utoipa::openapi::Schema::Object(obj_schema) => {
                 // Check if this is a primitive type by looking at the schema properties

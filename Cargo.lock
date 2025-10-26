@@ -1065,6 +1065,7 @@ dependencies = [
 name = "openapi-generator-typescript"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "heck",
  "indexmap",
  "minijinja",
