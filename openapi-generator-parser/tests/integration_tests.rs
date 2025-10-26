@@ -201,19 +201,17 @@ fn test_petstore_references_validation() {
             match schema {
                 utoipa::openapi::Schema::Object(obj_schema) => {
                     // Check that status references PetStatus
-                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) = obj_schema.properties.get("status") {
-                        assert_eq!(
-                            ref_schema.ref_location,
-                            "#/components/schemas/PetStatus"
-                        );
+                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) =
+                        obj_schema.properties.get("status")
+                    {
+                        assert_eq!(ref_schema.ref_location, "#/components/schemas/PetStatus");
                     }
 
                     // Check that category references Category
-                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) = obj_schema.properties.get("category") {
-                        assert_eq!(
-                            ref_schema.ref_location,
-                            "#/components/schemas/Category"
-                        );
+                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) =
+                        obj_schema.properties.get("category")
+                    {
+                        assert_eq!(ref_schema.ref_location, "#/components/schemas/Category");
                     }
                 }
                 _ => panic!("Pet schema should be an object"),

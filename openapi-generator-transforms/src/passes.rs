@@ -1,8 +1,9 @@
 //! Transformation passes for OpenAPI specifications
 
-use heck::{ToKebabCase, ToLowerCamelCase, ToPascalCase, ToSnakeCase};
-use snafu::prelude::*;
+use snafu::Snafu;
 use utoipa::openapi::OpenApi;
+
+use crate::ir_context::IrContext;
 
 /// Error type for transformation passes
 #[derive(Debug, Snafu)]
@@ -10,119 +11,83 @@ use utoipa::openapi::OpenApi;
 pub enum TransformError {
     #[snafu(display("Transform error: {}", message))]
     Generic { message: String },
+
+    #[snafu(display("Transform pass '{}' failed: {}", pass, error))]
+    PassFailed { pass: String, error: String },
+
+    #[snafu(display("Circular dependency detected: {}", cycle))]
+    CircularDependency { cycle: String },
+
+    #[snafu(display("Invalid pass configuration: {}", message))]
+    InvalidConfiguration { message: String },
+
+    #[snafu(display("Pass '{}' not found", pass))]
+    PassNotFound { pass: String },
 }
 
-/// Base trait for transformation passes
+/// OpenAPI-level transformation pass
+/// These passes operate directly on the OpenAPI specification
+pub trait OpenApiTransformPass {
+    /// Get the name of this pass
+    fn name(&self) -> &str;
+
+    /// Apply the transformation to the OpenAPI specification
+    fn transform(&self, openapi: &mut OpenApi) -> Result<(), TransformError>;
+
+    /// Get the names of passes that must run before this pass
+    fn dependencies(&self) -> Vec<&str>;
+}
+
+/// IR-level transformation pass
+/// These passes operate on the intermediate representation context
+pub trait IrTransformPass {
+    /// Get the name of this pass
+    fn name(&self) -> &str;
+
+    /// Apply the transformation to the IR context
+    fn transform(&self, ir: &mut IrContext) -> Result<(), TransformError>;
+
+    /// Get the names of passes that must run before this pass
+    fn dependencies(&self) -> Vec<&str>;
+}
+
+/// AST-level transformation pass
+/// These passes operate on language-specific ASTs
+pub trait AstTransformPass<T> {
+    /// Get the name of this pass
+    fn name(&self) -> &str;
+
+    /// Apply the transformation to the AST
+    fn transform(&self, ast: &mut T) -> Result<(), TransformError>;
+
+    /// Get the names of passes that must run before this pass
+    fn dependencies(&self) -> Vec<&str>;
+}
+
+/// Base trait for transformation passes (for backward compatibility)
 pub trait TransformPass {
     /// Apply the transformation to the OpenAPI specification
     fn transform(&self, openapi: &mut OpenApi) -> Result<(), TransformError>;
 }
 
-/// Naming convention transformation pass
-pub struct NamingConventionPass {
-    pub target_case: NamingConvention,
-}
+// Re-export all pass types from submodules
+pub mod circular_reference_detection;
+pub mod dependency_analysis;
+pub mod naming_convention;
+pub mod path_normalization;
+pub mod reference_resolution;
+pub mod schema_normalization;
+pub mod type_inference;
+pub mod validation;
 
-#[derive(Debug)]
-pub enum NamingConvention {
-    CamelCase,
-    PascalCase,
-    SnakeCase,
-    KebabCase,
-}
+pub use circular_reference_detection::CircularReferenceDetectionPass;
+pub use dependency_analysis::DependencyAnalysisPass;
+pub use naming_convention::NamingConventionPass;
+pub use path_normalization::PathNormalizationPass;
+pub use reference_resolution::ReferenceResolutionPass;
+pub use schema_normalization::SchemaNormalizationPass;
+pub use type_inference::TypeInferencePass;
+pub use validation::ValidationPass;
 
-impl TransformPass for NamingConventionPass {
-    fn transform(&self, _openapi: &mut OpenApi) -> Result<(), TransformError> {
-        tracing::debug!("Applying naming convention: {:?}", self.target_case);
-
-        // TODO: Implement proper naming convention transformation
-        // This requires understanding the actual utoipa schema structure
-
-        Ok(())
-    }
-}
-
-impl NamingConventionPass {
-    fn transform_name(&self, name: &str) -> String {
-        match self.target_case {
-            NamingConvention::CamelCase => name.to_lower_camel_case(),
-            NamingConvention::PascalCase => name.to_pascal_case(),
-            NamingConvention::SnakeCase => name.to_snake_case(),
-            NamingConvention::KebabCase => name.to_kebab_case(),
-        }
-    }
-
-    fn transform_path(&self, path: &str) -> String {
-        // For paths, we typically want to keep them as-is or apply minimal transformation
-        // This is a placeholder - in practice, path transformation might be more complex
-        path.to_string()
-    }
-}
-
-/// Reference resolution transformation pass
-pub struct ReferenceResolutionPass;
-
-impl Default for ReferenceResolutionPass {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ReferenceResolutionPass {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl TransformPass for ReferenceResolutionPass {
-    fn transform(&self, _openapi: &mut OpenApi) -> Result<(), TransformError> {
-        tracing::debug!("Resolving references");
-
-        // TODO: Implement proper reference resolution
-        // This requires understanding the actual utoipa schema structure
-
-        Ok(())
-    }
-}
-
-/// Validation transformation pass
-pub struct ValidationPass;
-
-impl Default for ValidationPass {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ValidationPass {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl TransformPass for ValidationPass {
-    fn transform(&self, openapi: &mut OpenApi) -> Result<(), TransformError> {
-        tracing::debug!("Validating OpenAPI specification");
-
-        // Basic validation
-        if openapi.info.title.is_empty() {
-            return Err(TransformError::Generic {
-                message: "OpenAPI info.title is required".to_string(),
-            });
-        }
-
-        if openapi.info.version.is_empty() {
-            return Err(TransformError::Generic {
-                message: "OpenAPI info.version is required".to_string(),
-            });
-        }
-
-        if openapi.paths.paths.is_empty() {
-            return Err(TransformError::Generic {
-                message: "OpenAPI must have at least one path defined".to_string(),
-            });
-        }
-
-        Ok(())
-    }
-}
+// Re-export naming convention enum
+pub use naming_convention::NamingConvention;

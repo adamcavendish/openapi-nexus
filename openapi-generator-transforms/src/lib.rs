@@ -3,11 +3,14 @@
 //! This crate provides a pipeline of transformation passes that can be
 //! applied to OpenAPI specifications before code generation.
 
+pub mod ir_context;
 pub mod passes;
 pub mod pipeline;
 
+pub use ir_context::{CustomTypes, IrContext, SchemaAnalysis, TypeMappings};
 pub use passes::{
-    NamingConvention, NamingConventionPass, ReferenceResolutionPass, TransformError,
-    TransformPass, ValidationPass,
+    CircularReferenceDetectionPass, DependencyAnalysisPass, NamingConvention, NamingConventionPass,
+    PathNormalizationPass, ReferenceResolutionPass, SchemaNormalizationPass, TransformError,
+    TransformPass, TypeInferencePass, ValidationPass,
 };
 pub use pipeline::TransformPipeline;
