@@ -8,7 +8,7 @@ use openapi_generator_transforms::{
     TransformPipeline,
     passes::{NamingConvention, NamingConventionPass, ReferenceResolutionPass, ValidationPass},
 };
-use openapi_generator_typescript::TypeScriptGenerator;
+use openapi_generator_typescript::{GeneratedFile, TypeScriptGenerator};
 
 pub mod error;
 pub mod generator;
@@ -61,12 +61,13 @@ impl CodeGenerator {
             match language.as_str() {
                 "typescript" | "ts" => {
                     tracing::info!("Generating TypeScript code");
-                    let code = self.typescript_generator.generate(&openapi).map_err(|e| {
-                        error::Error::Generate {
-                            source: Box::new(e),
-                        }
-                    })?;
-                    self.write_output(&output_dir, "typescript", &code)?;
+                    let files =
+                        self.typescript_generator
+                            .generate_files(&openapi)
+                            .map_err(|e| error::Error::Generate {
+                                source: Box::new(e),
+                            })?;
+                    self.write_files(&output_dir, "typescript", &files)?;
                 }
                 "rust" => {
                     tracing::info!("Generating Rust code");
@@ -85,6 +86,27 @@ impl CodeGenerator {
             }
         }
 
+        Ok(())
+    }
+
+    fn write_files<P: AsRef<std::path::Path>>(
+        &self,
+        output_dir: P,
+        language: &str,
+        files: &[GeneratedFile],
+    ) -> Result<(), error::Error> {
+        let language_dir = output_dir.as_ref().join(format!("{}.generated", language));
+        std::fs::create_dir_all(&language_dir).context(error::WriteOutputSnafu {
+            path: language_dir.to_string_lossy().to_string(),
+        })?;
+
+        for file in files {
+            let file_path = language_dir.join(&file.filename);
+            std::fs::write(&file_path, &file.content).context(error::WriteOutputSnafu {
+                path: file_path.to_string_lossy().to_string(),
+            })?;
+            tracing::info!("Generated file: {:?}", file_path);
+        }
         Ok(())
     }
 
