@@ -49,7 +49,9 @@ pub struct LoginUserQuery {
     ),
     tag = "pet"
 )]
-pub async fn update_pet(Json(pet): Json<Pet>) -> Result<Json<Pet>, (StatusCode, Json<ErrorResponse>)> {
+pub async fn update_pet(
+    Json(pet): Json<Pet>,
+) -> Result<Json<Pet>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would update the pet in the database
     Ok(Json(pet))
 }
@@ -88,22 +90,20 @@ pub async fn find_pets_by_status(
     Query(params): Query<FindPetsByStatusQuery>,
 ) -> Result<Json<Vec<Pet>>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
-    let pets = vec![
-        Pet {
+    let pets = vec![Pet {
+        id: Some(1),
+        name: "doggie".to_string(),
+        category: Some(Category {
             id: Some(1),
-            name: "doggie".to_string(),
-            category: Some(Category {
-                id: Some(1),
-                name: Some("Dogs".to_string()),
-            }),
-            photo_urls: vec!["http://example.com/photo1.jpg".to_string()],
-            tags: Some(vec![Tag {
-                id: Some(1),
-                name: Some("friendly".to_string()),
-            }]),
-            status: Some(PetStatus::Available),
-        },
-    ];
+            name: Some("Dogs".to_string()),
+        }),
+        photo_urls: vec!["http://example.com/photo1.jpg".to_string()],
+        tags: Some(vec![Tag {
+            id: Some(1),
+            name: Some("friendly".to_string()),
+        }]),
+        status: Some(PetStatus::Available),
+    }];
     Ok(Json(pets))
 }
 
@@ -124,22 +124,20 @@ pub async fn find_pets_by_tags(
     Query(params): Query<FindPetsByTagsQuery>,
 ) -> Result<Json<Vec<Pet>>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
-    let pets = vec![
-        Pet {
+    let pets = vec![Pet {
+        id: Some(1),
+        name: "doggie".to_string(),
+        category: Some(Category {
             id: Some(1),
-            name: "doggie".to_string(),
-            category: Some(Category {
-                id: Some(1),
-                name: Some("Dogs".to_string()),
-            }),
-            photo_urls: vec!["http://example.com/photo1.jpg".to_string()],
-            tags: Some(vec![Tag {
-                id: Some(1),
-                name: Some("friendly".to_string()),
-            }]),
-            status: Some(PetStatus::Available),
-        },
-    ];
+            name: Some("Dogs".to_string()),
+        }),
+        photo_urls: vec!["http://example.com/photo1.jpg".to_string()],
+        tags: Some(vec![Tag {
+            id: Some(1),
+            name: Some("friendly".to_string()),
+        }]),
+        status: Some(PetStatus::Available),
+    }];
     Ok(Json(pets))
 }
 
@@ -228,7 +226,9 @@ pub async fn update_pet_with_form(
     ),
     tag = "pet"
 )]
-pub async fn delete_pet(Path(pet_id): Path<i64>) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+pub async fn delete_pet(
+    Path(pet_id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the pet from the database
     Ok(StatusCode::OK)
 }
@@ -268,7 +268,8 @@ pub async fn upload_file(
     ),
     tag = "store"
 )]
-pub async fn get_inventory() -> Result<Json<HashMap<String, i32>>, (StatusCode, Json<ErrorResponse>)> {
+pub async fn get_inventory() -> Result<Json<HashMap<String, i32>>, (StatusCode, Json<ErrorResponse>)>
+{
     // In a real implementation, this would query the database
     let mut inventory = HashMap::new();
     inventory.insert("available".to_string(), 10);
@@ -288,7 +289,9 @@ pub async fn get_inventory() -> Result<Json<HashMap<String, i32>>, (StatusCode, 
     ),
     tag = "store"
 )]
-pub async fn place_order(Json(order): Json<Order>) -> Result<Json<Order>, (StatusCode, Json<ErrorResponse>)> {
+pub async fn place_order(
+    Json(order): Json<Order>,
+) -> Result<Json<Order>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would create the order in the database
     Ok(Json(order))
 }
@@ -336,7 +339,9 @@ pub async fn get_order_by_id(
     ),
     tag = "store"
 )]
-pub async fn delete_order(Path(order_id): Path<i64>) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+pub async fn delete_order(
+    Path(order_id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the order from the database
     Ok(StatusCode::OK)
 }
@@ -351,7 +356,9 @@ pub async fn delete_order(Path(order_id): Path<i64>) -> Result<StatusCode, (Stat
     ),
     tag = "user"
 )]
-pub async fn create_user(Json(user): Json<User>) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
+pub async fn create_user(
+    Json(user): Json<User>,
+) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would create the user in the database
     Ok(Json(user))
 }
@@ -370,7 +377,9 @@ pub async fn create_users_with_list_input(
     Json(users): Json<Vec<User>>,
 ) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would create the users in the database
-    Ok(Json(users.into_iter().next().unwrap_or_else(|| User::default())))
+    Ok(Json(
+        users.into_iter().next().unwrap_or_else(|| User::default()),
+    ))
 }
 
 /// Logs user into the system
@@ -476,7 +485,9 @@ pub async fn update_user(
     ),
     tag = "user"
 )]
-pub async fn delete_user(Path(username): Path<String>) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+pub async fn delete_user(
+    Path(username): Path<String>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the user from the database
     Ok(StatusCode::OK)
 }

@@ -1,8 +1,8 @@
 //! Rust code generator
 
-use snafu::prelude::*;
-use utoipa::openapi::{OpenApi, Schema, RefOr};
 use heck::ToPascalCase;
+use snafu::prelude::*;
+use utoipa::openapi::{OpenApi, RefOr, Schema};
 
 use crate::ast::*;
 use crate::emitter::RustEmitter;
@@ -69,9 +69,9 @@ impl RustGenerator {
 
     fn schema_to_rust_node(&self, name: &str, schema: &Schema) -> Result<RustNode, GeneratorError> {
         let rust_name = name.to_pascal_case();
-        
+
         // TODO: Implement proper schema-to-Rust conversion based on actual utoipa Schema fields
-        
+
         // For now, generate a simple struct as a placeholder
         // TODO: Implement proper schema-to-Rust conversion based on actual utoipa Schema fields
         let struct_def = Struct {
@@ -86,13 +86,20 @@ impl RustGenerator {
                 },
                 Field {
                     name: "name".to_string(),
-                    type_expr: TypeExpression::Option(Box::new(TypeExpression::Primitive(PrimitiveType::String))),
+                    type_expr: TypeExpression::Option(Box::new(TypeExpression::Primitive(
+                        PrimitiveType::String,
+                    ))),
                     optional: true,
                     visibility: Visibility::Public,
                     documentation: Some("Display name".to_string()),
                 },
             ],
-            derives: vec!["Debug".to_string(), "Clone".to_string(), "Serialize".to_string(), "Deserialize".to_string()],
+            derives: vec![
+                "Debug".to_string(),
+                "Clone".to_string(),
+                "Serialize".to_string(),
+                "Deserialize".to_string(),
+            ],
             generics: Vec::new(),
             documentation: Some(format!("Generated from OpenAPI schema: {}", name)),
             visibility: Visibility::Public,
@@ -100,20 +107,17 @@ impl RustGenerator {
 
         Ok(RustNode::Struct(struct_def))
     }
-    
 
     fn generate_api_client(&self) -> RustNode {
         let struct_def = Struct {
             name: "ApiClient".to_string(),
-            fields: vec![
-                Field {
-                    name: "base_url".to_string(),
-                    type_expr: TypeExpression::Primitive(PrimitiveType::String),
-                    optional: false,
-                    visibility: Visibility::Private,
-                    documentation: Some("Base URL for API requests".to_string()),
-                },
-            ],
+            fields: vec![Field {
+                name: "base_url".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: false,
+                visibility: Visibility::Private,
+                documentation: Some("Base URL for API requests".to_string()),
+            }],
             derives: vec!["Debug".to_string(), "Clone".to_string()],
             generics: Vec::new(),
             documentation: Some("Generated API client".to_string()),

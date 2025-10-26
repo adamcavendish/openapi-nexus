@@ -6,17 +6,26 @@ use snafu::prelude::*;
 #[snafu(visibility(pub))]
 pub enum Error {
     #[snafu(display("Failed to parse OpenAPI specification: {}", source))]
-    Parse { source: openapi_generator_parser::error::Error },
+    Parse {
+        source: openapi_generator_parser::error::Error,
+    },
 
     #[snafu(display("Failed to transform OpenAPI specification: {}", source))]
-    Transform { source: openapi_generator_transforms::TransformError },
+    Transform {
+        source: openapi_generator_transforms::TransformError,
+    },
 
     #[snafu(display("Failed to generate code: {}", source))]
-    Generate { source: Box<dyn std::error::Error + Send + Sync> },
+    Generate {
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 
     #[snafu(display("Unsupported language: {}", language))]
     UnsupportedLanguage { language: String },
 
     #[snafu(display("Failed to write output to '{}': {}", path, source))]
-    WriteOutput { path: String, source: std::io::Error },
+    WriteOutput {
+        path: String,
+        source: std::io::Error,
+    },
 }

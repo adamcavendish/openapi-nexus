@@ -67,14 +67,18 @@ impl GeneratorConfig {
     /// Validate the configuration
     pub fn validate(&self) -> Result<(), Error> {
         if self.languages.is_empty() {
-            return Err(Error::UnsupportedLanguage { language: "none".to_string() });
+            return Err(Error::UnsupportedLanguage {
+                language: "none".to_string(),
+            });
         }
 
         for language in &self.languages {
             match language.as_str() {
                 "typescript" | "ts" | "rust" => {}
                 _ => {
-                    return Err(Error::UnsupportedLanguage { language: language.clone() });
+                    return Err(Error::UnsupportedLanguage {
+                        language: language.clone(),
+                    });
                 }
             }
         }

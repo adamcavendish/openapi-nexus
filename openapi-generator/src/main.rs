@@ -2,7 +2,7 @@
 
 use clap::{Parser, Subcommand};
 use openapi_generator_core::CodeGenerator;
-use tracing::{info, Level};
+use tracing::{Level, info};
 use tracing_subscriber;
 
 #[derive(Parser)]
@@ -21,15 +21,15 @@ enum Commands {
         /// Path to the OpenAPI specification file
         #[arg(short, long)]
         input: String,
-        
+
         /// Output directory for generated code
         #[arg(short, long, default_value = "generated")]
         output: String,
-        
+
         /// Languages to generate code for
         #[arg(short, long, default_values = ["typescript"])]
         languages: Vec<String>,
-        
+
         /// Verbose output
         #[arg(short, long)]
         verbose: bool,
@@ -39,7 +39,7 @@ enum Commands {
         /// Path to the OpenAPI specification file
         #[arg(short, long)]
         input: String,
-        
+
         /// Verbose output
         #[arg(short, long)]
         verbose: bool,
@@ -55,13 +55,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         Level::INFO
     };
-    
-    tracing_subscriber::fmt()
-        .with_max_level(log_level)
-        .init();
+
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
     match cli.command {
-        Commands::Generate { input, output, languages, .. } => {
+        Commands::Generate {
+            input,
+            output,
+            languages,
+            ..
+        } => {
             info!("Starting code generation");
             info!("Input: {}", input);
             info!("Output: {}", output);
@@ -69,12 +72,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let generator = CodeGenerator::new();
             generator.generate_from_file(&input, &output, &languages)?;
-            
+
             info!("Code generation completed successfully");
         }
         Commands::Validate { input, .. } => {
             info!("Validating OpenAPI specification: {}", input);
-            
+
             // TODO: Implement validation command
             println!("Validation not yet implemented");
         }

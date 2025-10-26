@@ -53,30 +53,29 @@ impl TypeScriptEmitter {
 
     fn emit_interface(&self, interface: &Interface) -> Result<RcDoc<()>, EmitError> {
         let mut result = String::new();
-        
+
         // Add documentation
         if let Some(docs) = &interface.documentation {
             result.push_str(&format!("/**\n * {}\n */\n", docs));
         }
-        
+
         // Add interface declaration
         result.push_str("export interface ");
         result.push_str(&interface.name);
-        
+
         // Add generics
         if !interface.generics.is_empty() {
-            let generic_names: Vec<String> = interface.generics.iter()
-                .map(|g| g.name.clone())
-                .collect();
+            let generic_names: Vec<String> =
+                interface.generics.iter().map(|g| g.name.clone()).collect();
             result.push_str(&format!("<{}>", generic_names.join(", ")));
         }
-        
+
         // Add extends
         if !interface.extends.is_empty() {
             result.push_str(" extends ");
             result.push_str(&interface.extends.join(", "));
         }
-        
+
         // Add properties
         if interface.properties.is_empty() {
             result.push_str(" {}");
@@ -88,7 +87,7 @@ impl TypeScriptEmitter {
             }
             result.push('}');
         }
-        
+
         Ok(RcDoc::text(result))
     }
 
@@ -98,60 +97,59 @@ impl TypeScriptEmitter {
 
     fn emit_property_string(&self, property: &Property) -> Result<String, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &property.documentation {
             result.push_str(&format!("  /** {} */\n", docs));
         }
-        
+
         result.push_str("  ");
         result.push_str(&property.name);
-        
+
         if property.optional {
             result.push('?');
         }
-        
+
         result.push_str(": ");
         result.push_str(&self.emit_type_expression_string(&property.type_expr)?);
         result.push(';');
-        
+
         Ok(result)
     }
 
     fn emit_type_alias(&self, type_alias: &TypeAlias) -> Result<RcDoc<()>, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &type_alias.documentation {
             result.push_str(&format!("/**\n * {}\n */\n", docs));
         }
-        
+
         result.push_str("export type ");
         result.push_str(&type_alias.name);
-        
+
         if !type_alias.generics.is_empty() {
-            let generic_names: Vec<String> = type_alias.generics.iter()
-                .map(|g| g.name.clone())
-                .collect();
+            let generic_names: Vec<String> =
+                type_alias.generics.iter().map(|g| g.name.clone()).collect();
             result.push_str(&format!("<{}>", generic_names.join(", ")));
         }
-        
+
         result.push_str(" = ");
         result.push_str(&self.emit_type_expression_string(&type_alias.type_expr)?);
         result.push(';');
-        
+
         Ok(RcDoc::text(result))
     }
 
     fn emit_enum(&self, enum_def: &Enum) -> Result<RcDoc<()>, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &enum_def.documentation {
             result.push_str(&format!("/**\n * {}\n */\n", docs));
         }
-        
+
         result.push_str("export enum ");
         result.push_str(&enum_def.name);
         result.push_str(" {\n");
-        
+
         for variant in &enum_def.variants {
             result.push_str("  ");
             result.push_str(&variant.name);
@@ -160,19 +158,19 @@ impl TypeScriptEmitter {
             }
             result.push_str(",\n");
         }
-        
+
         result.push('}');
-        
+
         Ok(RcDoc::text(result))
     }
 
     fn emit_function(&self, function: &Function) -> Result<RcDoc<()>, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &function.documentation {
             result.push_str(&format!("/**\n * {}\n */\n", docs));
         }
-        
+
         result.push_str("export ");
         if function.is_async {
             result.push_str("async ");
@@ -180,73 +178,81 @@ impl TypeScriptEmitter {
         result.push_str("function ");
         result.push_str(&function.name);
         result.push('(');
-        
-        let param_strings: Vec<String> = function.parameters.iter()
+
+        let param_strings: Vec<String> = function
+            .parameters
+            .iter()
             .map(|param| {
                 let mut param_str = param.name.clone();
                 if param.optional {
                     param_str.push('?');
                 }
                 if let Some(type_expr) = &param.type_expr {
-                    param_str.push_str(&format!(": {}", self.emit_type_expression_string(type_expr).unwrap_or_else(|_| "any".to_string())));
+                    param_str.push_str(&format!(
+                        ": {}",
+                        self.emit_type_expression_string(type_expr)
+                            .unwrap_or_else(|_| "any".to_string())
+                    ));
                 }
                 param_str
             })
             .collect();
-        
+
         result.push_str(&param_strings.join(", "));
         result.push(')');
-        
+
         if let Some(return_type) = &function.return_type {
-            result.push_str(&format!(": {}", self.emit_type_expression_string(return_type)?));
+            result.push_str(&format!(
+                ": {}",
+                self.emit_type_expression_string(return_type)?
+            ));
         }
-        
+
         result.push_str(" {\n  // TODO: Implement function body\n}");
-        
+
         Ok(RcDoc::text(result))
     }
 
     fn emit_class(&self, class_def: &Class) -> Result<RcDoc<()>, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &class_def.documentation {
             result.push_str(&format!("/**\n * {}\n */\n", docs));
         }
-        
+
         result.push_str("export class ");
         result.push_str(&class_def.name);
-        
+
         if !class_def.generics.is_empty() {
-            let generic_names: Vec<String> = class_def.generics.iter()
-                .map(|g| g.name.clone())
-                .collect();
+            let generic_names: Vec<String> =
+                class_def.generics.iter().map(|g| g.name.clone()).collect();
             result.push_str(&format!("<{}>", generic_names.join(", ")));
         }
-        
+
         if let Some(extends) = &class_def.extends {
             result.push_str(&format!(" extends {}", extends));
         }
-        
+
         if !class_def.implements.is_empty() {
             result.push_str(&format!(" implements {}", class_def.implements.join(", ")));
         }
-        
+
         result.push_str(" {\n");
-        
+
         // Add properties
         for prop in &class_def.properties {
             result.push_str(&self.emit_property_string(prop)?);
             result.push('\n');
         }
-        
+
         // Add methods
         for method in &class_def.methods {
             result.push_str(&self.emit_method_string(method)?);
             result.push('\n');
         }
-        
+
         result.push('}');
-        
+
         Ok(RcDoc::text(result))
     }
 
@@ -256,37 +262,46 @@ impl TypeScriptEmitter {
 
     fn emit_method_string(&self, method: &Method) -> Result<String, EmitError> {
         let mut result = String::new();
-        
+
         if let Some(docs) = &method.documentation {
             result.push_str(&format!("  /**\n   * {}\n   */\n", docs));
         }
-        
+
         result.push_str("  ");
         result.push_str(&method.name);
         result.push('(');
-        
-        let param_strings: Vec<String> = method.parameters.iter()
+
+        let param_strings: Vec<String> = method
+            .parameters
+            .iter()
             .map(|param| {
                 let mut param_str = param.name.clone();
                 if param.optional {
                     param_str.push('?');
                 }
                 if let Some(type_expr) = &param.type_expr {
-                    param_str.push_str(&format!(": {}", self.emit_type_expression_string(type_expr).unwrap_or_else(|_| "any".to_string())));
+                    param_str.push_str(&format!(
+                        ": {}",
+                        self.emit_type_expression_string(type_expr)
+                            .unwrap_or_else(|_| "any".to_string())
+                    ));
                 }
                 param_str
             })
             .collect();
-        
+
         result.push_str(&param_strings.join(", "));
         result.push(')');
-        
+
         if let Some(return_type) = &method.return_type {
-            result.push_str(&format!(": {}", self.emit_type_expression_string(return_type)?));
+            result.push_str(&format!(
+                ": {}",
+                self.emit_type_expression_string(return_type)?
+            ));
         }
-        
+
         result.push_str(" {\n    // TODO: Implement method\n  }");
-        
+
         Ok(result)
     }
 
@@ -310,17 +325,20 @@ impl TypeScriptEmitter {
                 };
                 Ok(type_name.to_string())
             }
-            TypeExpression::Array(item_type) => {
-                Ok(format!("Array<{}>", self.emit_type_expression_string(item_type)?))
-            }
+            TypeExpression::Array(item_type) => Ok(format!(
+                "Array<{}>",
+                self.emit_type_expression_string(item_type)?
+            )),
             TypeExpression::Union(types) => {
-                let type_strings: Result<Vec<String>, _> = types.iter()
+                let type_strings: Result<Vec<String>, _> = types
+                    .iter()
                     .map(|t| self.emit_type_expression_string(t))
                     .collect();
                 Ok(type_strings?.join(" | "))
             }
             TypeExpression::Intersection(types) => {
-                let type_strings: Result<Vec<String>, _> = types.iter()
+                let type_strings: Result<Vec<String>, _> = types
+                    .iter()
                     .map(|t| self.emit_type_expression_string(t))
                     .collect();
                 Ok(type_strings?.join(" & "))
@@ -331,46 +349,63 @@ impl TypeScriptEmitter {
                 if properties.is_empty() {
                     Ok("{}".to_string())
                 } else {
-                    let prop_strings: Result<Vec<String>, _> = properties.iter()
+                    let prop_strings: Result<Vec<String>, _> = properties
+                        .iter()
                         .map(|(name, type_expr)| {
-                            Ok(format!("{}: {}", name, self.emit_type_expression_string(type_expr)?))
+                            Ok(format!(
+                                "{}: {}",
+                                name,
+                                self.emit_type_expression_string(type_expr)?
+                            ))
                         })
                         .collect();
                     Ok(format!("{{ {} }}", prop_strings?.join("; ")))
                 }
             }
             TypeExpression::Function(signature) => {
-                let param_strings: Vec<String> = signature.parameters.iter()
+                let param_strings: Vec<String> = signature
+                    .parameters
+                    .iter()
                     .map(|param| {
                         let mut param_str = param.name.clone();
                         if param.optional {
                             param_str.push('?');
                         }
                         if let Some(type_expr) = &param.type_expr {
-                            param_str.push_str(&format!(": {}", self.emit_type_expression_string(type_expr).unwrap_or_else(|_| "any".to_string())));
+                            param_str.push_str(&format!(
+                                ": {}",
+                                self.emit_type_expression_string(type_expr)
+                                    .unwrap_or_else(|_| "any".to_string())
+                            ));
                         }
                         param_str
                     })
                     .collect();
-                
+
                 let mut func_str = format!("({})", param_strings.join(", "));
-                
+
                 if let Some(return_type) = &signature.return_type {
-                    func_str.push_str(&format!(" => {}", self.emit_type_expression_string(return_type)?));
+                    func_str.push_str(&format!(
+                        " => {}",
+                        self.emit_type_expression_string(return_type)?
+                    ));
                 }
-                
+
                 Ok(func_str)
             }
             TypeExpression::Tuple(types) => {
-                let type_strings: Result<Vec<String>, _> = types.iter()
+                let type_strings: Result<Vec<String>, _> = types
+                    .iter()
                     .map(|t| self.emit_type_expression_string(t))
                     .collect();
                 Ok(format!("[{}]", type_strings?.join(", ")))
             }
             TypeExpression::Generic(name) => Ok(name.clone()),
-            TypeExpression::IndexSignature(key_type, value_type) => {
-                Ok(format!("[key: {}]: {}", key_type, self.emit_type_expression_string(value_type)?))
-            }
+            TypeExpression::IndexSignature(key_type, value_type) => Ok(format!(
+                "[key: {}]: {}",
+                key_type,
+                self.emit_type_expression_string(value_type)?
+            )),
         }
     }
 }

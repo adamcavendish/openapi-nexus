@@ -1,25 +1,24 @@
 //! Petstore API example using Axum and utoipa
 
 use axum::{
+    Router,
     extract::DefaultBodyLimit,
     http::Method,
-    routing::{get, post, put, delete},
-    Router,
+    routing::{delete, get, post, put},
 };
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 
 use openapi_generator_petstore_example::{
-    update_pet, add_pet, find_pets_by_status, find_pets_by_tags, get_pet_by_id,
-    update_pet_with_form, delete_pet, upload_file, get_inventory, place_order,
-    get_order_by_id, delete_order, create_user, create_users_with_list_input,
-    login_user, logout_user, get_user_by_name, update_user, delete_user,
-    ApiDoc,
+    ApiDoc, add_pet, create_user, create_users_with_list_input, delete_order, delete_pet,
+    delete_user, find_pets_by_status, find_pets_by_tags, get_inventory, get_order_by_id,
+    get_pet_by_id, get_user_by_name, login_user, logout_user, place_order, update_pet,
+    update_pet_with_form, update_user, upload_file,
 };
 
 /// Create the OpenAPI specification
@@ -39,8 +38,9 @@ async fn main() {
     // Initialize tracing
     tracing_subscriber::registry()
         .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "openapi_generator_petstore_example=debug,tower_http=debug".into()),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "openapi_generator_petstore_example=debug,tower_http=debug".into()
+            }),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

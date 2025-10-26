@@ -62,7 +62,7 @@ impl RustEmitter {
 
         // Visibility
         let visibility = self.emit_visibility(&struct_def.visibility);
-        
+
         // Derives
         if !struct_def.derives.is_empty() {
             let derives = struct_def.derives.join(", ");
@@ -99,7 +99,7 @@ impl RustEmitter {
 
         // Visibility
         let visibility = self.emit_visibility(&enum_def.visibility);
-        
+
         // Derives
         if !enum_def.derives.is_empty() {
             let derives = enum_def.derives.join(", ");
@@ -131,11 +131,14 @@ impl RustEmitter {
 
         // Visibility
         let visibility = self.emit_visibility(&type_alias.visibility);
-        
+
         // Type alias definition
         let type_expr = self.emit_type_expression(&type_alias.type_expr)?;
         let alias_line = format!("{}type {} = ", visibility, type_alias.name);
-        doc = doc.append(RcDoc::text(alias_line)).append(type_expr).append(RcDoc::text(";"));
+        doc = doc
+            .append(RcDoc::text(alias_line))
+            .append(type_expr)
+            .append(RcDoc::text(";"));
 
         Ok(doc)
     }
@@ -150,7 +153,7 @@ impl RustEmitter {
 
         // Visibility
         let visibility = self.emit_visibility(&function.visibility);
-        
+
         // Function signature
         let mut sig = String::new();
         if function.is_async {
@@ -162,7 +165,9 @@ impl RustEmitter {
         sig.push_str(&format!("{}fn {}(", visibility, function.name));
 
         // Parameters
-        let params: Vec<String> = function.parameters.iter()
+        let params: Vec<String> = function
+            .parameters
+            .iter()
             .map(|p| {
                 let mut param = String::new();
                 if p.reference {
@@ -206,7 +211,7 @@ impl RustEmitter {
 
         // Visibility
         let visibility = self.emit_visibility(&trait_def.visibility);
-        
+
         // Trait definition
         let trait_line = format!("{}trait {} {{", visibility, trait_def.name);
         doc = doc.append(RcDoc::text(trait_line));
@@ -283,7 +288,9 @@ impl RustEmitter {
         sig.push_str(&format!("fn {}(", method.name));
 
         // Parameters
-        let params: Vec<String> = method.parameters.iter()
+        let params: Vec<String> = method
+            .parameters
+            .iter()
             .map(|p| {
                 let mut param = String::new();
                 if p.reference {
@@ -341,11 +348,15 @@ impl RustEmitter {
             }
             TypeExpression::Option(inner) => {
                 let inner_doc = self.emit_type_expression(inner)?;
-                Ok(RcDoc::text("Option<").append(inner_doc).append(RcDoc::text(">")))
+                Ok(RcDoc::text("Option<")
+                    .append(inner_doc)
+                    .append(RcDoc::text(">")))
             }
             TypeExpression::Vec(inner) => {
                 let inner_doc = self.emit_type_expression(inner)?;
-                Ok(RcDoc::text("Vec<").append(inner_doc).append(RcDoc::text(">")))
+                Ok(RcDoc::text("Vec<")
+                    .append(inner_doc)
+                    .append(RcDoc::text(">")))
             }
             TypeExpression::Reference(name) => Ok(RcDoc::text(name.clone())),
             _ => Ok(RcDoc::text("T")), // Placeholder for complex types

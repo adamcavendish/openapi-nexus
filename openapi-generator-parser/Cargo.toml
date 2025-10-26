@@ -9,3 +9,6 @@ serde_json.workspace = true
 serde_norway.workspace = true
 snafu.workspace = true
 utoipa.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,7 +1,7 @@
 //! Type mapping from OpenAPI types to Rust types
 
+use crate::ast::{PrimitiveType, TypeExpression};
 use utoipa::openapi::Schema;
-use crate::ast::{TypeExpression, PrimitiveType};
 
 /// Comprehensive type mapping from OpenAPI to Rust
 pub struct TypeMapper;
@@ -36,7 +36,9 @@ impl TypeMapper {
         // Handle string formats
         if let Some(format) = self.get_string_format(schema) {
             match format {
-                StringFormat::DateTime => TypeExpression::Reference("chrono::DateTime<chrono::Utc>".to_string()),
+                StringFormat::DateTime => {
+                    TypeExpression::Reference("chrono::DateTime<chrono::Utc>".to_string())
+                }
                 StringFormat::Date => TypeExpression::Reference("chrono::NaiveDate".to_string()),
                 StringFormat::Time => TypeExpression::Reference("chrono::NaiveTime".to_string()),
                 StringFormat::Uuid => TypeExpression::Reference("uuid::Uuid".to_string()),

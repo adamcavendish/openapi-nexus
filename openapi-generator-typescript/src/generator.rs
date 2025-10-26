@@ -33,7 +33,7 @@ impl TypeScriptGenerator {
     /// Generate TypeScript code from OpenAPI specification
     pub fn generate(&self, _openapi: &OpenApi) -> Result<String, GeneratorError> {
         let mut nodes = Vec::new();
-        
+
         // For now, generate a simple example interface
         let example_interface = Interface {
             name: "ExampleModel".to_string(),
@@ -55,7 +55,7 @@ impl TypeScriptGenerator {
             generics: Vec::new(),
             documentation: Some("Example model generated from OpenAPI".to_string()),
         };
-        
+
         nodes.push(TsNode::Interface(example_interface));
 
         // Generate API client class
@@ -69,7 +69,7 @@ impl TypeScriptGenerator {
             is_export: true,
             documentation: Some("Generated API client".to_string()),
         };
-        
+
         nodes.push(TsNode::Class(client_class));
 
         // Emit all nodes
@@ -79,5 +79,4 @@ impl TypeScriptGenerator {
                 message: e.to_string(),
             })
     }
-
 }

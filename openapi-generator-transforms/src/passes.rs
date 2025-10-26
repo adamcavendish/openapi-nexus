@@ -1,8 +1,8 @@
 //! Transformation passes for OpenAPI specifications
 
+use heck::{ToKebabCase, ToLowerCamelCase, ToPascalCase, ToSnakeCase};
 use snafu::prelude::*;
 use utoipa::openapi::OpenApi;
-use heck::{ToLowerCamelCase, ToPascalCase, ToSnakeCase, ToKebabCase};
 
 /// Error type for transformation passes
 #[derive(Debug, Snafu)]
@@ -34,10 +34,10 @@ pub enum NamingConvention {
 impl TransformPass for NamingConventionPass {
     fn transform(&self, _openapi: &mut OpenApi) -> Result<(), TransformError> {
         tracing::debug!("Applying naming convention: {:?}", self.target_case);
-        
+
         // TODO: Implement proper naming convention transformation
         // This requires understanding the actual utoipa schema structure
-        
+
         Ok(())
     }
 }
@@ -51,7 +51,7 @@ impl NamingConventionPass {
             NamingConvention::KebabCase => name.to_kebab_case(),
         }
     }
-    
+
     fn transform_path(&self, path: &str) -> String {
         // For paths, we typically want to keep them as-is or apply minimal transformation
         // This is a placeholder - in practice, path transformation might be more complex
@@ -71,14 +71,13 @@ impl ReferenceResolutionPass {
 impl TransformPass for ReferenceResolutionPass {
     fn transform(&self, _openapi: &mut OpenApi) -> Result<(), TransformError> {
         tracing::debug!("Resolving references");
-        
+
         // TODO: Implement proper reference resolution
         // This requires understanding the actual utoipa schema structure
-        
+
         Ok(())
     }
 }
-
 
 /// Validation transformation pass
 pub struct ValidationPass;
@@ -92,26 +91,26 @@ impl ValidationPass {
 impl TransformPass for ValidationPass {
     fn transform(&self, openapi: &mut OpenApi) -> Result<(), TransformError> {
         tracing::debug!("Validating OpenAPI specification");
-        
+
         // Basic validation
         if openapi.info.title.is_empty() {
             return Err(TransformError::Generic {
                 message: "OpenAPI info.title is required".to_string(),
             });
         }
-        
+
         if openapi.info.version.is_empty() {
             return Err(TransformError::Generic {
                 message: "OpenAPI info.version is required".to_string(),
             });
         }
-        
+
         if openapi.paths.paths.is_empty() {
             return Err(TransformError::Generic {
                 message: "OpenAPI must have at least one path defined".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }

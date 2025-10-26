@@ -1,7 +1,7 @@
 //! Type mapping from OpenAPI types to TypeScript types
 
+use crate::ast::{PrimitiveType, TypeExpression};
 use utoipa::openapi::Schema;
-use crate::ast::{TypeExpression, PrimitiveType};
 
 /// Comprehensive type mapping from OpenAPI to TypeScript
 pub struct TypeMapper;

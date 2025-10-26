@@ -6,4 +6,5 @@
 pub mod error;
 pub mod parser;
 
-pub use parser::*;
+pub use error::{Error, ParseWarning, SourceLocation};
+pub use parser::{OpenApiParser, ParserConfig, ParseResult, parse_file, parse_content, parse_file_with_validation, parse_content_with_validation, validate_openapi};
