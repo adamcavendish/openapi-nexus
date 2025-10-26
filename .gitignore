@@ -1,4 +1,73 @@
-/target
-petstore-api.yaml
-test-output/
+# Rust build artifacts
+/target/
+**/target/
+
+# Generated files
 *.generated
+test-output/
+examples/*/generated/
+examples/*/target/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Coverage reports
+tarpaulin-report.html
+coverage/
+lcov.info
+
+# Benchmark results
+criterion/
+
+# Documentation build artifacts
+/doc/
+/docs/book/
+
+# Test artifacts
+test-report.txt
+*.prof
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node.js (for any frontend tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (for any Python tooling)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
