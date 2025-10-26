@@ -1,6 +1,6 @@
 //! Error types for the core orchestration
 
-use snafu::prelude::*;
+use snafu::Snafu;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]

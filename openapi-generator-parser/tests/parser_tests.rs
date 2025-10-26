@@ -339,21 +339,21 @@ fn test_parse_warning() {
 fn test_generated_yaml_can_be_parsed() {
     let parser = OpenApiParser::new();
     let result = parser.parse_file(format!("{}/valid/petstore.yaml", fixtures_path()));
-    
+
     assert!(result.is_ok(), "Failed to parse generated YAML file");
     let parse_result = result.unwrap();
-    
+
     assert_eq!(parse_result.openapi.info.title, "Petstore API");
     assert_eq!(parse_result.openapi.info.version, "1.0.0");
     assert!(!parse_result.openapi.paths.paths.is_empty());
     assert!(parse_result.openapi.components.is_some());
-    
+
     let components = parse_result.openapi.components.as_ref().unwrap();
     assert!(!components.schemas.is_empty());
     assert!(components.schemas.contains_key("Pet"));
     assert!(components.schemas.contains_key("User"));
     assert!(components.schemas.contains_key("Order"));
-    
+
     // Should have no warnings for a valid generated file
     assert!(parse_result.warnings.is_empty());
 }
@@ -362,21 +362,21 @@ fn test_generated_yaml_can_be_parsed() {
 fn test_generated_json_can_be_parsed() {
     let parser = OpenApiParser::new();
     let result = parser.parse_file(format!("{}/valid/petstore.json", fixtures_path()));
-    
+
     assert!(result.is_ok(), "Failed to parse generated JSON file");
     let parse_result = result.unwrap();
-    
+
     assert_eq!(parse_result.openapi.info.title, "Petstore API");
     assert_eq!(parse_result.openapi.info.version, "1.0.0");
     assert!(!parse_result.openapi.paths.paths.is_empty());
     assert!(parse_result.openapi.components.is_some());
-    
+
     let components = parse_result.openapi.components.as_ref().unwrap();
     assert!(!components.schemas.is_empty());
     assert!(components.schemas.contains_key("Pet"));
     assert!(components.schemas.contains_key("User"));
     assert!(components.schemas.contains_key("Order"));
-    
+
     // Should have no warnings for a valid generated file
     assert!(parse_result.warnings.is_empty());
 }
@@ -384,25 +384,40 @@ fn test_generated_json_can_be_parsed() {
 #[test]
 fn test_generated_yaml_and_json_are_equivalent() {
     let parser = OpenApiParser::new();
-    
-    let yaml_result = parser.parse_file(format!("{}/valid/petstore.yaml", fixtures_path())).unwrap();
-    let json_result = parser.parse_file(format!("{}/valid/petstore.json", fixtures_path())).unwrap();
-    
+
+    let yaml_result = parser
+        .parse_file(format!("{}/valid/petstore.yaml", fixtures_path()))
+        .unwrap();
+    let json_result = parser
+        .parse_file(format!("{}/valid/petstore.json", fixtures_path()))
+        .unwrap();
+
     // Both should have the same basic structure
-    assert_eq!(yaml_result.openapi.info.title, json_result.openapi.info.title);
-    assert_eq!(yaml_result.openapi.info.version, json_result.openapi.info.version);
-    assert_eq!(yaml_result.openapi.paths.paths.len(), json_result.openapi.paths.paths.len());
-    
+    assert_eq!(
+        yaml_result.openapi.info.title,
+        json_result.openapi.info.title
+    );
+    assert_eq!(
+        yaml_result.openapi.info.version,
+        json_result.openapi.info.version
+    );
+    assert_eq!(
+        yaml_result.openapi.paths.paths.len(),
+        json_result.openapi.paths.paths.len()
+    );
+
     // Both should have the same components
     let yaml_components = yaml_result.openapi.components.as_ref().unwrap();
     let json_components = json_result.openapi.components.as_ref().unwrap();
     assert_eq!(yaml_components.schemas.len(), json_components.schemas.len());
-    
+
     // Both should have the same schema names
-    let yaml_schema_names: std::collections::HashSet<&String> = yaml_components.schemas.keys().collect();
-    let json_schema_names: std::collections::HashSet<&String> = json_components.schemas.keys().collect();
+    let yaml_schema_names: std::collections::HashSet<&String> =
+        yaml_components.schemas.keys().collect();
+    let json_schema_names: std::collections::HashSet<&String> =
+        json_components.schemas.keys().collect();
     assert_eq!(yaml_schema_names, json_schema_names);
-    
+
     // Both should have no warnings
     assert!(yaml_result.warnings.is_empty());
     assert!(json_result.warnings.is_empty());

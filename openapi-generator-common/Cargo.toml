@@ -1,0 +1,8 @@
+[package]
+name = "openapi-generator-common"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+snafu.workspace = true

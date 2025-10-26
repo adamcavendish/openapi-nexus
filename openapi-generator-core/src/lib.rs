@@ -1,7 +1,6 @@
 //! Core orchestration for OpenAPI code generation
 
-use snafu::prelude::*;
-use utoipa::openapi::OpenApi;
+use snafu::ResultExt as _;
 
 use openapi_generator_parser::parse_file_with_validation;
 use openapi_generator_rust::RustGenerator;

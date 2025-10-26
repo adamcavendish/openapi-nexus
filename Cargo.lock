@@ -947,9 +947,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "openapi-generator-common"
+version = "0.1.0"
+dependencies = [
+ "snafu",
+]
+
+[[package]]
 name = "openapi-generator-core"
 version = "0.1.0"
 dependencies = [
+ "openapi-generator-common",
  "openapi-generator-ir",
  "openapi-generator-parser",
  "openapi-generator-plugin",
@@ -966,7 +974,10 @@ name = "openapi-generator-ir"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "openapi-generator-common",
  "serde",
+ "snafu",
+ "tempfile",
  "utoipa",
 ]
 
@@ -974,6 +985,7 @@ dependencies = [
 name = "openapi-generator-parser"
 version = "0.1.0"
 dependencies = [
+ "openapi-generator-common",
  "serde_json",
  "serde_norway",
  "snafu",
@@ -1033,6 +1045,7 @@ version = "0.1.0"
 dependencies = [
  "heck",
  "indexmap",
+ "openapi-generator-common",
  "openapi-generator-ir",
  "snafu",
  "tracing",

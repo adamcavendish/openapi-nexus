@@ -5,6 +5,7 @@ edition.workspace = true
 publish = false
 
 [dependencies]
+openapi-generator-common.workspace = true
 snafu.workspace = true
 tracing.workspace = true
 

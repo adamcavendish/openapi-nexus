@@ -7,4 +7,10 @@ publish = false
 [dependencies]
 indexmap.workspace = true
 serde.workspace = true
+snafu.workspace = true
 utoipa.workspace = true
+
+openapi-generator-common.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

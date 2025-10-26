@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "openapi-generator",
+    "openapi-generator-common",
     "openapi-generator-core",
     "openapi-generator-parser",
     "openapi-generator-ir",
@@ -46,6 +47,7 @@ uuid = { version = "1.18.1", features = ["v4", "v7", "serde"] }
 
 # Workspace Projects
 openapi-generator = { path = "openapi-generator" }
+openapi-generator-common = { path = "openapi-generator-common" }
 openapi-generator-core = { path = "openapi-generator-core" }
 openapi-generator-ir = { path = "openapi-generator-ir" }
 openapi-generator-parser = { path = "openapi-generator-parser" }

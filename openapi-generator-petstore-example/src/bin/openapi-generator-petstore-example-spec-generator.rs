@@ -15,11 +15,7 @@ const GENERATED_FILE_HEADER_YAML: &str = r#"# DO NOT EDIT - This file is automat
 #[command(about = "Generate OpenAPI YAML and JSON specifications from the Petstore API")]
 struct Args {
     /// Output directory for generated files
-    #[arg(
-        short,
-        long,
-        default_value = "tests/fixtures/valid"
-    )]
+    #[arg(short, long, default_value = "tests/fixtures/valid")]
     output_dir: PathBuf,
 }
 
