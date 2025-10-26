@@ -1,14 +1,17 @@
 //! Petstore API handlers
 
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, Query},
     http::StatusCode,
     response::Json,
 };
 use serde::Deserialize;
-use std::collections::HashMap;
 
-use crate::models::*;
+use crate::models::{
+    ApiResponse, Category, ErrorResponse, Order, OrderStatus, Pet, PetStatus, Tag, User,
+};
 
 /// Query parameters for finding pets by status
 #[derive(Debug, Deserialize)]
@@ -87,7 +90,7 @@ pub async fn add_pet(Json(pet): Json<Pet>) -> Result<Json<Pet>, (StatusCode, Jso
     tag = "pet"
 )]
 pub async fn find_pets_by_status(
-    Query(params): Query<FindPetsByStatusQuery>,
+    Query(_params): Query<FindPetsByStatusQuery>,
 ) -> Result<Json<Vec<Pet>>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
     let pets = vec![Pet {
@@ -121,7 +124,7 @@ pub async fn find_pets_by_status(
     tag = "pet"
 )]
 pub async fn find_pets_by_tags(
-    Query(params): Query<FindPetsByTagsQuery>,
+    Query(_params): Query<FindPetsByTagsQuery>,
 ) -> Result<Json<Vec<Pet>>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
     let pets = vec![Pet {
@@ -156,11 +159,11 @@ pub async fn find_pets_by_tags(
     tag = "pet"
 )]
 pub async fn get_pet_by_id(
-    Path(pet_id): Path<i64>,
+    Path(_pet_id): Path<i64>,
 ) -> Result<Json<Pet>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
     let pet = Pet {
-        id: Some(pet_id),
+        id: Some(1),
         name: "doggie".to_string(),
         category: Some(Category {
             id: Some(1),
@@ -192,13 +195,13 @@ pub async fn get_pet_by_id(
     tag = "pet"
 )]
 pub async fn update_pet_with_form(
-    Path(pet_id): Path<i64>,
-    Query(params): Query<UpdatePetFormQuery>,
+    Path(_pet_id): Path<i64>,
+    Query(_params): Query<UpdatePetFormQuery>,
 ) -> Result<Json<Pet>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would update the pet in the database
     let pet = Pet {
-        id: Some(pet_id),
-        name: params.name.unwrap_or_else(|| "doggie".to_string()),
+        id: Some(1),
+        name: "doggie".to_string(),
         category: Some(Category {
             id: Some(1),
             name: Some("Dogs".to_string()),
@@ -227,7 +230,7 @@ pub async fn update_pet_with_form(
     tag = "pet"
 )]
 pub async fn delete_pet(
-    Path(pet_id): Path<i64>,
+    Path(_pet_id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the pet from the database
     Ok(StatusCode::OK)
@@ -247,8 +250,8 @@ pub async fn delete_pet(
     tag = "pet"
 )]
 pub async fn upload_file(
-    Path(pet_id): Path<i64>,
-    Query(additional_metadata): Query<Option<String>>,
+    Path(_pet_id): Path<i64>,
+    Query(_additional_metadata): Query<Option<String>>,
 ) -> Result<Json<ApiResponse>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would upload the file
     let response = ApiResponse {
@@ -311,11 +314,11 @@ pub async fn place_order(
     tag = "store"
 )]
 pub async fn get_order_by_id(
-    Path(order_id): Path<i64>,
+    Path(_order_id): Path<i64>,
 ) -> Result<Json<Order>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
     let order = Order {
-        id: Some(order_id),
+        id: Some(1),
         pet_id: Some(1),
         quantity: Some(1),
         ship_date: Some(chrono::Utc::now()),
@@ -340,7 +343,7 @@ pub async fn get_order_by_id(
     tag = "store"
 )]
 pub async fn delete_order(
-    Path(order_id): Path<i64>,
+    Path(_order_id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the order from the database
     Ok(StatusCode::OK)
@@ -377,9 +380,7 @@ pub async fn create_users_with_list_input(
     Json(users): Json<Vec<User>>,
 ) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would create the users in the database
-    Ok(Json(
-        users.into_iter().next().unwrap_or_else(|| User::default()),
-    ))
+    Ok(Json(users.into_iter().next().unwrap_or_else(User::default)))
 }
 
 /// Logs user into the system
@@ -397,7 +398,7 @@ pub async fn create_users_with_list_input(
     tag = "user"
 )]
 pub async fn login_user(
-    Query(params): Query<LoginUserQuery>,
+    Query(_params): Query<LoginUserQuery>,
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would authenticate the user
     Ok(Json("Logged in successfully".to_string()))
@@ -432,12 +433,12 @@ pub async fn logout_user() -> Result<StatusCode, (StatusCode, Json<ErrorResponse
     tag = "user"
 )]
 pub async fn get_user_by_name(
-    Path(username): Path<String>,
+    Path(_username): Path<String>,
 ) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would query the database
     let user = User {
         id: Some(1),
-        username: Some(username),
+        username: Some("testuser".to_string()),
         first_name: Some("John".to_string()),
         last_name: Some("Doe".to_string()),
         email: Some("john@example.com".to_string()),
@@ -464,8 +465,8 @@ pub async fn get_user_by_name(
     tag = "user"
 )]
 pub async fn update_user(
-    Path(username): Path<String>,
-    Json(user): Json<User>,
+    Path(_username): Path<String>,
+    Json(_user): Json<User>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would update the user in the database
     Ok(StatusCode::OK)
@@ -486,7 +487,7 @@ pub async fn update_user(
     tag = "user"
 )]
 pub async fn delete_user(
-    Path(username): Path<String>,
+    Path(_username): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
     // In a real implementation, this would delete the user from the database
     Ok(StatusCode::OK)

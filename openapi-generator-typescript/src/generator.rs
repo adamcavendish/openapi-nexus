@@ -21,6 +21,12 @@ pub struct TypeScriptGenerator {
     type_mapper: TypeMapper,
 }
 
+impl Default for TypeScriptGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeScriptGenerator {
     /// Create a new TypeScript generator
     pub fn new() -> Self {

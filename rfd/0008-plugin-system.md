@@ -396,7 +396,7 @@ impl PluginConfigLoader {
 
 ### Plugin Structure
 
-```
+```text
 my-openapi-plugin/
 ├── Cargo.toml
 ├── src/

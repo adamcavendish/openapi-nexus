@@ -26,7 +26,7 @@ impl TypeMapper {
         }
     }
 
-    fn get_schema_type(&self, schema: &Schema) -> OpenApiType {
+    fn get_schema_type(&self, _schema: &Schema) -> OpenApiType {
         // TODO: Implement proper schema type detection based on utoipa Schema structure
         // For now, return Unknown as we need to understand the actual schema fields
         OpenApiType::Unknown
@@ -89,33 +89,33 @@ impl TypeMapper {
         }
     }
 
-    fn map_object_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_object_type(&self, _schema: &Schema) -> TypeExpression {
         // For generic objects, use serde_json::Value
         // TODO: Generate specific struct types for objects with defined properties
         TypeExpression::Reference("serde_json::Value".to_string())
     }
 
-    fn map_enum_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_enum_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Generate enum types for string enums
         TypeExpression::Primitive(PrimitiveType::String)
     }
 
-    fn map_one_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_one_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle oneOf with union types
         TypeExpression::Reference("serde_json::Value".to_string())
     }
 
-    fn map_any_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_any_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle anyOf with union types
         TypeExpression::Reference("serde_json::Value".to_string())
     }
 
-    fn map_all_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_all_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle allOf with intersection types
         TypeExpression::Reference("serde_json::Value".to_string())
     }
 
-    fn map_reference_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_reference_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Resolve references to actual types
         TypeExpression::Reference("serde_json::Value".to_string())
     }

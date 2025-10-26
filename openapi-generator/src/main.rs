@@ -3,7 +3,6 @@
 use clap::{Parser, Subcommand};
 use openapi_generator_core::CodeGenerator;
 use tracing::{Level, info};
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "openapi-generator")]

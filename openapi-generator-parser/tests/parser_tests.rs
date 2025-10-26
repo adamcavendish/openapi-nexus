@@ -1,6 +1,7 @@
 //! Parser tests
 
-use openapi_generator_parser::*;
+use openapi_generator_common::{ParseWarning, SourceLocation};
+use openapi_generator_parser::{Error, OpenApiParser, ParserConfig};
 
 fn fixtures_path() -> &'static str {
     "../tests/fixtures"
@@ -281,29 +282,6 @@ fn test_parser_config() {
     let parser = OpenApiParser::with_config(config);
     let result = parser.parse_file(format!("{}/valid/minimal.yaml", fixtures_path()));
 
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_legacy_functions() {
-    // Test legacy parse_file function
-    let result = parse_file(format!("{}/valid/minimal.yaml", fixtures_path()));
-    assert!(result.is_ok());
-
-    // Test legacy parse_content function
-    let content = r#"
-openapi: 3.1.0
-info:
-  title: Test API
-  version: 1.0.0
-paths:
-  /test:
-    get:
-      responses:
-        '200':
-          description: OK
-"#;
-    let result = parse_content(content, Some("yaml"));
     assert!(result.is_ok());
 }
 

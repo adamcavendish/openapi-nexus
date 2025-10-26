@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::traits::*;
+use crate::traits::{Plugin, PluginCapability, PluginError, PluginRegistry};
 
 /// Simple in-memory plugin registry
 pub struct SimplePluginRegistry {

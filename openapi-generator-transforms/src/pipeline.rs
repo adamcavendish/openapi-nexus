@@ -1,6 +1,5 @@
 //! Transformation pipeline for OpenAPI specifications
 
-use snafu::prelude::*;
 use utoipa::openapi::OpenApi;
 
 use crate::passes::{TransformError, TransformPass};

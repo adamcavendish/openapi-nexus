@@ -55,5 +55,5 @@ pub use utoipa::openapi::{
 // Re-export IR types
 pub use analysis::{Analyzer, CircularRef, SchemaAnalyzer};
 pub use error::IrError;
-pub use traversal::{OpenApiTraverser, OpenApiVisitor, Traverser};
+pub use traversal::{OpenApiTraverser, OpenApiVisitor};
 pub use utils::{ReferenceResolver, Utils};

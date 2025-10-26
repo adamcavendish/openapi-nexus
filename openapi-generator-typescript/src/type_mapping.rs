@@ -26,7 +26,7 @@ impl TypeMapper {
         }
     }
 
-    fn get_schema_type(&self, schema: &Schema) -> OpenApiType {
+    fn get_schema_type(&self, _schema: &Schema) -> OpenApiType {
         // TODO: Implement proper schema type detection based on utoipa Schema structure
         // For now, return Unknown as we need to understand the actual schema fields
         OpenApiType::Unknown
@@ -51,12 +51,12 @@ impl TypeMapper {
         }
     }
 
-    fn map_integer_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_integer_type(&self, _schema: &Schema) -> TypeExpression {
         // TypeScript doesn't distinguish between int32 and int64
         TypeExpression::Primitive(PrimitiveType::Number)
     }
 
-    fn map_number_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_number_type(&self, _schema: &Schema) -> TypeExpression {
         TypeExpression::Primitive(PrimitiveType::Number)
     }
 
@@ -70,32 +70,32 @@ impl TypeMapper {
         }
     }
 
-    fn map_object_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_object_type(&self, _schema: &Schema) -> TypeExpression {
         // For generic objects, use Record<string, any>
         TypeExpression::Reference("Record<string, any>".to_string())
     }
 
-    fn map_enum_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_enum_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Generate union types for string enums
         TypeExpression::Primitive(PrimitiveType::String)
     }
 
-    fn map_one_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_one_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle oneOf with union types
         TypeExpression::Reference("any".to_string())
     }
 
-    fn map_any_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_any_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle anyOf with union types
         TypeExpression::Reference("any".to_string())
     }
 
-    fn map_all_of_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_all_of_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Handle allOf with intersection types
         TypeExpression::Reference("any".to_string())
     }
 
-    fn map_reference_type(&self, schema: &Schema) -> TypeExpression {
+    fn map_reference_type(&self, _schema: &Schema) -> TypeExpression {
         // TODO: Resolve references to actual types
         TypeExpression::Reference("any".to_string())
     }

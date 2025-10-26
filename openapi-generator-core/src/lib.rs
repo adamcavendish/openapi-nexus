@@ -2,7 +2,7 @@
 
 use snafu::ResultExt as _;
 
-use openapi_generator_parser::parse_file_with_validation;
+use openapi_generator_parser::OpenApiParser;
 use openapi_generator_rust::RustGenerator;
 use openapi_generator_transforms::{
     TransformPipeline,
@@ -23,7 +23,7 @@ pub struct CodeGenerator {
 impl CodeGenerator {
     /// Create a new code generator with default configuration
     pub fn new() -> Self {
-        let mut pipeline = TransformPipeline::new()
+        let pipeline = TransformPipeline::new()
             .add_pass(ValidationPass::new())
             .add_pass(ReferenceResolutionPass::new())
             .add_pass(NamingConventionPass {
@@ -48,7 +48,9 @@ impl CodeGenerator {
             "Parsing OpenAPI specification from: {:?}",
             input_path.as_ref()
         );
-        let mut openapi = parse_file_with_validation(input_path).context(error::ParseSnafu)?;
+        let parser = OpenApiParser::new();
+        let parse_result = parser.parse_file(input_path).context(error::ParseSnafu)?;
+        let mut openapi = parse_result.openapi;
 
         tracing::info!("Applying transformations");
         self.transform_pipeline

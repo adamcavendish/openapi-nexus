@@ -22,13 +22,6 @@ impl Utils {
         }
     }
 
-    /// Check if a schema is nullable
-    pub fn is_nullable(_schema: &Schema) -> bool {
-        // Note: OpenAPI 3.1 uses nullable differently than 3.0
-        // For now, we'll return false as the nullable field structure may vary
-        false
-    }
-
     /// Extract all schema references from a schema
     pub fn extract_schema_refs(schema: &Schema) -> Vec<String> {
         let mut refs = Vec::new();
@@ -212,10 +205,6 @@ mod tests {
 
         let name = Utils::get_reference_name(&schema_obj);
         assert_eq!(name, None);
-
-        // Test is_nullable
-        let schema = Schema::Object(Object::new());
-        assert!(!Utils::is_nullable(&schema));
     }
 
     #[test]

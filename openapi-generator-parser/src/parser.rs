@@ -1,7 +1,8 @@
 //! OpenAPI parser implementation
 
-use snafu::prelude::*;
 use std::path::Path;
+
+use snafu::ResultExt as _;
 use utoipa::openapi::OpenApi;
 
 use crate::error::{
@@ -220,43 +221,4 @@ impl Default for OpenApiParser {
     fn default() -> Self {
         Self::new()
     }
-}
-
-// Legacy functions for backward compatibility
-/// Parse an OpenAPI specification from a file
-pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<OpenApi, Error> {
-    let parser = OpenApiParser::new();
-    let result = parser.parse_file(path)?;
-    Ok(result.openapi)
-}
-
-/// Parse OpenAPI content from a string
-pub fn parse_content(content: &str, file_extension: Option<&str>) -> Result<OpenApi, Error> {
-    let parser = OpenApiParser::new();
-    let result = parser.parse_content(content, file_extension)?;
-    Ok(result.openapi)
-}
-
-/// Parse an OpenAPI specification from a file with validation
-pub fn parse_file_with_validation<P: AsRef<Path>>(path: P) -> Result<OpenApi, Error> {
-    let parser = OpenApiParser::new();
-    let result = parser.parse_file(path)?;
-    Ok(result.openapi)
-}
-
-/// Parse OpenAPI content from a string with validation
-pub fn parse_content_with_validation(
-    content: &str,
-    file_extension: Option<&str>,
-) -> Result<OpenApi, Error> {
-    let parser = OpenApiParser::new();
-    let result = parser.parse_content(content, file_extension)?;
-    Ok(result.openapi)
-}
-
-/// Validate an OpenAPI specification
-pub fn validate_openapi(openapi: &OpenApi) -> Result<(), Error> {
-    let parser = OpenApiParser::new();
-    let mut warnings = Vec::new();
-    parser.validate_openapi(openapi, &mut warnings)
 }

@@ -171,7 +171,7 @@ impl RustEmitter {
             .map(|p| {
                 let mut param = String::new();
                 if p.reference {
-                    param.push_str("&");
+                    param.push('&');
                 }
                 if p.mutable {
                     param.push_str("mut ");
@@ -179,18 +179,18 @@ impl RustEmitter {
                 param.push_str(&p.name);
                 param.push_str(": ");
                 // TODO: Add type expression emission
-                param.push_str("T"); // Placeholder
+                param.push('T'); // Placeholder
                 param
             })
             .collect();
         sig.push_str(&params.join(", "));
-        sig.push_str(")");
+        sig.push(')');
 
         // Return type
         if let Some(_return_type) = &function.return_type {
             sig.push_str(" -> ");
             // TODO: Add return type emission
-            sig.push_str("T"); // Placeholder
+            sig.push('T'); // Placeholder
         }
 
         sig.push_str(" {");
@@ -294,7 +294,7 @@ impl RustEmitter {
             .map(|p| {
                 let mut param = String::new();
                 if p.reference {
-                    param.push_str("&");
+                    param.push('&');
                 }
                 if p.mutable {
                     param.push_str("mut ");
@@ -302,21 +302,21 @@ impl RustEmitter {
                 param.push_str(&p.name);
                 param.push_str(": ");
                 // TODO: Add type expression emission
-                param.push_str("T"); // Placeholder
+                param.push('T'); // Placeholder
                 param
             })
             .collect();
         sig.push_str(&params.join(", "));
-        sig.push_str(")");
+        sig.push(')');
 
         // Return type
         if let Some(_return_type) = &method.return_type {
             sig.push_str(" -> ");
             // TODO: Add return type emission
-            sig.push_str("T"); // Placeholder
+            sig.push('T'); // Placeholder
         }
 
-        sig.push_str(";");
+        sig.push(';');
         doc = doc.append(RcDoc::text(sig));
 
         Ok(doc)

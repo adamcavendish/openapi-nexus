@@ -1,9 +1,6 @@
 //! Enhanced TypeScript generator with improved schema parsing
 
-use crate::ast::*;
 use crate::generator::{GeneratorError, TypeScriptGenerator};
-use heck::{ToLowerCamelCase, ToPascalCase};
-use snafu::prelude::*;
 use utoipa::openapi::OpenApi;
 
 /// Enhanced TypeScript generator with improved schema parsing

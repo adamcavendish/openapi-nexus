@@ -1,7 +1,8 @@
 //! Error types for OpenAPI parsing
 
+use snafu::Snafu;
+
 pub use openapi_generator_common::{ParseWarning, SourceLocation};
-use snafu::prelude::*;
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]

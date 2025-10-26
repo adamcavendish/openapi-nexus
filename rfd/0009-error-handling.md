@@ -27,8 +27,6 @@ This RFD defines the comprehensive error handling and diagnostics system for the
 ### Core Error Types
 
 ```rust
-use snafu::prelude::*;
-
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("Parse error: {}", source))]

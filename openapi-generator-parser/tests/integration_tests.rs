@@ -1,6 +1,6 @@
 //! Integration tests for OpenAPI parser
 
-use openapi_generator_parser::*;
+use openapi_generator_parser::{OpenApiParser, ParserConfig};
 
 fn fixtures_path() -> &'static str {
     "../tests/fixtures"
@@ -26,7 +26,7 @@ fn test_petstore_integration() {
     assert_eq!(
         openapi.info.description,
         Some(
-            "This is a sample Pet Store Server based on the OpenAPI 3.0 specification".to_string()
+            "This is a sample Pet Store Server based on the OpenAPI 3.1 specification".to_string()
         )
     );
 
@@ -201,29 +201,19 @@ fn test_petstore_references_validation() {
             match schema {
                 utoipa::openapi::Schema::Object(obj_schema) => {
                     // Check that status references PetStatus
-                    if let Some(status_prop) = obj_schema.properties.get("status") {
-                        match status_prop {
-                            utoipa::openapi::RefOr::Ref(ref_schema) => {
-                                assert_eq!(
-                                    ref_schema.ref_location,
-                                    "#/components/schemas/PetStatus"
-                                );
-                            }
-                            _ => {} // Could be oneOf with null
-                        }
+                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) = obj_schema.properties.get("status") {
+                        assert_eq!(
+                            ref_schema.ref_location,
+                            "#/components/schemas/PetStatus"
+                        );
                     }
 
                     // Check that category references Category
-                    if let Some(category_prop) = obj_schema.properties.get("category") {
-                        match category_prop {
-                            utoipa::openapi::RefOr::Ref(ref_schema) => {
-                                assert_eq!(
-                                    ref_schema.ref_location,
-                                    "#/components/schemas/Category"
-                                );
-                            }
-                            _ => {} // Could be oneOf with null
-                        }
+                    if let Some(utoipa::openapi::RefOr::Ref(ref_schema)) = obj_schema.properties.get("category") {
+                        assert_eq!(
+                            ref_schema.ref_location,
+                            "#/components/schemas/Category"
+                        );
                     }
                 }
                 _ => panic!("Pet schema should be an object"),
@@ -254,22 +244,4 @@ fn test_petstore_with_custom_config() {
         parse_result.openapi.openapi,
         utoipa::openapi::OpenApiVersion::Version31
     ));
-}
-
-#[test]
-fn test_petstore_legacy_functions() {
-    // Test legacy parse_file_with_validation
-    let result = parse_file_with_validation(format!("{}/valid/petstore.yaml", fixtures_path()));
-    assert!(result.is_ok());
-
-    let openapi = result.unwrap();
-    assert_eq!(openapi.info.title, "Petstore API");
-    assert!(matches!(
-        openapi.openapi,
-        utoipa::openapi::OpenApiVersion::Version31
-    ));
-
-    // Test legacy validate_openapi
-    let validation_result = validate_openapi(&openapi);
-    assert!(validation_result.is_ok());
 }

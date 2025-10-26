@@ -523,9 +523,9 @@ mod tests {
         assert_eq!(schemas.len(), 3);
 
         let schema_names: Vec<String> = schemas.iter().map(|(name, _)| (*name).clone()).collect();
-        assert!(schema_names.contains(&&"User".to_string()));
-        assert!(schema_names.contains(&&"Product".to_string()));
-        assert!(schema_names.contains(&&"Order".to_string()));
+        assert!(schema_names.contains(&"User".to_string()));
+        assert!(schema_names.contains(&"Product".to_string()));
+        assert!(schema_names.contains(&"Order".to_string()));
     }
 
     #[test]

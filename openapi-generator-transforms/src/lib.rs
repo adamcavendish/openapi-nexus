@@ -6,5 +6,8 @@
 pub mod passes;
 pub mod pipeline;
 
-pub use passes::*;
-pub use pipeline::*;
+pub use passes::{
+    NamingConvention, NamingConventionPass, ReferenceResolutionPass, TransformError,
+    TransformPass, ValidationPass,
+};
+pub use pipeline::TransformPipeline;

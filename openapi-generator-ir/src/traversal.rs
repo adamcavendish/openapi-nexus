@@ -109,79 +109,6 @@ impl OpenApiTraverser {
     }
 }
 
-/// Legacy traversal utilities for backward compatibility
-pub struct Traverser;
-
-impl Traverser {
-    /// Visit all schemas in the OpenAPI specification
-    pub fn visit_schemas<F>(openapi: &OpenApi, mut visitor: F)
-    where
-        F: FnMut(&String, &utoipa::openapi::RefOr<utoipa::openapi::Schema>),
-    {
-        if let Some(components) = &openapi.components {
-            for (name, schema) in &components.schemas {
-                visitor(name, schema);
-            }
-        }
-    }
-
-    /// Visit all operations in the OpenAPI specification
-    pub fn visit_operations<F>(openapi: &OpenApi, mut visitor: F)
-    where
-        F: FnMut(&String, &utoipa::openapi::path::Operation),
-    {
-        for (path, path_item) in &openapi.paths.paths {
-            // Visit each HTTP method operation
-            if let Some(op) = &path_item.get {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.post {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.put {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.delete {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.patch {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.head {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.options {
-                visitor(path, op);
-            }
-            if let Some(op) = &path_item.trace {
-                visitor(path, op);
-            }
-        }
-    }
-
-    /// Visit all responses in the OpenAPI specification
-    pub fn visit_responses<F>(openapi: &OpenApi, mut visitor: F)
-    where
-        F: FnMut(&String, &utoipa::openapi::RefOr<utoipa::openapi::Response>),
-    {
-        if let Some(components) = &openapi.components {
-            for (name, response) in &components.responses {
-                visitor(name, response);
-            }
-        }
-    }
-
-    /// Visit all parameters in the OpenAPI specification
-    pub fn visit_parameters<F>(_openapi: &OpenApi, _visitor: F)
-    where
-        F: FnMut(&String, &utoipa::openapi::RefOr<utoipa::openapi::path::Parameter>),
-    {
-        // Note: utoipa Components doesn't have a parameters field
-        // Parameters are typically defined inline in operations
-        // This method is kept for backward compatibility but does nothing
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use utoipa::openapi::schema::Object;
@@ -248,40 +175,6 @@ mod tests {
 
         assert_eq!(visitor.schema_count, 1);
         assert_eq!(visitor.operation_count, 0); // No operations in test OpenAPI
-    }
-
-    #[test]
-    fn test_legacy_traverser() {
-        let openapi = create_test_openapi();
-
-        let mut schema_count = 0;
-        Traverser::visit_schemas(&openapi, |name, _schema| {
-            assert_eq!(name, "User");
-            schema_count += 1;
-        });
-
-        assert_eq!(schema_count, 1);
-
-        let mut operation_count = 0;
-        Traverser::visit_operations(&openapi, |_path, _operation| {
-            operation_count += 1;
-        });
-
-        assert_eq!(operation_count, 0); // No operations in test OpenAPI
-
-        let mut response_count = 0;
-        Traverser::visit_responses(&openapi, |_name, _response| {
-            response_count += 1;
-        });
-
-        assert_eq!(response_count, 0); // No responses in test OpenAPI
-
-        let mut parameter_count = 0;
-        Traverser::visit_parameters(&openapi, |_name, _parameter| {
-            parameter_count += 1;
-        });
-
-        assert_eq!(parameter_count, 0); // No parameters in test OpenAPI
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Plugin system traits for OpenAPI code generation
 
 use serde::{Deserialize, Serialize};
-use snafu::prelude::*;
+use snafu::Snafu;
 use std::collections::HashMap;
 use utoipa::openapi::OpenApi;
 

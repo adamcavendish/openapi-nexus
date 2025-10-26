@@ -62,6 +62,12 @@ impl NamingConventionPass {
 /// Reference resolution transformation pass
 pub struct ReferenceResolutionPass;
 
+impl Default for ReferenceResolutionPass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReferenceResolutionPass {
     pub fn new() -> Self {
         Self
@@ -81,6 +87,12 @@ impl TransformPass for ReferenceResolutionPass {
 
 /// Validation transformation pass
 pub struct ValidationPass;
+
+impl Default for ValidationPass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ValidationPass {
     pub fn new() -> Self {

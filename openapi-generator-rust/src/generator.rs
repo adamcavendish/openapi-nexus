@@ -22,6 +22,12 @@ pub struct RustGenerator {
     type_mapper: TypeMapper,
 }
 
+impl Default for RustGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RustGenerator {
     /// Create a new Rust generator
     pub fn new() -> Self {
@@ -67,7 +73,7 @@ impl RustGenerator {
         }
     }
 
-    fn schema_to_rust_node(&self, name: &str, schema: &Schema) -> Result<RustNode, GeneratorError> {
+    fn schema_to_rust_node(&self, name: &str, _schema: &Schema) -> Result<RustNode, GeneratorError> {
         let rust_name = name.to_pascal_case();
 
         // TODO: Implement proper schema-to-Rust conversion based on actual utoipa Schema fields

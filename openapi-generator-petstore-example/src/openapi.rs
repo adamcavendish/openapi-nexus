@@ -1,7 +1,14 @@
 //! OpenAPI specification for the Petstore API
 
-use crate::handlers::*;
-use crate::models::*;
+use crate::handlers::{
+    // Import the generated path types that utoipa macro needs
+    __path_update_pet, __path_add_pet, __path_find_pets_by_status, __path_find_pets_by_tags,
+    __path_get_pet_by_id, __path_update_pet_with_form, __path_delete_pet, __path_upload_file,
+    __path_get_inventory, __path_place_order, __path_get_order_by_id, __path_delete_order,
+    __path_create_user, __path_create_users_with_list_input, __path_login_user, __path_logout_user,
+    __path_get_user_by_name, __path_update_user, __path_delete_user,
+};
+use crate::models::{ApiResponse, Category, ErrorResponse, Order, OrderStatus, Pet, PetStatus, Tag, User};
 
 /// OpenAPI documentation
 #[derive(utoipa::OpenApi)]
@@ -48,7 +55,7 @@ use crate::models::*;
     info(
         title = "Petstore API",
         version = "1.0.0",
-        description = "This is a sample Pet Store Server based on the OpenAPI 3.0 specification",
+        description = "This is a sample Pet Store Server based on the OpenAPI 3.1 specification",
         contact(
             email = "apiteam@swagger.io"
         ),
