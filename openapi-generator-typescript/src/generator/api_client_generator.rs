@@ -1,8 +1,12 @@
 //! API client generation logic for TypeScript
 
+use std::collections::HashMap;
+
+use utoipa::openapi::OpenApi;
+use utoipa::openapi::path::Operation;
+
 use crate::ast::{Class, Method, Parameter, PrimitiveType, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
-use utoipa::openapi::path::Operation;
 
 /// API client generator for creating TypeScript API client classes
 pub struct ApiClientGenerator;
@@ -16,16 +20,13 @@ impl ApiClientGenerator {
     /// Generate API client class with methods from operations
     pub fn generate_api_client_with_methods(
         &self,
-        openapi: &utoipa::openapi::OpenApi,
+        openapi: &OpenApi,
     ) -> Result<TsNode, GeneratorError> {
         // Generate individual API classes for each tag/group
         let mut api_classes = Vec::new();
 
         // Group operations by tags
-        let mut tag_operations: std::collections::HashMap<
-            String,
-            Vec<(String, String, Operation)>,
-        > = std::collections::HashMap::new();
+        let mut tag_operations: HashMap<String, Vec<(String, String, Operation)>> = HashMap::new();
 
         for (path, path_item) in openapi.paths.paths.iter() {
             // Check each HTTP method
@@ -71,7 +72,7 @@ impl ApiClientGenerator {
     /// Add operation to tag groups
     fn add_operation_to_tags(
         &self,
-        tag_operations: &mut std::collections::HashMap<String, Vec<(String, String, Operation)>>,
+        tag_operations: &mut HashMap<String, Vec<(String, String, Operation)>>,
         path: &str,
         method: &str,
         operation: &Operation,

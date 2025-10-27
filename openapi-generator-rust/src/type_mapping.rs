@@ -144,6 +144,7 @@ impl TypeMapper {
 
 /// OpenAPI schema types
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum OpenApiType {
     String,
     Integer,
@@ -161,6 +162,7 @@ enum OpenApiType {
 
 /// String format types
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum StringFormat {
     DateTime,
     Date,
@@ -175,6 +177,7 @@ enum StringFormat {
 
 /// Integer format types
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum IntegerFormat {
     Int32,
     Int64,
@@ -183,6 +186,7 @@ enum IntegerFormat {
 
 /// Number format types
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum NumberFormat {
     Float,
     Double,

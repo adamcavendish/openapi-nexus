@@ -1,8 +1,9 @@
 //! Package file generators for npm package structure
 
-use crate::config::{PackageConfig, TypeScriptModule};
-use crate::emission::file_generator::{FileType, GeneratedFile};
 use utoipa::openapi::OpenApi;
+
+use crate::config::{PackageConfig, TypeScriptModule};
+use crate::emission::{GeneratedFile, TypeScriptFileCategory};
 
 /// Generator for npm package files
 pub struct PackageFilesGenerator {
@@ -56,7 +57,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "package.json".to_string(),
             content,
-            file_type: FileType::PackageJson,
+            file_category: TypeScriptFileCategory::PackageJson,
         }
     }
 
@@ -91,7 +92,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "tsconfig.json".to_string(),
             content,
-            file_type: FileType::TsConfig,
+            file_category: TypeScriptFileCategory::TsConfig,
         }
     }
 
@@ -111,7 +112,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "tsconfig.esm.json".to_string(),
             content,
-            file_type: FileType::TsConfigEsm,
+            file_category: TypeScriptFileCategory::TsConfigEsm,
         }
     }
 
@@ -137,9 +138,6 @@ impl PackageFilesGenerator {
         // Example API class name (will be improved when we have actual API classes)
         let example_api_class = "DefaultApi";
 
-        // Get current date
-        let generated_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
-
         // Load the template
         let template_str = include_str!("../../templates/README.md.j2");
 
@@ -156,7 +154,6 @@ impl PackageFilesGenerator {
             description => description,
             install_path => install_path,
             example_api_class => example_api_class,
-            generated_date => generated_date,
         };
 
         // Render the template
@@ -168,7 +165,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "README.md".to_string(),
             content,
-            file_type: FileType::Readme,
+            file_category: TypeScriptFileCategory::Readme,
         }
     }
 

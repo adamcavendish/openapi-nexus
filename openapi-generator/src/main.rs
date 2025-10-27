@@ -1,8 +1,10 @@
 //! OpenAPI Code Generator CLI
 
 use clap::{Parser, Subcommand};
-use openapi_generator_core::CodeGenerator;
 use tracing::{Level, info};
+
+use openapi_generator_core::OpenApiCodeGenerator;
+use openapi_generator_typescript::generator::TypeScriptGenerator;
 
 #[derive(Parser)]
 #[command(name = "openapi-generator")]
@@ -69,7 +71,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("Output: {}", output);
             info!("Languages: {:?}", languages);
 
-            let generator = CodeGenerator::new();
+            let mut generator = OpenApiCodeGenerator::new();
+            
+            // Register TypeScript generator
+            generator.register_language_generator("typescript".to_string(), TypeScriptGenerator::new())?;
+            generator.register_language_generator("ts".to_string(), TypeScriptGenerator::new())?;
+            
             generator.generate_from_file(&input, &output, &languages)?;
 
             info!("Code generation completed successfully");

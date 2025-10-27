@@ -6,6 +6,8 @@ publish = false
 
 [dependencies]
 clap.workspace = true
-openapi-generator-core.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+openapi-generator-core.workspace = true
+openapi-generator-typescript.workspace = true

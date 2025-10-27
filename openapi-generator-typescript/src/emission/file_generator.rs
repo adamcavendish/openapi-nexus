@@ -5,9 +5,8 @@ use std::collections::HashMap;
 use crate::ast::TsNode;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
 use crate::emission::emitter::TypeScriptEmitter;
-use crate::generator::import_generator::ImportGenerator;
-use crate::generator::package_files::PackageFilesGenerator;
-use crate::generator::runtime::RuntimeGenerator;
+use crate::emission::file_category::TypeScriptFileCategory;
+use crate::generator::package_files_generator::PackageFilesGenerator;
 use utoipa::openapi::OpenApi;
 
 /// Error type for file generation
@@ -37,19 +36,17 @@ impl std::fmt::Display for FileGeneratorError {
 impl std::error::Error for FileGeneratorError {}
 
 /// File generator for TypeScript code
-pub struct FileGenerator {
+pub struct TypeScriptFileGenerator {
     emitter: TypeScriptEmitter,
-    import_generator: ImportGenerator,
     config: FileConfig,
     package_config: PackageConfig,
 }
 
-impl FileGenerator {
+impl TypeScriptFileGenerator {
     /// Create a new file generator
     pub fn new(config: FileConfig) -> Self {
         Self {
             emitter: TypeScriptEmitter,
-            import_generator: ImportGenerator::new(),
             config,
             package_config: PackageConfig::default(),
         }
@@ -59,7 +56,6 @@ impl FileGenerator {
     pub fn with_package_config(config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
             emitter: TypeScriptEmitter,
-            import_generator: ImportGenerator::new(),
             config,
             package_config,
         }
@@ -73,11 +69,7 @@ impl FileGenerator {
         let mut files = Vec::new();
 
         if self.package_config.generate_package {
-            let runtime_generator = RuntimeGenerator::new();
             let package_generator = PackageFilesGenerator::new(self.package_config.clone());
-
-            // Generate runtime.ts
-            files.push(runtime_generator.generate_runtime(openapi));
 
             // Generate package.json
             files.push(package_generator.generate_package_json(openapi));
@@ -97,7 +89,7 @@ impl FileGenerator {
         Ok(files)
     }
 
-    /// Generate files for all schemas (always granular)
+    /// Generate files for all schemas with proper directory structure
     pub fn generate_files(
         &self,
         schemas: &HashMap<String, TsNode>,
@@ -105,54 +97,54 @@ impl FileGenerator {
     ) -> Result<Vec<GeneratedFile>, FileGeneratorError> {
         let mut files = Vec::new();
 
-        // Create schema name to filename mapping
-        let schema_to_filename: HashMap<String, String> = schemas
-            .keys()
-            .map(|name| {
-                // Convert to PascalCase for the mapping
-                let pascal_name = self.to_pascal_case(name);
-                (pascal_name, self.generate_filename(name))
-            })
-            .collect();
+        // Separate API classes from other schemas
+        let mut api_classes = HashMap::new();
+        let mut other_schemas = HashMap::new();
 
-        // Generate one file per schema
         for (name, node) in schemas {
+            if name.ends_with("Api") {
+                api_classes.insert(name.clone(), node.clone());
+            } else {
+                other_schemas.insert(name.clone(), node.clone());
+            }
+        }
+
+        // Generate models files (no directory prefix - handled by core)
+        for (name, node) in &other_schemas {
             let filename = self.generate_filename(name);
-
-            // Extract dependencies for this node
-            let dependencies = self.import_generator.extract_dependencies(node);
-
-            // Generate import statements
-            let imports = self.import_generator.generate_imports(
-                &filename,
-                &dependencies,
-                &schema_to_filename,
-            );
-
-            // Generate the main content
-            let main_content = self.emitter.emit(std::slice::from_ref(node)).map_err(|e| {
+            let content = self.emitter.emit(std::slice::from_ref(node)).map_err(|e| {
                 FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
                 }
             })?;
 
-            // Combine imports and main content
-            let content = if imports.is_empty() {
-                main_content
-            } else {
-                format!("{}\n{}", imports.trim_end(), main_content)
-            };
+            files.push(GeneratedFile {
+                filename,
+                content,
+                file_category: TypeScriptFileCategory::Models,
+            });
+        }
+
+        // Generate API classes (no directory prefix - handled by core)
+        for (name, node) in &api_classes {
+            let filename = self.generate_filename(name);
+            let content = self.emitter.emit(std::slice::from_ref(node)).map_err(|e| {
+                FileGeneratorError::EmitError {
+                    filename: filename.clone(),
+                    source: format!("{}", e),
+                }
+            })?;
 
             files.push(GeneratedFile {
                 filename,
                 content,
-                file_type: FileType::Schema,
+                file_category: TypeScriptFileCategory::Api,
             });
         }
 
-        // Generate index file
-        files.push(self.generate_index_file(schemas)?);
+        // Generate main index.ts
+        files.push(self.generate_main_index_file(&api_classes, &other_schemas)?);
 
         // Generate package files if configured
         if self.package_config.generate_package {
@@ -163,28 +155,35 @@ impl FileGenerator {
         Ok(files)
     }
 
-    /// Generate index file with exports
-    fn generate_index_file(
+    /// Generate main index file
+    fn generate_main_index_file(
         &self,
+        api_classes: &HashMap<String, TsNode>,
         schemas: &HashMap<String, TsNode>,
     ) -> Result<GeneratedFile, FileGeneratorError> {
         let mut exports = Vec::new();
 
-        // Export runtime if package generation is enabled
-        if self.package_config.generate_package {
-            exports.push("export * from './runtime';".to_string());
-        }
+        // Export runtime files from runtime directory
+        exports.push("export * from './runtime/core';".to_string());
+        exports.push("export * from './runtime/config';".to_string());
+        exports.push("export * from './runtime/api';".to_string());
 
-        // Export all individual schema files
-        // Sort keys to ensure deterministic output
+        // Export all models from models directory
         let mut sorted_names: Vec<&String> = schemas.keys().collect();
         sorted_names.sort();
-
         for name in sorted_names {
             let filename = self.generate_filename(name);
-            // Remove .ts extension for imports
             let import_name = filename.trim_end_matches(".ts");
-            exports.push(format!("export * from './{}';", import_name));
+            exports.push(format!("export * from './models/{}';", import_name));
+        }
+
+        // Export all API classes from apis directory
+        let mut sorted_api_names: Vec<&String> = api_classes.keys().collect();
+        sorted_api_names.sort();
+        for name in sorted_api_names {
+            let filename = self.generate_filename(name);
+            let import_name = filename.trim_end_matches(".ts");
+            exports.push(format!("export * from './apis/{}';", import_name));
         }
 
         let content = exports.join("\n");
@@ -192,7 +191,7 @@ impl FileGenerator {
         Ok(GeneratedFile {
             filename: "index.ts".to_string(),
             content,
-            file_type: FileType::Index,
+            file_category: TypeScriptFileCategory::Index,
         })
     }
 
@@ -265,20 +264,5 @@ impl FileGenerator {
 pub struct GeneratedFile {
     pub filename: String,
     pub content: String,
-    pub file_type: FileType,
-}
-
-/// Type of generated file
-#[derive(Debug, Clone)]
-pub enum FileType {
-    Schema,
-    Models,
-    Api,
-    Index,
-    Utility,
-    Runtime,
-    PackageJson,
-    TsConfig,
-    TsConfigEsm,
-    Readme,
+    pub file_category: TypeScriptFileCategory,
 }

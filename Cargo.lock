@@ -951,6 +951,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "openapi-generator-core",
+ "openapi-generator-typescript",
  "tracing",
  "tracing-subscriber",
 ]
@@ -972,7 +973,6 @@ dependencies = [
  "openapi-generator-plugin",
  "openapi-generator-rust",
  "openapi-generator-transforms",
- "openapi-generator-typescript",
  "snafu",
  "tracing",
  "utoipa",
@@ -1069,6 +1069,7 @@ dependencies = [
  "heck",
  "indexmap",
  "minijinja",
+ "openapi-generator-core",
  "openapi-generator-ir",
  "openapi-generator-plugin",
  "pretty",

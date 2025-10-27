@@ -4,9 +4,10 @@
 
 
 /**
- * Category model
+ * API response model
  */
-export interface Category {
-  id?: any;
-  name?: any;
+export interface ApiResponse {
+  code?: number | null | null;
+  message?: string | null | null;
+  type?: string | null | null;
 }

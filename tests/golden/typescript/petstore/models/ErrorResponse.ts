@@ -7,6 +7,6 @@
  * Error response model
  */
 export interface ErrorResponse {
-  code: any;
-  message: any;
+  code: number;
+  message: string;
 }

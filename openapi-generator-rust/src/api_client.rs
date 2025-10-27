@@ -1,18 +1,13 @@
 //! API client generation for Rust
 
-use crate::generator::RustGenerator;
 use utoipa::openapi::OpenApi;
 
 /// API client generator for Rust
-pub struct ApiClientGenerator {
-    generator: RustGenerator,
-}
+pub struct ApiClientGenerator;
 
 impl ApiClientGenerator {
     pub fn new() -> Self {
-        Self {
-            generator: RustGenerator::new(),
-        }
+        Self
     }
 
     /// Generate API client code from OpenAPI specification

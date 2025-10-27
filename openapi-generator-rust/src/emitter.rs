@@ -39,7 +39,7 @@ impl RustEmitter {
         Ok(combined.pretty(80).to_string())
     }
 
-    fn emit_node(&self, node: &RustNode) -> Result<RcDoc<()>, EmitError> {
+    fn emit_node(&self, node: &RustNode) -> Result<RcDoc<'_, ()>, EmitError> {
         match node {
             RustNode::Struct(struct_def) => self.emit_struct(struct_def),
             RustNode::Enum(enum_def) => self.emit_enum(enum_def),
@@ -52,7 +52,7 @@ impl RustEmitter {
         }
     }
 
-    fn emit_struct(&self, struct_def: &Struct) -> Result<RcDoc<()>, EmitError> {
+    fn emit_struct(&self, struct_def: &Struct) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -89,7 +89,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_enum(&self, enum_def: &Enum) -> Result<RcDoc<()>, EmitError> {
+    fn emit_enum(&self, enum_def: &Enum) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -121,7 +121,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_type_alias(&self, type_alias: &TypeAlias) -> Result<RcDoc<()>, EmitError> {
+    fn emit_type_alias(&self, type_alias: &TypeAlias) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -143,7 +143,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_function(&self, function: &Function) -> Result<RcDoc<()>, EmitError> {
+    fn emit_function(&self, function: &Function) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -201,7 +201,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_trait(&self, trait_def: &Trait) -> Result<RcDoc<()>, EmitError> {
+    fn emit_trait(&self, trait_def: &Trait) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -227,7 +227,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_field(&self, field: &Field) -> Result<RcDoc<()>, EmitError> {
+    fn emit_field(&self, field: &Field) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -244,7 +244,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_enum_variant(&self, variant: &EnumVariant) -> Result<RcDoc<()>, EmitError> {
+    fn emit_enum_variant(&self, variant: &EnumVariant) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -269,7 +269,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_method(&self, method: &Method) -> Result<RcDoc<()>, EmitError> {
+    fn emit_method(&self, method: &Method) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -322,7 +322,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_type_expression(&self, type_expr: &TypeExpression) -> Result<RcDoc<()>, EmitError> {
+    fn emit_type_expression(&self, type_expr: &TypeExpression) -> Result<RcDoc<'_, ()>, EmitError> {
         match type_expr {
             TypeExpression::Primitive(primitive) => {
                 let type_name = match primitive {

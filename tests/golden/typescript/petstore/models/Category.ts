@@ -4,15 +4,9 @@
 
 
 /**
- * User model
+ * Category model
  */
-export interface User {
-  email?: any;
-  first_name?: any;
-  id?: any;
-  last_name?: any;
-  password?: any;
-  phone?: any;
-  user_status?: any;
-  username?: any;
+export interface Category {
+  id?: number | null | null;
+  name?: string | null | null;
 }

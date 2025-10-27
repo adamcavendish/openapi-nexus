@@ -28,4 +28,7 @@ pub enum Error {
         path: String,
         source: std::io::Error,
     },
+
+    #[snafu(display("Generator not found for language: {}", language))]
+    GeneratorNotFound { language: String },
 }

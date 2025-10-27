@@ -129,7 +129,7 @@ impl TypeScriptApiClientGenerator {
 ### Generator Trait
 
 ```rust
-pub trait CodeGenerator {
+pub trait LanguageCodeGenerator {
     type AstType;
     type Error;
     
@@ -143,7 +143,7 @@ pub trait CodeGenerator {
 ### TypeScript Generator
 
 ```rust
-impl CodeGenerator for TypeScriptGenerator {
+impl LanguageCodeGenerator for TypeScriptGenerator {
     type AstType = TsNode;
     type Error = GeneratorError;
     
@@ -277,7 +277,7 @@ impl TypeMappingCache {
 ### Parallel Processing
 
 ```rust
-impl CodeGenerator for TypeScriptGenerator {
+impl LanguageCodeGenerator for TypeScriptGenerator {
     fn generate_models(&self, schemas: &HashMap<String, Schema>) -> Result<Vec<TsNode>, GeneratorError> {
         // Process schemas in parallel
         schemas.par_iter()

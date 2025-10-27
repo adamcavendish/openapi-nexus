@@ -1,7 +1,7 @@
 //! TypeScript type expression definitions
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::ast::{FunctionSignature, PrimitiveType};
 
@@ -12,7 +12,7 @@ pub enum TypeExpression {
     Union(Vec<TypeExpression>),
     Intersection(Vec<TypeExpression>),
     Array(Box<TypeExpression>),
-    Object(HashMap<String, TypeExpression>),
+    Object(BTreeMap<String, TypeExpression>),
     Reference(String),
     Generic(String),
     Function(Box<FunctionSignature>),

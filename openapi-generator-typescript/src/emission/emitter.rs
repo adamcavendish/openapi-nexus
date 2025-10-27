@@ -300,8 +300,7 @@ impl TypeScriptEmitter {
         // Add method implementation based on method name
         match method.name.as_str() {
             "constructor" => {
-                result.push_str("    this.baseUrl = baseUrl;\n");
-                result.push_str("    this.headers = headers;\n");
+                result.push_str("    super(configuration);\n");
             }
             "get" => {
                 result.push_str("    return fetch(`${this.baseUrl}${path}`, {\n");

@@ -16,6 +16,7 @@ snafu.workspace = true
 tracing.workspace = true
 utoipa.workspace = true
 
+openapi-generator-core.workspace = true
 openapi-generator-ir.workspace = true
 openapi-generator-plugin.workspace = true
 

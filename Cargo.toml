@@ -44,7 +44,7 @@ tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 url = "2.5.7"
-utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "config", "openapi_extensions", "time", "ulid", "url", "uuid", "yaml"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "config", "non_strict_integers", "openapi_extensions", "time", "ulid", "url", "uuid", "yaml"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "cache", "vendored"] }
 uuid = { version = "1.18.1", features = ["v4", "v7", "serde"] }
 
