@@ -103,18 +103,16 @@ impl ParameterExtractor {
         // Extract request body parameter
         if let Some(request_body) = &operation.request_body
             && let Some(json_content) = request_body.content.get("application/json")
-                && let Some(schema_ref) = &json_content.schema {
-                    body_param = Some(ParameterInfo {
-                        name: "body".to_string(),
-                        type_expr: self.map_schema_ref_to_type(schema_ref),
-                        required: matches!(
-                            request_body.required,
-                            Some(utoipa::openapi::Required::True)
-                        ),
-                        description: request_body.description.clone(),
-                        default_value: None,
-                    });
-                }
+            && let Some(schema_ref) = &json_content.schema
+        {
+            body_param = Some(ParameterInfo {
+                name: "body".to_string(),
+                type_expr: self.map_schema_ref_to_type(schema_ref),
+                required: matches!(request_body.required, Some(utoipa::openapi::Required::True)),
+                description: request_body.description.clone(),
+                default_value: None,
+            });
+        }
 
         Ok(ExtractedParameters {
             path_params,

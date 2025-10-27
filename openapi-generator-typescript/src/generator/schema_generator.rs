@@ -3,7 +3,7 @@
 //! This module consolidates schema-to-TypeScript conversion and type mapping functionality
 //! into a single, well-architected generator that fully implements OpenAPI v3.1.2 features.
 
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json;
 use utoipa::openapi::schema::{
