@@ -6,8 +6,11 @@
  * Error response model
  */
 export interface ErrorResponse {
-  /** Error code */
-  code: number;
-  /** Error message */
-  message: string;
+  /**
+   * Error code
+   */
+  code: number,   /**
+   * Error message
+   */
+  message: string,
 }

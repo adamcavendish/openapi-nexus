@@ -20,7 +20,7 @@ export class DefaultApi extends BaseAPI {
    * Test endpoint
    */
   test(): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
 }

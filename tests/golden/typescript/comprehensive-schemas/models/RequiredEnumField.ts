@@ -6,5 +6,5 @@
  * Required enum field in object
  */
 export interface RequiredEnumField {
-  status: "active" | "inactive";
+  status: "active" | "inactive",
 }

@@ -46,18 +46,15 @@ pub struct PrettyConfig {
 ### Pretty Document Type
 
 ```rust
-use pretty::Doc;
+use pretty::RcDoc;
 
-pub type PrettyDoc = Doc<Box<dyn PrettyRender>>;
+// We use RcDoc directly for simplicity and performance
+pub type TypeScriptDoc<'a> = RcDoc<'a, ()>;
 
-pub trait PrettyRender {
-    fn render(&self, width: usize) -> String;
+// Shared utilities for TypeScript pretty printing
+pub struct TypeScriptPrettyUtils {
+    type_emitter: TypeExpressionEmitter,
 }
-
-// Language-specific pretty renderers
-pub struct TypeScriptRenderer;
-pub struct RustRenderer;
-pub struct PythonRenderer;
 ```
 
 ## AST to Pretty Doc Conversion
@@ -65,25 +62,35 @@ pub struct PythonRenderer;
 ### TypeScript Pretty Printing
 
 ```rust
-impl PrettyPrinter for TypeScriptPrettyPrinter {
-    type AstType = TsNode;
-    type Error = PrettyPrintError;
-    
-    fn pretty_print(&self, ast: &TsNode) -> Result<String, PrettyPrintError> {
-        let doc = self.ast_to_doc(ast)?;
-        Ok(doc.pretty(100)) // Fixed line width for consistency
-    }
-    
-    fn ast_to_doc(&self, ast: &TsNode) -> Result<PrettyDoc, PrettyPrintError> {
-        match ast {
-            TsNode::Interface(interface) => self.interface_to_doc(interface),
-            TsNode::TypeAlias(type_alias) => self.type_alias_to_doc(type_alias),
-            TsNode::Enum(enum_def) => self.enum_to_doc(enum_def),
-            TsNode::Function(function) => self.function_to_doc(function),
-            TsNode::Class(class) => self.class_to_doc(class),
-            TsNode::Import(import) => self.import_to_doc(import),
-            TsNode::Export(export) => self.export_to_doc(export),
+// Each emitter now uses RcDoc combinators directly
+impl InterfaceEmitter {
+    pub fn emit_interface_doc(&self, interface: &Interface) -> Result<RcDoc<'_, ()>, EmitError> {
+        let utils = TypeScriptPrettyUtils::new();
+        let mut doc = RcDoc::text("interface")
+            .append(RcDoc::space())
+            .append(RcDoc::text(&interface.name));
+        
+        // Add generics using shared utility
+        doc = doc.append(utils.generics(&interface.generics)?);
+        
+        // Add extends clause
+        doc = doc.append(utils.extends_clause(&interface.extends));
+        
+        // Add body with properties
+        if interface.properties.is_empty() {
+            doc = doc.append(RcDoc::space()).append(utils.empty_block());
+        } else {
+            let prop_docs: Result<Vec<_>, _> = interface.properties
+                .iter()
+                .map(|p| self.emit_property_doc(p))
+                .collect();
+            let properties = prop_docs?;
+            doc = doc.append(RcDoc::space()).append(utils.block(
+                RcDoc::intersperse(properties, RcDoc::text(",").append(RcDoc::line()))
+            ));
         }
+        
+        Ok(doc)
     }
 }
 ```

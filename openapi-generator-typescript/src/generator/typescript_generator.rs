@@ -8,9 +8,9 @@ use utoipa::openapi::path::Operation;
 use super::api_class_generator::ApiClassGenerator;
 use super::runtime_generator::RuntimeGenerator;
 use super::schema_generator::SchemaGenerator;
-use crate::config::GeneratorConfig;
+use crate::config::{FileConfig, GeneratorConfig};
 use crate::core::GeneratorError;
-use crate::emission::TypeScriptFileGenerator;
+use crate::emission::{TypeScriptEmitter, TypeScriptFileGenerator};
 use crate::generator::schema_context::SchemaContext;
 use openapi_generator_core::generator_registry::LanguageGenerator;
 use openapi_generator_core::traits::code_generator::LanguageCodeGenerator;
@@ -18,9 +18,11 @@ use openapi_generator_core::traits::file_writer::{FileCategory, FileInfo, FileWr
 
 /// Main TypeScript code generator
 pub struct TypeScriptGenerator {
+    emitter: TypeScriptEmitter,
     schema_generator: SchemaGenerator,
     api_class_generator: ApiClassGenerator,
     runtime_generator: RuntimeGenerator,
+    file_generator: TypeScriptFileGenerator,
     config: GeneratorConfig,
 }
 
@@ -28,9 +30,11 @@ impl TypeScriptGenerator {
     /// Create a new TypeScript generator with default configuration
     pub fn new() -> Self {
         Self {
+            emitter: TypeScriptEmitter::new(),
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
             runtime_generator: RuntimeGenerator::new(),
+            file_generator: TypeScriptFileGenerator::new(FileConfig::default()),
             config: GeneratorConfig::default(),
         }
     }
@@ -38,9 +42,14 @@ impl TypeScriptGenerator {
     /// Create a new TypeScript generator with custom configuration
     pub fn with_config(config: GeneratorConfig) -> Self {
         Self {
+            emitter: TypeScriptEmitter::new(),
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
             runtime_generator: RuntimeGenerator::new(),
+            file_generator: TypeScriptFileGenerator::with_package_config(
+                config.file_config.clone(),
+                config.package_config.clone(),
+            ),
             config,
         }
     }
@@ -84,11 +93,7 @@ impl TypeScriptGenerator {
         }
 
         // Generate files using file generator
-        let file_generator = TypeScriptFileGenerator::with_package_config(
-            self.config.file_config.clone(),
-            self.config.package_config.clone(),
-        );
-        let generated_files = file_generator
+        let generated_files = self.file_generator
             .generate_files(&schemas, openapi)
             .map_err(|e| GeneratorError::Generic {
                 message: format!("File generation error: {}", e),

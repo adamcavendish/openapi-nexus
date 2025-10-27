@@ -6,8 +6,12 @@
  * Category model
  */
 export interface Category {
-  /** Category ID */
-  id?: number | null;
-  /** Category name */
-  name?: string | null;
+  /**
+   * Category ID
+   */
+  id?: number | null,
+  /**
+   * Category name
+   */
+  name?: string | null,
 }

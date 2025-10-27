@@ -6,10 +6,16 @@
  * Basic object with properties
  */
 export interface BasicObject {
-  /** Whether the object is currently active */
-  active?: boolean;
-  /** Unique identifier for the object */
-  id: number;
-  /** Human-readable name of the object */
-  name: string;
+  /**
+   * Whether the object is currently active
+   */
+  active?: boolean,
+  /**
+   * Unique identifier for the object
+   */
+  id: number,
+  /**
+   * Human-readable name of the object
+   */
+  name: string,
 }

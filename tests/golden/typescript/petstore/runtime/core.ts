@@ -6,13 +6,11 @@
  * Convert typed object to JSON
  */
 export function ToJSON<T>(value: T): any {
-  // TODO: Implement function body
-  throw new Error('Not implemented');
+  return JSON.parse(JSON.stringify(value));
 }
 /**
  * Convert JSON object to typed object
  */
 export function FromJSON<T>(json: any): T {
-  // TODO: Implement function body
-  throw new Error('Not implemented');
+  return json as T;
 }

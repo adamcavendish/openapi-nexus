@@ -10,12 +10,16 @@ use crate::core::GeneratorError;
 use crate::emission::{GeneratedFile, TypeScriptEmitter, TypeScriptFileCategory};
 
 /// Runtime module generator for creating TypeScript runtime utilities
-pub struct RuntimeGenerator;
+pub struct RuntimeGenerator {
+    emitter: TypeScriptEmitter,
+}
 
 impl RuntimeGenerator {
     /// Create a new runtime generator
     pub fn new() -> Self {
-        Self
+        Self {
+            emitter: TypeScriptEmitter::new(),
+        }
     }
 
     /// Generate multiple runtime files
@@ -64,8 +68,7 @@ impl RuntimeGenerator {
 
     /// Convert nodes to string using the TypeScript emitter
     fn nodes_to_string(&self, nodes: &[TsNode]) -> Result<String, GeneratorError> {
-        let emitter = TypeScriptEmitter;
-        emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
+        self.emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
             message: format!("Emission error: {}", e),
         })
     }
@@ -76,8 +79,7 @@ impl RuntimeGenerator {
         nodes: &[TsNode],
         imports: &str,
     ) -> Result<String, GeneratorError> {
-        let emitter = TypeScriptEmitter;
-        let mut content = emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
+        let mut content = self.emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
             message: format!("Emission error: {}", e),
         })?;
 
@@ -408,8 +410,3 @@ impl RuntimeGenerator {
     }
 }
 
-impl Default for RuntimeGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
-}

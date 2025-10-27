@@ -6,20 +6,36 @@
  * User model
  */
 export interface User {
-  /** Email */
-  email?: string | null;
-  /** First name */
-  first_name?: string | null;
-  /** User ID */
-  id?: number | null;
-  /** Last name */
-  last_name?: string | null;
-  /** Password */
-  password?: string | null;
-  /** Phone */
-  phone?: string | null;
-  /** User status */
-  user_status?: number | null;
-  /** Username */
-  username?: string | null;
+  /**
+   * Email
+   */
+  email?: string | null,
+  /**
+   * First name
+   */
+  first_name?: string | null,
+  /**
+   * User ID
+   */
+  id?: number | null,
+  /**
+   * Last name
+   */
+  last_name?: string | null,
+  /**
+   * Password
+   */
+  password?: string | null,
+  /**
+   * Phone
+   */
+  phone?: string | null,
+  /**
+   * User status
+   */
+  user_status?: number | null,
+  /**
+   * Username
+   */
+  username?: string | null,
 }

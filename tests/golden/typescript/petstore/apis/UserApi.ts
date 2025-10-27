@@ -20,49 +20,63 @@ export class UserApi extends BaseAPI {
    * Create user
    */
   createUser(body: User): Promise<User> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
   }
   /**
    * Creates list of users with given input array
    */
   createUsersWithListInput(body: Array<string>): Promise<User> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
   }
   /**
    * Logs user into the system
    */
   loginUser(username?: string, password?: string): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
   /**
    * Logs out current logged in user session
    */
   logoutUser(): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
   /**
    * Get user by user name
    */
   getUserByName(username: string): Promise<User> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
   }
   /**
    * Update user
    */
   updateUser(username: string, body: User): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
   /**
    * Delete user
    */
   deleteUser(username: string): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
 }

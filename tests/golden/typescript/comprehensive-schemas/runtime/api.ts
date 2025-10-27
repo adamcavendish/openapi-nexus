@@ -7,8 +7,10 @@ import { Configuration } from './config';
  * Base API class for all API clients
  */
 export class BaseAPI {
-  /** API configuration */
-  configuration?: Configuration;
+/**
+ * API configuration
+ */
+configuration?: Configuration
   /**
    * Initialize the BaseAPI
    */
@@ -19,16 +21,49 @@ export class BaseAPI {
    * Make an HTTP request
    */
   request(context: RequestContext): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const { url, init } = context;
+    const baseUrl = this.configuration?.basePath || '';
+    const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
+
+    // Build headers with authentication
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+
+    // Add authentication headers
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+
+    // Merge request init options
+    const requestInit: RequestInit = {
+      ...init,
+      headers: {
+        ...headers,
+        ...init?.headers,
+      },
+    };
+
+    // Make the fetch request
+    return fetch(fullUrl, requestInit);
   }
 }
 /**
  * Error thrown when a required parameter is missing
  */
 export class RequiredError extends Error {
-  /** The field that is required */
-  field: string;
+/**
+ * The field that is required
+ */
+field: string
   /**
    * Create a new RequiredError
    */
@@ -41,8 +76,11 @@ export class RequiredError extends Error {
  * Request context for API calls
  */
 export interface RequestContext {
-  /** Request URL */
-  url: string;
-  /** Request initialization options */
-  init?: RequestInit;
+  /**
+   * Request URL
+   */
+  url: string,   /**
+   * Request initialization options
+   */
+  init?: RequestInit,
 }

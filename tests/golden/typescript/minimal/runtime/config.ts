@@ -6,31 +6,53 @@
  * Configuration for API client
  */
 export interface Configuration {
-  /** Base path for API requests */
-  basePath?: string;
-  /** Username for authentication */
-  username?: string;
-  /** Password for authentication */
-  password?: string;
-  /** API key for authentication */
-  apiKey?: string;
-  /** Access token for authentication */
-  accessToken?: string;
-  /** Additional headers for requests */
-  headers?: { key: string; value: string };
+  /**
+   * Base path for API requests
+   */
+  basePath?: string,
+  /**
+   * Username for authentication
+   */
+  username?: string,
+  /**
+   * Password for authentication
+   */
+  password?: string,
+  /**
+   * API key for authentication
+   */
+  apiKey?: string,
+  /**
+   * Access token for authentication
+   */
+  accessToken?: string,
+  /**
+   * Additional headers for requests
+   */
+  headers?: { key: string; value: string },
 }
 /**
  * Configuration parameters for API client
  */
 export interface ConfigurationParameters {
-  /** Base path for API requests */
-  basePath?: string;
-  /** Username for authentication */
-  username?: string;
-  /** Password for authentication */
-  password?: string;
-  /** API key for authentication */
-  apiKey?: string;
-  /** Access token for authentication */
-  accessToken?: string;
+  /**
+   * Base path for API requests
+   */
+  basePath?: string,
+  /**
+   * Username for authentication
+   */
+  username?: string,
+  /**
+   * Password for authentication
+   */
+  password?: string,
+  /**
+   * API key for authentication
+   */
+  apiKey?: string,
+  /**
+   * Access token for authentication
+   */
+  accessToken?: string,
 }

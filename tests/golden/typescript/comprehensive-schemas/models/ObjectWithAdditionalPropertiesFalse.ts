@@ -6,5 +6,5 @@
  * Object not allowing additional properties
  */
 export interface ObjectWithAdditionalPropertiesFalse {
-  name: string;
+  name: string,
 }

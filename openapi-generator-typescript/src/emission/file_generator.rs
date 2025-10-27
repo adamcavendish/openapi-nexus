@@ -2,12 +2,13 @@
 
 use std::collections::HashMap;
 
+use utoipa::openapi::OpenApi;
+
 use crate::ast::TsNode;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
 use crate::emission::emitter::TypeScriptEmitter;
 use crate::emission::file_category::TypeScriptFileCategory;
 use crate::generator::package_files_generator::PackageFilesGenerator;
-use utoipa::openapi::OpenApi;
 
 /// Error type for file generation
 #[derive(Debug)]
@@ -46,7 +47,7 @@ impl TypeScriptFileGenerator {
     /// Create a new file generator
     pub fn new(config: FileConfig) -> Self {
         Self {
-            emitter: TypeScriptEmitter,
+            emitter: TypeScriptEmitter::new(),
             config,
             package_config: PackageConfig::default(),
         }
@@ -55,7 +56,7 @@ impl TypeScriptFileGenerator {
     /// Create a new file generator with package configuration
     pub fn with_package_config(config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
-            emitter: TypeScriptEmitter,
+            emitter: TypeScriptEmitter::new(),
             config,
             package_config,
         }
@@ -129,7 +130,9 @@ impl TypeScriptFileGenerator {
         // Generate API classes (no directory prefix - handled by core)
         for (name, node) in &api_classes {
             let filename = self.generate_filename(name);
-            let content = self.emitter.emit(std::slice::from_ref(node)).map_err(|e| {
+            
+            // The main emitter will handle runtime imports automatically
+            let content = self.emitter.emit(&[node.clone()]).map_err(|e| {
                 FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),

@@ -20,28 +20,35 @@ export class StoreApi extends BaseAPI {
    * Returns pet inventories by status
    */
   getInventory(): Promise<string> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
   }
   /**
    * Place an order for a pet
    */
   placeOrder(body: Order): Promise<Order> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
   }
   /**
    * Find purchase order by ID
    */
   getOrderById(orderId: string): Promise<Order> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
   }
   /**
    * Delete purchase order by ID
    */
   deleteOrder(orderId: string): Promise<Response> {
-    // TODO: Implement method
-    throw new Error('Not implemented');
+    const url = this.configuration?.basePath || '';
+    return this.request({ url, init: { method: 'DELETE' } });
   }
 }

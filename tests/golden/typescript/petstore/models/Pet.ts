@@ -7,17 +7,21 @@
  */
 export interface Pet {
   category?: null | {
-    id: number | null;
-    name: string | null;
-  };
-  /** Pet ID */
-  id?: number | null;
-  /** Pet name */
-  name: string;
-  photo_urls: Array<string>;
-  status?: null | "available" | "pending" | "sold";
+      id: number | null;
+      name: string | null;
+    },
+  /**
+   * Pet ID
+   */
+  id?: number | null,
+  /**
+   * Pet name
+   */
+  name: string,
+  photo_urls: Array<string>,
+  status?: null | "available" | "pending" | "sold",
   tags?: Array<{
-    id: number | null;
-    name: string | null;
-  }>;
+      id: number | null;
+      name: string | null;
+    }>,
 }

@@ -6,7 +6,9 @@
  * Object with typed additional properties
  */
 export interface ObjectWithTypedAdditionalProperties {
-  name: string;
-  /** Additional properties */
-  [key: string]: string | number;
+  name: string,
+  /**
+   * Additional properties
+   */
+  [key: string]: string | number,
 }

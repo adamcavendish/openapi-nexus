@@ -6,15 +6,25 @@
  * Order model
  */
 export interface Order {
-  /** Complete flag */
-  complete?: boolean | null;
-  /** Order ID */
-  id?: number | null;
-  /** Pet ID */
-  pet_id?: number | null;
-  /** Quantity */
-  quantity?: number | null;
-  /** Ship date */
-  ship_date?: string | null;
-  status?: null | "approved" | "delivered" | "placed";
+  /**
+   * Complete flag
+   */
+  complete?: boolean | null,
+  /**
+   * Order ID
+   */
+  id?: number | null,
+  /**
+   * Pet ID
+   */
+  pet_id?: number | null,
+  /**
+   * Quantity
+   */
+  quantity?: number | null,
+  /**
+   * Ship date
+   */
+  ship_date?: string | null,
+  status?: null | "approved" | "delivered" | "placed",
 }

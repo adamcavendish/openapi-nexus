@@ -6,7 +6,8 @@
  * Object allowing any additional properties
  */
 export interface ObjectWithAdditionalPropertiesTrue {
-  name: string;
-  /** Additional properties */
-  [key: string]: any;
+  name: string,   /**
+   * Additional properties
+   */
+  [key: string]: any,
 }
