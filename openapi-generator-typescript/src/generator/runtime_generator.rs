@@ -14,6 +14,12 @@ pub struct RuntimeGenerator {
     emitter: TypeScriptEmitter,
 }
 
+impl Default for RuntimeGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RuntimeGenerator {
     /// Create a new runtime generator
     pub fn new() -> Self {
@@ -68,9 +74,11 @@ impl RuntimeGenerator {
 
     /// Convert nodes to string using the TypeScript emitter
     fn nodes_to_string(&self, nodes: &[TsNode]) -> Result<String, GeneratorError> {
-        self.emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
-            message: format!("Emission error: {}", e),
-        })
+        self.emitter
+            .emit(nodes)
+            .map_err(|e| GeneratorError::Generic {
+                message: format!("Emission error: {}", e),
+            })
     }
 
     /// Convert nodes to string with additional imports
@@ -79,9 +87,12 @@ impl RuntimeGenerator {
         nodes: &[TsNode],
         imports: &str,
     ) -> Result<String, GeneratorError> {
-        let mut content = self.emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
-            message: format!("Emission error: {}", e),
-        })?;
+        let mut content = self
+            .emitter
+            .emit(nodes)
+            .map_err(|e| GeneratorError::Generic {
+                message: format!("Emission error: {}", e),
+            })?;
 
         // Insert imports after the generated file header
         let header_end = content.find("\n\n").unwrap_or(0) + 2;
@@ -92,89 +103,68 @@ impl RuntimeGenerator {
 
     /// Generate the complete runtime module (legacy method for backward compatibility)
     pub fn generate_runtime_module(&self) -> Result<Vec<TsNode>, GeneratorError> {
-        let mut nodes = Vec::new();
-
-        // Generate in the expected order to match golden files
-        // Functions first
-        nodes.push(self.generate_to_json_function()?);
-
-        // Interfaces
-        nodes.push(self.generate_configuration_interface()?);
-        nodes.push(self.generate_configuration_parameters_interface()?);
-
-        // Classes
-        nodes.push(self.generate_base_api_class()?);
-        nodes.push(self.generate_required_error_class()?);
-
-        // More functions
-        nodes.push(self.generate_from_json_function()?);
-
-        // More interfaces
-        nodes.push(self.generate_request_context_interface()?);
+        let nodes = vec![
+            self.generate_to_json_function()?,
+            self.generate_configuration_interface()?,
+            self.generate_configuration_parameters_interface()?,
+            self.generate_base_api_class()?,
+            self.generate_required_error_class()?,
+            self.generate_from_json_function()?,
+            self.generate_request_context_interface()?,
+        ];
 
         Ok(nodes)
     }
 
     /// Generate Configuration interface
     fn generate_configuration_interface(&self) -> Result<TsNode, GeneratorError> {
-        let mut properties = Vec::new();
-
-        // basePath property
-        properties.push(Property {
-            name: "basePath".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Base path for API requests".to_string()),
-        });
-
-        // username property
-        properties.push(Property {
-            name: "username".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Username for authentication".to_string()),
-        });
-
-        // password property
-        properties.push(Property {
-            name: "password".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Password for authentication".to_string()),
-        });
-
-        // apiKey property
-        properties.push(Property {
-            name: "apiKey".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("API key for authentication".to_string()),
-        });
-
-        // accessToken property
-        properties.push(Property {
-            name: "accessToken".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Access token for authentication".to_string()),
-        });
-
-        // headers property
-        properties.push(Property {
-            name: "headers".to_string(),
-            type_expr: TypeExpression::Object(BTreeMap::from([
-                (
-                    "key".to_string(),
-                    TypeExpression::Primitive(PrimitiveType::String),
-                ),
-                (
-                    "value".to_string(),
-                    TypeExpression::Primitive(PrimitiveType::String),
-                ),
-            ])),
-            optional: true,
-            documentation: Some("Additional headers for requests".to_string()),
-        });
+        let properties = vec![
+            Property {
+                name: "basePath".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Base path for API requests".to_string()),
+            },
+            Property {
+                name: "username".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Username for authentication".to_string()),
+            },
+            Property {
+                name: "password".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Password for authentication".to_string()),
+            },
+            Property {
+                name: "apiKey".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("API key for authentication".to_string()),
+            },
+            Property {
+                name: "accessToken".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Access token for authentication".to_string()),
+            },
+            Property {
+                name: "headers".to_string(),
+                type_expr: TypeExpression::Object(BTreeMap::from([
+                    (
+                        "key".to_string(),
+                        TypeExpression::Primitive(PrimitiveType::String),
+                    ),
+                    (
+                        "value".to_string(),
+                        TypeExpression::Primitive(PrimitiveType::String),
+                    ),
+                ])),
+                optional: true,
+                documentation: Some("Additional headers for requests".to_string()),
+            },
+        ];
 
         Ok(TsNode::Interface(Interface {
             name: "Configuration".to_string(),
@@ -187,47 +177,38 @@ impl RuntimeGenerator {
 
     /// Generate ConfigurationParameters interface
     fn generate_configuration_parameters_interface(&self) -> Result<TsNode, GeneratorError> {
-        let mut properties = Vec::new();
-
-        // basePath property
-        properties.push(Property {
-            name: "basePath".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Base path for API requests".to_string()),
-        });
-
-        // username property
-        properties.push(Property {
-            name: "username".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Username for authentication".to_string()),
-        });
-
-        // password property
-        properties.push(Property {
-            name: "password".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Password for authentication".to_string()),
-        });
-
-        // apiKey property
-        properties.push(Property {
-            name: "apiKey".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("API key for authentication".to_string()),
-        });
-
-        // accessToken property
-        properties.push(Property {
-            name: "accessToken".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: true,
-            documentation: Some("Access token for authentication".to_string()),
-        });
+        let properties = vec![
+            Property {
+                name: "basePath".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Base path for API requests".to_string()),
+            },
+            Property {
+                name: "username".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Username for authentication".to_string()),
+            },
+            Property {
+                name: "password".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Password for authentication".to_string()),
+            },
+            Property {
+                name: "apiKey".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("API key for authentication".to_string()),
+            },
+            Property {
+                name: "accessToken".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: true,
+                documentation: Some("Access token for authentication".to_string()),
+            },
+        ];
 
         Ok(TsNode::Interface(Interface {
             name: "ConfigurationParameters".to_string(),
@@ -240,23 +221,20 @@ impl RuntimeGenerator {
 
     /// Generate RequestContext interface
     fn generate_request_context_interface(&self) -> Result<TsNode, GeneratorError> {
-        let mut properties = Vec::new();
-
-        // url property
-        properties.push(Property {
-            name: "url".to_string(),
-            type_expr: TypeExpression::Primitive(PrimitiveType::String),
-            optional: false,
-            documentation: Some("Request URL".to_string()),
-        });
-
-        // init property
-        properties.push(Property {
-            name: "init".to_string(),
-            type_expr: TypeExpression::Reference("RequestInit".to_string()),
-            optional: true,
-            documentation: Some("Request initialization options".to_string()),
-        });
+        let properties = vec![
+            Property {
+                name: "url".to_string(),
+                type_expr: TypeExpression::Primitive(PrimitiveType::String),
+                optional: false,
+                documentation: Some("Request URL".to_string()),
+            },
+            Property {
+                name: "init".to_string(),
+                type_expr: TypeExpression::Reference("RequestInit".to_string()),
+                optional: true,
+                documentation: Some("Request initialization options".to_string()),
+            },
+        ];
 
         Ok(TsNode::Interface(Interface {
             name: "RequestContext".to_string(),
@@ -409,4 +387,3 @@ impl RuntimeGenerator {
         }))
     }
 }
-

@@ -3,7 +3,7 @@
 use utoipa::openapi::path::Operation;
 use utoipa::openapi::{RefOr, Schema};
 
-use crate::ast::{Class, Import, ImportSpecifier, Method, Parameter, TsNode, TypeExpression, Visibility};
+use crate::ast::{Class, Method, Parameter, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
 
@@ -236,6 +236,7 @@ impl ApiClassGenerator {
     }
 
     /// Convert TypeExpression to string representation
+    #[allow(clippy::only_used_in_recursion)]
     fn type_expression_to_string(&self, type_expr: &TypeExpression) -> String {
         match type_expr {
             TypeExpression::Primitive(primitive) => match primitive {
@@ -321,32 +322,32 @@ impl ApiClassGenerator {
         operation: &Operation,
     ) -> Result<String, GeneratorError> {
         let params = self.generate_method_parameters(path, operation)?;
-        
+
         // Extract path parameters
         let path_params: Vec<_> = params
             .iter()
             .filter(|p| self.is_path_parameter(p.name.as_str(), path))
             .collect();
-        
+
         // Build URL with path parameter substitution
         let mut url = path.to_string();
         for param in &path_params {
             let placeholder = format!("{{{}}}", param.name);
             url = url.replace(&placeholder, &format!("${{{}}}", param.name));
         }
-        
+
         // Build query parameters string
         let query_params: Vec<_> = params
             .iter()
             .filter(|p| !self.is_path_parameter(p.name.as_str(), path))
             .filter(|p| p.name != "body")
             .collect();
-        
+
         // Build request body parameter
         let body_param = params.iter().find(|p| p.name == "body");
-        
+
         let mut body = String::new();
-        
+
         match http_method.to_uppercase().as_str() {
             "GET" => {
                 if !query_params.is_empty() {
@@ -361,7 +362,10 @@ impl ApiClassGenerator {
                         })
                         .collect::<Vec<_>>()
                         .join(" + '&' + ");
-                    body.push_str(&format!("    const queryParams = [{}].filter(Boolean).join('&');\n", query_string));
+                    body.push_str(&format!(
+                        "    const queryParams = [{}].filter(Boolean).join('&');\n",
+                        query_string
+                    ));
                     body.push_str("    const url = `${this.configuration?.basePath || ''}");
                     for param in &path_params {
                         body.push_str("/${{");
@@ -388,9 +392,15 @@ impl ApiClassGenerator {
                     body.push_str("    return this.request({\n");
                     body.push_str("      url,\n");
                     body.push_str("      init: {\n");
-                    body.push_str(&format!("        method: '{}',\n", http_method.to_uppercase()));
+                    body.push_str(&format!(
+                        "        method: '{}',\n",
+                        http_method.to_uppercase()
+                    ));
                     body.push_str("        headers: { 'Content-Type': 'application/json' },\n");
-                    body.push_str(&format!("        body: JSON.stringify({})\n", body_param.name));
+                    body.push_str(&format!(
+                        "        body: JSON.stringify({})\n",
+                        body_param.name
+                    ));
                     body.push_str("      }\n");
                     body.push_str("    }).then(response => response.json());\n");
                 } else {
@@ -408,13 +418,15 @@ impl ApiClassGenerator {
             }
             _ => {
                 body.push_str("    // Unsupported HTTP method\n");
-                body.push_str("    throw new Error(`HTTP method ${http_method} is not supported`);\n");
+                body.push_str(
+                    "    throw new Error(`HTTP method ${http_method} is not supported`);\n",
+                );
             }
         }
-        
+
         Ok(body)
     }
-    
+
     /// Check if a parameter is a path parameter based on the path template
     fn is_path_parameter(&self, param_name: &str, path: &str) -> bool {
         path.contains(&format!("{{{}}}", param_name))
@@ -451,139 +463,6 @@ impl ApiClassGenerator {
         }
 
         result
-    }
-
-    /// Collect all types used in a method
-    fn collect_types_from_method(
-        &self,
-        method: &Method,
-        used_types: &mut std::collections::HashSet<String>,
-    ) {
-        // Collect types from parameters
-        for param in &method.parameters {
-            if let Some(type_expr) = &param.type_expr {
-                self.collect_types_from_expression(type_expr, used_types);
-            }
-        }
-
-        // Collect types from return type
-        if let Some(return_type) = &method.return_type {
-            self.collect_types_from_expression(return_type, used_types);
-        }
-    }
-
-    /// Collect types from a type expression
-    fn collect_types_from_expression(
-        &self,
-        type_expr: &TypeExpression,
-        used_types: &mut std::collections::HashSet<String>,
-    ) {
-        match type_expr {
-            TypeExpression::Reference(name) => {
-                // Only collect model types (not built-in types)
-                if self.is_model_type(name) {
-                    used_types.insert(name.clone());
-                }
-            }
-            TypeExpression::Array(item_type) => {
-                self.collect_types_from_expression(item_type, used_types);
-            }
-            TypeExpression::Union(types) => {
-                for t in types {
-                    self.collect_types_from_expression(t, used_types);
-                }
-            }
-            TypeExpression::Intersection(types) => {
-                for t in types {
-                    self.collect_types_from_expression(t, used_types);
-                }
-            }
-            TypeExpression::Generic(_) => {
-                // Generic types don't have additional type arguments in this implementation
-            }
-            TypeExpression::Object(properties) => {
-                for (_, prop_type) in properties {
-                    self.collect_types_from_expression(prop_type, used_types);
-                }
-            }
-            TypeExpression::Function(_) => {}
-            TypeExpression::Primitive(_) => {}
-            TypeExpression::Literal(_) => {}
-            TypeExpression::IndexSignature(_, value_type) => {
-                self.collect_types_from_expression(value_type, used_types);
-            }
-            TypeExpression::Tuple(types) => {
-                for t in types {
-                    self.collect_types_from_expression(t, used_types);
-                }
-            }
-        }
-    }
-
-    /// Check if a type name is a model type (not built-in)
-    fn is_model_type(&self, type_name: &str) -> bool {
-        // Built-in types that don't need imports
-        let built_in_types = [
-            "string", "number", "boolean", "any", "unknown", "void", "never", "null", "undefined",
-            "Promise", "Response", "Array", "Object", "Date", "Error", "RegExp", "Map", "Set",
-            "WeakMap", "WeakSet", "PromiseLike", "Iterable", "Iterator", "AsyncIterable",
-            "AsyncIterator", "ReadonlyArray", "ReadonlyMap", "ReadonlySet", "Partial", "Required",
-            "Pick", "Omit", "Record", "Exclude", "Extract", "NonNullable", "Parameters", "ReturnType",
-            "InstanceType", "ThisParameterType", "OmitThisParameter", "ThisType", "Uppercase",
-            "Lowercase", "Capitalize", "Uncapitalize", "Configuration", "BaseAPI", "RequestContext",
-        ];
-
-        !built_in_types.contains(&type_name)
-    }
-
-    /// Generate import statements for used types
-    fn generate_imports_for_types(&self, used_types: &std::collections::HashSet<String>) -> Vec<TsNode> {
-        let mut imports = Vec::new();
-
-        // Runtime imports
-        imports.push(TsNode::Import(Import {
-            module: "../runtime/api".to_string(),
-            imports: vec![
-                ImportSpecifier {
-                    name: "BaseAPI".to_string(),
-                    alias: None,
-                },
-                ImportSpecifier {
-                    name: "RequestContext".to_string(),
-                    alias: None,
-                },
-            ],
-            is_type_only: false,
-        }));
-
-        imports.push(TsNode::Import(Import {
-            module: "../runtime/config".to_string(),
-            imports: vec![ImportSpecifier {
-                name: "Configuration".to_string(),
-                alias: None,
-            }],
-            is_type_only: false,
-        }));
-
-        // Model imports
-        if !used_types.is_empty() {
-            let mut model_imports: Vec<ImportSpecifier> = used_types
-                .iter()
-                .map(|type_name| ImportSpecifier {
-                    name: type_name.clone(),
-                    alias: None,
-                })
-                .collect();
-            model_imports.sort_by(|a, b| a.name.cmp(&b.name));
-
-            imports.push(TsNode::Import(Import {
-                module: "../models".to_string(),
-                imports: model_imports,
-                is_type_only: false,
-            }));
-        }
-
-        imports
     }
 }
 

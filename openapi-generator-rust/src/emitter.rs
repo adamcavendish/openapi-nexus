@@ -31,7 +31,7 @@ impl RustEmitter {
         docs.push(RcDoc::text(GENERATED_FILE_HEADER));
 
         for node in nodes {
-            let doc = self.emit_node(node)?;
+            let doc = Self::emit_node(node)?;
             docs.push(doc);
         }
 
@@ -39,20 +39,20 @@ impl RustEmitter {
         Ok(combined.pretty(80).to_string())
     }
 
-    fn emit_node(&self, node: &RustNode) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_node(node: &RustNode) -> Result<RcDoc<'_, ()>, EmitError> {
         match node {
-            RustNode::Struct(struct_def) => self.emit_struct(struct_def),
-            RustNode::Enum(enum_def) => self.emit_enum(enum_def),
-            RustNode::TypeAlias(type_alias) => self.emit_type_alias(type_alias),
-            RustNode::Function(function) => self.emit_function(function),
-            RustNode::Trait(trait_def) => self.emit_trait(trait_def),
+            RustNode::Struct(struct_def) => Self::emit_struct(struct_def),
+            RustNode::Enum(enum_def) => Self::emit_enum(enum_def),
+            RustNode::TypeAlias(type_alias) => Self::emit_type_alias(type_alias),
+            RustNode::Function(function) => Self::emit_function(function),
+            RustNode::Trait(trait_def) => Self::emit_trait(trait_def),
             RustNode::Module(_) => Ok(RcDoc::text("// TODO: Module emission")),
             RustNode::Import(_) => Ok(RcDoc::text("// TODO: Import emission")),
             RustNode::Use(_) => Ok(RcDoc::text("// TODO: Use emission")),
         }
     }
 
-    fn emit_struct(&self, struct_def: &Struct) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_struct(struct_def: &Struct) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -61,7 +61,7 @@ impl RustEmitter {
         }
 
         // Visibility
-        let visibility = self.emit_visibility(&struct_def.visibility);
+        let visibility = Self::emit_visibility(&struct_def.visibility);
 
         // Derives
         if !struct_def.derives.is_empty() {
@@ -77,7 +77,7 @@ impl RustEmitter {
         if !struct_def.fields.is_empty() {
             let mut field_docs = Vec::new();
             for field in &struct_def.fields {
-                let field_doc = self.emit_field(field)?;
+                let field_doc = Self::emit_field(field)?;
                 field_docs.push(field_doc);
             }
             let fields_doc = RcDoc::intersperse(field_docs, RcDoc::line());
@@ -89,7 +89,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_enum(&self, enum_def: &Enum) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_enum(enum_def: &Enum) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -98,7 +98,7 @@ impl RustEmitter {
         }
 
         // Visibility
-        let visibility = self.emit_visibility(&enum_def.visibility);
+        let visibility = Self::emit_visibility(&enum_def.visibility);
 
         // Derives
         if !enum_def.derives.is_empty() {
@@ -112,7 +112,7 @@ impl RustEmitter {
 
         // Variants
         for variant in &enum_def.variants {
-            let variant_doc = self.emit_enum_variant(variant)?;
+            let variant_doc = Self::emit_enum_variant(variant)?;
             doc = doc.append(RcDoc::line().append(variant_doc));
         }
 
@@ -121,7 +121,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_type_alias(&self, type_alias: &TypeAlias) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_type_alias(type_alias: &TypeAlias) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -130,10 +130,10 @@ impl RustEmitter {
         }
 
         // Visibility
-        let visibility = self.emit_visibility(&type_alias.visibility);
+        let visibility = Self::emit_visibility(&type_alias.visibility);
 
         // Type alias definition
-        let type_expr = self.emit_type_expression(&type_alias.type_expr)?;
+        let type_expr = Self::emit_type_expression(&type_alias.type_expr)?;
         let alias_line = format!("{}type {} = ", visibility, type_alias.name);
         doc = doc
             .append(RcDoc::text(alias_line))
@@ -143,7 +143,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_function(&self, function: &Function) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_function(function: &Function) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -152,7 +152,7 @@ impl RustEmitter {
         }
 
         // Visibility
-        let visibility = self.emit_visibility(&function.visibility);
+        let visibility = Self::emit_visibility(&function.visibility);
 
         // Function signature
         let mut sig = String::new();
@@ -201,7 +201,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_trait(&self, trait_def: &Trait) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_trait(trait_def: &Trait) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -210,7 +210,7 @@ impl RustEmitter {
         }
 
         // Visibility
-        let visibility = self.emit_visibility(&trait_def.visibility);
+        let visibility = Self::emit_visibility(&trait_def.visibility);
 
         // Trait definition
         let trait_line = format!("{}trait {} {{", visibility, trait_def.name);
@@ -218,7 +218,7 @@ impl RustEmitter {
 
         // Methods
         for method in &trait_def.methods {
-            let method_doc = self.emit_method(method)?;
+            let method_doc = Self::emit_method(method)?;
             doc = doc.append(RcDoc::line().append(method_doc));
         }
 
@@ -227,7 +227,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_field(&self, field: &Field) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_field(field: &Field) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -236,15 +236,15 @@ impl RustEmitter {
         }
 
         // Field definition
-        let visibility = self.emit_visibility(&field.visibility);
-        let type_expr = self.emit_type_expression(&field.type_expr)?;
+        let visibility = Self::emit_visibility(&field.visibility);
+        let type_expr = Self::emit_type_expression(&field.type_expr)?;
         let field_line = format!("    {}pub {}: ", visibility, field.name);
         doc = doc.append(RcDoc::text(field_line)).append(type_expr);
 
         Ok(doc)
     }
 
-    fn emit_enum_variant(&self, variant: &EnumVariant) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_enum_variant(variant: &EnumVariant) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -258,7 +258,7 @@ impl RustEmitter {
             variant_line.push_str(" {");
             doc = doc.append(RcDoc::text(variant_line));
             for field in &variant.fields {
-                let field_doc = self.emit_field(field)?;
+                let field_doc = Self::emit_field(field)?;
                 doc = doc.append(RcDoc::line().append(field_doc));
             }
             doc = doc.append(RcDoc::text("    }"));
@@ -269,7 +269,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_method(&self, method: &Method) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_method(method: &Method) -> Result<RcDoc<'_, ()>, EmitError> {
         let mut doc = RcDoc::nil();
 
         // Documentation comment
@@ -322,7 +322,7 @@ impl RustEmitter {
         Ok(doc)
     }
 
-    fn emit_type_expression(&self, type_expr: &TypeExpression) -> Result<RcDoc<'_, ()>, EmitError> {
+    fn emit_type_expression(type_expr: &TypeExpression) -> Result<RcDoc<'_, ()>, EmitError> {
         match type_expr {
             TypeExpression::Primitive(primitive) => {
                 let type_name = match primitive {
@@ -347,13 +347,13 @@ impl RustEmitter {
                 Ok(RcDoc::text(type_name))
             }
             TypeExpression::Option(inner) => {
-                let inner_doc = self.emit_type_expression(inner)?;
+                let inner_doc = Self::emit_type_expression(inner)?;
                 Ok(RcDoc::text("Option<")
                     .append(inner_doc)
                     .append(RcDoc::text(">")))
             }
             TypeExpression::Vec(inner) => {
-                let inner_doc = self.emit_type_expression(inner)?;
+                let inner_doc = Self::emit_type_expression(inner)?;
                 Ok(RcDoc::text("Vec<")
                     .append(inner_doc)
                     .append(RcDoc::text(">")))
@@ -363,7 +363,7 @@ impl RustEmitter {
         }
     }
 
-    fn emit_visibility(&self, visibility: &Visibility) -> String {
+    fn emit_visibility(visibility: &Visibility) -> String {
         match visibility {
             Visibility::Public => "pub ".to_string(),
             Visibility::Private => "".to_string(),

@@ -13,6 +13,12 @@ pub struct TypeAliasEmitter {
     utils: TypeScriptPrettyUtils,
 }
 
+impl Default for TypeAliasEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeAliasEmitter {
     pub fn new() -> Self {
         Self {
@@ -22,8 +28,13 @@ impl TypeAliasEmitter {
     }
 
     /// Emit a TypeScript type alias as RcDoc
-    pub fn emit_type_alias_doc(&self, type_alias: &TypeAlias) -> Result<RcDoc<'static, ()>, EmitError> {
-        let mut doc = self.utils.export_prefix()
+    pub fn emit_type_alias_doc(
+        &self,
+        type_alias: &TypeAlias,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = self
+            .utils
+            .export_prefix()
             .append(RcDoc::text("type"))
             .append(RcDoc::space())
             .append(RcDoc::text(type_alias.name.clone()));
@@ -32,7 +43,9 @@ impl TypeAliasEmitter {
         doc = doc.append(self.utils.generics(&type_alias.generics)?);
 
         // Add type expression
-        let type_doc = self.type_emitter.emit_type_expression_doc(&type_alias.type_expr)?;
+        let type_doc = self
+            .type_emitter
+            .emit_type_expression_doc(&type_alias.type_expr)?;
         doc = doc.append(RcDoc::text(" = ")).append(type_doc);
 
         // Add semicolon
@@ -40,7 +53,11 @@ impl TypeAliasEmitter {
 
         // Add documentation if present
         if let Some(docs) = &type_alias.documentation {
-            doc = self.utils.doc_comment(docs).append(RcDoc::line()).append(doc);
+            doc = self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)

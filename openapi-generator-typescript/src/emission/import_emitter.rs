@@ -30,7 +30,9 @@ impl ImportEmitter {
 
         if import.imports.is_empty() {
             // Namespace import: import * as module from 'module'
-            doc = doc.append(RcDoc::text("* as ")).append(RcDoc::text(import.module.clone()));
+            doc = doc
+                .append(RcDoc::text("* as "))
+                .append(RcDoc::text(import.module.clone()));
         } else {
             // Named imports: import { name1, name2 as alias } from 'module'
             let specifier_docs: Vec<RcDoc<'static, ()>> = import
@@ -49,18 +51,17 @@ impl ImportEmitter {
 
             let force_multiline = self.utils.should_format_multiline(
                 import.imports.len(),
-                false // import specifiers are typically simple
+                false, // import specifiers are typically simple
             );
 
-            doc = doc.append(self.utils.adaptive_list(
-                specifier_docs,
-                "{ ",
-                " }",
-                force_multiline,
-            ));
+            doc = doc.append(
+                self.utils
+                    .adaptive_list(specifier_docs, "{ ", " }", force_multiline),
+            );
         }
 
-        doc = doc.append(RcDoc::text(" from "))
+        doc = doc
+            .append(RcDoc::text(" from "))
             .append(self.utils.single_quoted(&import.module))
             .append(RcDoc::text(";"));
 

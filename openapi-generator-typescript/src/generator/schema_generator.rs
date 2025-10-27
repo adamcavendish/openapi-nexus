@@ -364,6 +364,7 @@ impl SchemaGenerator {
     }
 
     /// Map schema type to primitive TypeScript type
+    #[allow(clippy::only_used_in_recursion)]
     fn map_schema_type_to_primitive(&self, schema_type: &SchemaType) -> TypeExpression {
         match schema_type {
             SchemaType::Type(openapi_type) => match openapi_type {
@@ -528,6 +529,7 @@ impl SchemaGenerator {
     }
 
     /// Check if a TypeExpression contains null
+    #[allow(clippy::only_used_in_recursion)]
     fn type_contains_null(&self, type_expr: &TypeExpression) -> bool {
         match type_expr {
             TypeExpression::Primitive(PrimitiveType::Null) => true,

@@ -5,31 +5,38 @@ use pretty::RcDoc;
 use crate::ast::Function;
 use crate::emission::error::EmitError;
 use crate::emission::pretty_utils::TypeScriptPrettyUtils;
-use crate::emission::type_expression_emitter::TypeExpressionEmitter;
 
 /// Helper struct for emitting TypeScript functions
 pub struct FunctionEmitter {
-    type_emitter: TypeExpressionEmitter,
     utils: TypeScriptPrettyUtils,
+}
+
+impl Default for FunctionEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FunctionEmitter {
     pub fn new() -> Self {
         Self {
-            type_emitter: TypeExpressionEmitter,
             utils: TypeScriptPrettyUtils::new(),
         }
     }
 
     /// Emit a function signature as RcDoc (without body)
-    pub fn emit_function_signature_doc(&self, function: &Function) -> Result<RcDoc<'static, ()>, EmitError> {
+    pub fn emit_function_signature_doc(
+        &self,
+        function: &Function,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
         let mut doc = self.utils.export_prefix();
 
         if function.is_async {
             doc = doc.append(RcDoc::text("async "));
         }
 
-        doc = doc.append(RcDoc::text("function "))
+        doc = doc
+            .append(RcDoc::text("function "))
             .append(RcDoc::text(function.name.clone()));
 
         // Add generics
@@ -43,7 +50,11 @@ impl FunctionEmitter {
 
         // Add documentation if present
         if let Some(docs) = &function.documentation {
-            doc = self.utils.doc_comment(docs).append(RcDoc::line()).append(doc);
+            doc = self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)
@@ -56,7 +67,7 @@ impl FunctionEmitter {
         // Use RcDoc for the signature part
         let signature_doc = self.emit_function_signature_doc(function)?;
         let signature_string = signature_doc.pretty(80).to_string();
-        
+
         result.push_str(&signature_string);
         result.push_str(" {\n");
 

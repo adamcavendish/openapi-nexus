@@ -13,6 +13,12 @@ pub struct InterfaceEmitter {
     utils: TypeScriptPrettyUtils,
 }
 
+impl Default for InterfaceEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InterfaceEmitter {
     pub fn new() -> Self {
         Self {
@@ -22,8 +28,13 @@ impl InterfaceEmitter {
     }
 
     /// Emit a TypeScript interface as RcDoc
-    pub fn emit_interface_doc(&self, interface: &Interface) -> Result<RcDoc<'static, ()>, EmitError> {
-        let mut doc = self.utils.export_prefix()
+    pub fn emit_interface_doc(
+        &self,
+        interface: &Interface,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = self
+            .utils
+            .export_prefix()
             .append(RcDoc::text("interface"))
             .append(RcDoc::space())
             .append(RcDoc::text(interface.name.clone()));
@@ -38,24 +49,28 @@ impl InterfaceEmitter {
         if interface.properties.is_empty() {
             doc = doc.append(RcDoc::space()).append(self.utils.empty_block());
         } else {
-            let prop_docs: Result<Vec<_>, _> = interface.properties
+            let prop_docs: Result<Vec<_>, _> = interface
+                .properties
                 .iter()
                 .map(|p| self.emit_property_doc(p))
                 .collect();
             let properties = prop_docs?;
-            
+
             let force_multiline = self.utils.should_format_multiline(
                 interface.properties.len(),
-                interface.properties.iter().any(|p| self.is_complex_property(p))
+                interface
+                    .properties
+                    .iter()
+                    .any(|p| self.is_complex_property(p)),
             );
-            
+
             let body_content = if force_multiline {
                 // Convert each property to string and add proper indentation and commas
                 let mut body_parts = Vec::new();
-                for (_i, prop) in properties.into_iter().enumerate() {
+                for prop in properties.into_iter() {
                     let prop_string = prop.pretty(80).to_string();
                     let indented_prop = self.utils.indent_lines(&prop_string);
-                    
+
                     // Add comma to ALL properties (including the last one for trailing comma)
                     body_parts.push(self.utils.add_comma_to_last_line(&indented_prop));
                 }
@@ -67,19 +82,27 @@ impl InterfaceEmitter {
                     .map(|prop| {
                         let prop_string = prop.pretty(80).to_string();
                         let indented_prop = self.utils.indent_lines(&prop_string);
-                        Ok(RcDoc::text(self.utils.add_comma_to_last_line(&indented_prop)))
+                        Ok(RcDoc::text(
+                            self.utils.add_comma_to_last_line(&indented_prop),
+                        ))
                     })
                     .collect();
                 let indented_properties = property_strings?;
                 RcDoc::intersperse(indented_properties, RcDoc::text(" "))
             };
-            
-            doc = doc.append(RcDoc::space()).append(self.utils.block(body_content));
+
+            doc = doc
+                .append(RcDoc::space())
+                .append(self.utils.block(body_content));
         }
 
         // Add documentation if present
         if let Some(docs) = &interface.documentation {
-            doc = self.utils.doc_comment(docs).append(RcDoc::line()).append(doc);
+            doc = self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)
@@ -99,7 +122,9 @@ impl InterfaceEmitter {
             property_line = property_line.append(RcDoc::text("?"));
         }
 
-        let type_doc = self.type_emitter.emit_type_expression_doc(&property.type_expr)?;
+        let type_doc = self
+            .type_emitter
+            .emit_type_expression_doc(&property.type_expr)?;
         property_line = property_line.append(RcDoc::text(": ")).append(type_doc);
 
         // Add documentation if present

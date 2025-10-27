@@ -39,7 +39,8 @@ impl TypeExpressionEmitter {
                 Ok(RcDoc::text(type_name.to_string()))
             }
             TypeExpression::Array(item_type) => {
-                let item_doc = self.emit_type_expression_doc_with_indent(item_type, indent_level + 1)?;
+                let item_doc =
+                    self.emit_type_expression_doc_with_indent(item_type, indent_level + 1)?;
                 Ok(RcDoc::text("Array<".to_string())
                     .append(item_doc)
                     .append(RcDoc::text(">".to_string())))
@@ -82,22 +83,25 @@ impl TypeExpressionEmitter {
                         // Multi-line format with proper indentation
                         let mut result = RcDoc::text("{");
                         result = result.append(RcDoc::line());
-                        
+
                         let current_indent = "  ".repeat(indent_level + 1);
                         for (i, (name, type_expr)) in properties.iter().enumerate() {
-                            let type_doc = self.emit_type_expression_doc_with_indent(type_expr, indent_level + 1)?;
+                            let type_doc = self.emit_type_expression_doc_with_indent(
+                                type_expr,
+                                indent_level + 1,
+                            )?;
                             let prop_doc = RcDoc::text(current_indent.clone())
                                 .append(RcDoc::text(name.clone()))
                                 .append(RcDoc::text(": "))
                                 .append(type_doc)
                                 .append(RcDoc::text(";"));
-                            
+
                             result = result.append(prop_doc);
                             if i < properties.len() - 1 {
                                 result = result.append(RcDoc::line());
                             }
                         }
-                        
+
                         result = result.append(RcDoc::line());
                         let closing_indent = "  ".repeat(indent_level);
                         result = result.append(RcDoc::text(closing_indent));
@@ -108,7 +112,10 @@ impl TypeExpressionEmitter {
                         let prop_docs: Result<Vec<RcDoc<'_, ()>>, _> = properties
                             .iter()
                             .map(|(name, type_expr)| {
-                                let type_doc = self.emit_type_expression_doc_with_indent(type_expr, indent_level)?;
+                                let type_doc = self.emit_type_expression_doc_with_indent(
+                                    type_expr,
+                                    indent_level,
+                                )?;
                                 Ok(RcDoc::text(name.clone())
                                     .append(RcDoc::text(": "))
                                     .append(type_doc))
@@ -135,7 +142,8 @@ impl TypeExpressionEmitter {
                         }
                         if let Some(type_expr) = &param.type_expr {
                             param_doc = param_doc.append(RcDoc::text(": "));
-                            match self.emit_type_expression_doc_with_indent(type_expr, indent_level) {
+                            match self.emit_type_expression_doc_with_indent(type_expr, indent_level)
+                            {
                                 Ok(type_doc) => param_doc = param_doc.append(type_doc),
                                 Err(_) => param_doc = param_doc.append(RcDoc::text("any")),
                             }
@@ -154,7 +162,8 @@ impl TypeExpressionEmitter {
 
                 let mut func_doc = params;
                 if let Some(return_type) = &signature.return_type {
-                    let return_doc = self.emit_type_expression_doc_with_indent(return_type, indent_level)?;
+                    let return_doc =
+                        self.emit_type_expression_doc_with_indent(return_type, indent_level)?;
                     func_doc = func_doc.append(RcDoc::text(" => ")).append(return_doc);
                 }
 
@@ -172,7 +181,8 @@ impl TypeExpressionEmitter {
             }
             TypeExpression::Generic(name) => Ok(RcDoc::text(name.clone())),
             TypeExpression::IndexSignature(key_type, value_type) => {
-                let value_doc = self.emit_type_expression_doc_with_indent(value_type, indent_level)?;
+                let value_doc =
+                    self.emit_type_expression_doc_with_indent(value_type, indent_level)?;
                 Ok(RcDoc::text("[key: ")
                     .append(RcDoc::text(key_type.clone()))
                     .append(RcDoc::text("]: "))
@@ -203,6 +213,7 @@ impl TypeExpressionEmitter {
     }
 
     /// Check if a type expression is complex (nested objects, arrays, unions, etc.)
+    #[allow(clippy::only_used_in_recursion)]
     pub fn is_complex_type(&self, type_expr: &TypeExpression) -> bool {
         match type_expr {
             TypeExpression::Object(properties) => {
@@ -228,7 +239,10 @@ impl TypeExpressionEmitter {
     }
 
     /// Emit a TypeExpression as a string
-    pub fn emit_type_expression_string(&self, type_expr: &TypeExpression) -> Result<String, EmitError> {
+    pub fn emit_type_expression_string(
+        &self,
+        type_expr: &TypeExpression,
+    ) -> Result<String, EmitError> {
         let doc = self.emit_type_expression_doc(type_expr)?;
         Ok(doc.pretty(80).to_string())
     }

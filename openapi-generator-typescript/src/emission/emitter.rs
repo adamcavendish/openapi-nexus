@@ -2,6 +2,8 @@
 
 use pretty::RcDoc;
 
+use std::collections::HashMap;
+
 use crate::ast::TsNode;
 use crate::emission::class_emitter::ClassEmitter;
 use crate::emission::constants::GENERATED_FILE_HEADER;
@@ -9,6 +11,7 @@ use crate::emission::enum_emitter::emit_enum_string;
 use crate::emission::error::EmitError;
 use crate::emission::function_emitter::FunctionEmitter;
 use crate::emission::import_emitter::emit_import_string;
+use crate::emission::import_manager::ImportManager;
 use crate::emission::interface_emitter::InterfaceEmitter;
 use crate::emission::type_alias_emitter::TypeAliasEmitter;
 
@@ -18,6 +21,7 @@ pub struct TypeScriptEmitter {
     type_alias_emitter: TypeAliasEmitter,
     function_emitter: FunctionEmitter,
     class_emitter: ClassEmitter,
+    import_manager: ImportManager,
 }
 
 impl TypeScriptEmitter {
@@ -27,25 +31,37 @@ impl TypeScriptEmitter {
             type_alias_emitter: TypeAliasEmitter::new(),
             function_emitter: FunctionEmitter::new(),
             class_emitter: ClassEmitter::new(),
+            import_manager: ImportManager::new(),
         }
     }
 
     /// Emit TypeScript code from AST nodes
     pub fn emit(&self, nodes: &[TsNode]) -> Result<String, EmitError> {
+        self.emit_with_context(nodes, "", &HashMap::new())
+    }
+
+    /// Emit TypeScript code from AST nodes with import context
+    pub fn emit_with_context(
+        &self,
+        nodes: &[TsNode],
+        current_file: &str,
+        schema_to_file_map: &HashMap<String, String>,
+    ) -> Result<String, EmitError> {
         let mut docs = Vec::new();
 
         // Add generated file header
         docs.push(RcDoc::text(GENERATED_FILE_HEADER));
 
-        // Check if this is an API class file and add runtime imports
-        let needs_runtime_imports = self.needs_runtime_imports(nodes);
-        if needs_runtime_imports {
-            docs.push(RcDoc::text(
-                "import { BaseAPI, RequestContext } from '../runtime/api';\n",
-            ));
-            docs.push(RcDoc::text(
-                "import { Configuration } from '../runtime/config';\n",
-            ));
+        // Generate imports based on dependencies
+        let imports = self.import_manager.generate_imports_for_file(
+            nodes,
+            current_file,
+            schema_to_file_map,
+        )?;
+
+        if !imports.is_empty() {
+            let import_code = self.import_manager.emit_imports(&imports)?;
+            docs.push(RcDoc::text(import_code));
         }
 
         for node in nodes {
@@ -55,20 +71,6 @@ impl TypeScriptEmitter {
 
         let combined = RcDoc::intersperse(docs, RcDoc::line());
         Ok(combined.pretty(80).to_string())
-    }
-
-    /// Check if nodes contain API classes that need runtime imports
-    fn needs_runtime_imports(&self, nodes: &[TsNode]) -> bool {
-        nodes.iter().any(|node| {
-            if let TsNode::Class(class) = node {
-                class
-                    .extends
-                    .as_ref()
-                    .is_some_and(|extends| extends == "BaseAPI")
-            } else {
-                false
-            }
-        })
     }
 
     fn emit_node(&self, node: &TsNode) -> Result<RcDoc<'_, ()>, EmitError> {
@@ -99,5 +101,11 @@ impl TypeScriptEmitter {
             }
             TsNode::Export(_) => Ok(RcDoc::text("// TODO: Export emission")),
         }
+    }
+}
+
+impl Default for TypeScriptEmitter {
+    fn default() -> Self {
+        Self::new()
     }
 }

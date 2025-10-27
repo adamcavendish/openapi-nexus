@@ -13,6 +13,12 @@ pub struct MethodEmitter {
     utils: TypeScriptPrettyUtils,
 }
 
+impl Default for MethodEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MethodEmitter {
     pub fn new() -> Self {
         Self {
@@ -22,7 +28,10 @@ impl MethodEmitter {
     }
 
     /// Emit a method signature as RcDoc (without body)
-    pub fn emit_method_signature_doc(&self, method: &Method) -> Result<RcDoc<'static, ()>, EmitError> {
+    pub fn emit_method_signature_doc(
+        &self,
+        method: &Method,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
         let mut doc = RcDoc::text(method.name.clone());
 
         // Add parameter list
@@ -33,7 +42,11 @@ impl MethodEmitter {
 
         // Add documentation if present
         if let Some(docs) = &method.documentation {
-            doc = self.utils.doc_comment(docs).append(RcDoc::line()).append(doc);
+            doc = self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)
@@ -46,7 +59,7 @@ impl MethodEmitter {
         class_name: &str,
         extends: &Option<String>,
     ) -> Result<String, EmitError> {
-        self.emit_method_string_with_indent(method, class_name, extends, true)
+        self.emit_method_string_with_indent(method, class_name, extends)
     }
 
     /// Emit a method as a string with optional indentation
@@ -55,7 +68,6 @@ impl MethodEmitter {
         method: &Method,
         class_name: &str,
         extends: &Option<String>,
-        add_indentation: bool,
     ) -> Result<String, EmitError> {
         let mut result = String::new();
 
@@ -65,24 +77,36 @@ impl MethodEmitter {
             let doc_string = doc_comment.pretty(80).to_string();
             let indented_doc = doc_string
                 .lines()
-                .map(|line| if line.trim().is_empty() { line.to_string() } else { format!("  {}", line) })
+                .map(|line| {
+                    if line.trim().is_empty() {
+                        line.to_string()
+                    } else {
+                        format!("  {}", line)
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join("\n");
             result.push_str(&indented_doc);
-            result.push_str("\n");
+            result.push('\n');
         }
 
         // Use RcDoc for the signature part (without documentation)
         let mut signature_doc = RcDoc::text(method.name.clone());
         signature_doc = signature_doc.append(self.utils.parameter_list(&method.parameters)?);
         signature_doc = signature_doc.append(self.utils.return_type(&method.return_type)?);
-        
+
         let signature_string = signature_doc.pretty(80).to_string();
-        
+
         // Add 2-space indentation to method signature
         let indented_signature = signature_string
             .lines()
-            .map(|line| if line.trim().is_empty() { line.to_string() } else { format!("  {}", line) })
+            .map(|line| {
+                if line.trim().is_empty() {
+                    line.to_string()
+                } else {
+                    format!("  {}", line)
+                }
+            })
             .collect::<Vec<_>>()
             .join("\n");
         result.push_str(&indented_signature);
@@ -90,8 +114,8 @@ impl MethodEmitter {
 
         // Add method implementation based on method name
         match method.name.as_str() {
-            "request" if class_name == "BaseAPI" => {
-                result.push_str(r#"    const { url, init } = context;
+            "request" if class_name == "BaseAPI" => result.push_str(
+                r#"    const { url, init } = context;
     const baseUrl = this.configuration?.basePath || '';
     const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
 
@@ -124,8 +148,8 @@ impl MethodEmitter {
 
     // Make the fetch request
     return fetch(fullUrl, requestInit);
-"#)
-            }
+"#,
+            ),
             "constructor" => {
                 match class_name {
                     "BaseAPI" => {
@@ -187,50 +211,61 @@ impl MethodEmitter {
                         .type_emitter
                         .emit_type_expression_string(return_type)
                         .unwrap_or_else(|_| "any".to_string());
-                    
+
                     // Check if it's a Promise type
                     if return_type_str.starts_with("Promise<") {
                         // Check if it's Promise<Response> (DELETE methods)
                         if return_type_str == "Promise<Response>" {
                             // DELETE method
-                            result.push_str("    const url = this.configuration?.basePath || '';\n");
-                            result.push_str("    return this.request({ url, init: { method: 'DELETE' } });\n");
+                            result
+                                .push_str("    const url = this.configuration?.basePath || '';\n");
+                            result.push_str(
+                                "    return this.request({ url, init: { method: 'DELETE' } });\n",
+                            );
                         }
                         // Has parameters - check if it has a 'body' parameter (POST/PUT)
                         else {
                             let has_body_param = method.parameters.iter().any(|p| p.name == "body");
-                        
+
                             if has_body_param {
                                 // Determine method type from method name
-                                let http_method = if method.name.starts_with("update") || method.name.starts_with("put") {
+                                let http_method = if method.name.starts_with("update")
+                                    || method.name.starts_with("put")
+                                {
                                     "PUT"
                                 } else if method.name.starts_with("delete") {
                                     "DELETE"
-                                } else if method.name.starts_with("add") || method.name.starts_with("create") {
-                                    "POST"
                                 } else {
                                     "POST"
                                 };
-                                
-                                result.push_str("    const url = this.configuration?.basePath || '';\n");
+
+                                result.push_str(
+                                    "    const url = this.configuration?.basePath || '';\n",
+                                );
                                 result.push_str("    return this.request({\n");
                                 result.push_str("      url,\n");
                                 result.push_str("      init: {\n");
                                 result.push_str(&format!("        method: '{}',\n", http_method));
-                                result.push_str("        headers: { 'Content-Type': 'application/json' },\n");
+                                result.push_str(
+                                    "        headers: { 'Content-Type': 'application/json' },\n",
+                                );
                                 result.push_str("        body: JSON.stringify(body)\n");
                                 result.push_str("      }\n");
                                 result.push_str("    }).then(response => response.json());\n");
                             } else {
                                 // GET method
-                                result.push_str("    const url = this.configuration?.basePath || '';\n");
+                                result.push_str(
+                                    "    const url = this.configuration?.basePath || '';\n",
+                                );
                                 result.push_str("    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());\n");
                             }
                         }
                     } else {
                         // Not a Promise, might be void or Response
                         result.push_str("    const url = this.configuration?.basePath || '';\n");
-                        result.push_str("    return this.request({ url, init: { method: 'GET' } });\n");
+                        result.push_str(
+                            "    return this.request({ url, init: { method: 'GET' } });\n",
+                        );
                     }
                 } else {
                     // No return type - might be DELETE
@@ -240,11 +275,14 @@ impl MethodEmitter {
                         "GET"
                     };
                     result.push_str("    const url = this.configuration?.basePath || '';\n");
-                    result.push_str(&format!("    return this.request({{ url, init: {{ method: '{}' }} }});\n", http_method));
+                    result.push_str(&format!(
+                        "    return this.request({{ url, init: {{ method: '{}' }} }});\n",
+                        http_method
+                    ));
                 }
             }
         };
-        
+
         result.push_str("  }");
 
         Ok(result)

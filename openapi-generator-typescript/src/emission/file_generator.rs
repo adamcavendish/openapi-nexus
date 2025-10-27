@@ -1,6 +1,7 @@
 //! File generation and organization for TypeScript code
 
 use std::collections::HashMap;
+use std::slice;
 
 use utoipa::openapi::OpenApi;
 
@@ -110,15 +111,19 @@ impl TypeScriptFileGenerator {
             }
         }
 
+        // Create schema-to-file mapping for import resolution
+        let schema_to_file_map = self.create_schema_to_file_map(&api_classes, &other_schemas);
+
         // Generate models files (no directory prefix - handled by core)
         for (name, node) in &other_schemas {
             let filename = self.generate_filename(name);
-            let content = self.emitter.emit(std::slice::from_ref(node)).map_err(|e| {
-                FileGeneratorError::EmitError {
+            let content = self
+                .emitter
+                .emit_with_context(slice::from_ref(node), &filename, &schema_to_file_map)
+                .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
-                }
-            })?;
+                })?;
 
             files.push(GeneratedFile {
                 filename,
@@ -130,14 +135,15 @@ impl TypeScriptFileGenerator {
         // Generate API classes (no directory prefix - handled by core)
         for (name, node) in &api_classes {
             let filename = self.generate_filename(name);
-            
-            // The main emitter will handle runtime imports automatically
-            let content = self.emitter.emit(&[node.clone()]).map_err(|e| {
-                FileGeneratorError::EmitError {
+
+            // Use the new emit_with_context method for automatic import generation
+            let content = self
+                .emitter
+                .emit_with_context(slice::from_ref(node), &filename, &schema_to_file_map)
+                .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
-                }
-            })?;
+                })?;
 
             files.push(GeneratedFile {
                 filename,
@@ -259,6 +265,29 @@ impl TypeScriptFileGenerator {
             None => String::new(),
             Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
         }
+    }
+
+    /// Create a mapping from schema names to their corresponding filenames
+    fn create_schema_to_file_map(
+        &self,
+        api_classes: &HashMap<String, TsNode>,
+        other_schemas: &HashMap<String, TsNode>,
+    ) -> HashMap<String, String> {
+        let mut map = HashMap::new();
+
+        // Add API classes
+        for name in api_classes.keys() {
+            let filename = self.generate_filename(name);
+            map.insert(name.clone(), filename);
+        }
+
+        // Add other schemas
+        for name in other_schemas.keys() {
+            let filename = self.generate_filename(name);
+            map.insert(name.clone(), filename);
+        }
+
+        map
     }
 }
 

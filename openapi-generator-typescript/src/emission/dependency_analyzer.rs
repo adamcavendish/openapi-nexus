@@ -1,0 +1,297 @@
+//! Dependency analysis for TypeScript AST nodes
+
+use std::collections::HashSet;
+
+use crate::ast::{TsNode, TypeExpression};
+
+/// Analyzes TypeScript AST nodes to extract type dependencies
+pub struct DependencyAnalyzer;
+
+impl DependencyAnalyzer {
+    /// Create a new dependency analyzer
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Extract all type dependencies from a collection of AST nodes
+    pub fn analyze_dependencies(&self, nodes: &[TsNode]) -> DependencySet {
+        let mut dependencies = DependencySet::new();
+
+        for node in nodes {
+            self.extract_node_dependencies(node, &mut dependencies);
+        }
+
+        dependencies
+    }
+
+    /// Extract dependencies from a single AST node
+    fn extract_node_dependencies(&self, node: &TsNode, dependencies: &mut DependencySet) {
+        match node {
+            TsNode::Interface(interface) => {
+                // Extract dependencies from interface properties
+                for property in &interface.properties {
+                    self.extract_type_dependencies(&property.type_expr, dependencies);
+                }
+
+                // Extract dependencies from extends clause
+                for extend in &interface.extends {
+                    dependencies.add_model_dependency(extend.clone());
+                }
+            }
+            TsNode::TypeAlias(type_alias) => {
+                // Extract dependencies from type alias definition
+                self.extract_type_dependencies(&type_alias.type_expr, dependencies);
+            }
+            TsNode::Class(class) => {
+                // Extract dependencies from class properties
+                for property in &class.properties {
+                    self.extract_type_dependencies(&property.type_expr, dependencies);
+                }
+
+                // Extract dependencies from method signatures
+                for method in &class.methods {
+                    // Method parameters
+                    for param in &method.parameters {
+                        if let Some(type_expr) = &param.type_expr {
+                            self.extract_type_dependencies(type_expr, dependencies);
+                        }
+                    }
+
+                    // Method return type
+                    if let Some(return_type) = &method.return_type {
+                        self.extract_type_dependencies(return_type, dependencies);
+                    }
+                }
+
+                // Extract dependencies from extends clause
+                if let Some(extends) = &class.extends {
+                    // Check if it's a runtime dependency
+                    if self.is_runtime_type(extends) {
+                        dependencies.add_runtime_dependency(extends.clone());
+                    } else {
+                        dependencies.add_model_dependency(extends.clone());
+                    }
+                }
+
+                // Extract dependencies from implements clause
+                for implement in &class.implements {
+                    dependencies.add_model_dependency(implement.clone());
+                }
+            }
+            TsNode::Function(function) => {
+                // Extract dependencies from function parameters
+                for param in &function.parameters {
+                    if let Some(type_expr) = &param.type_expr {
+                        self.extract_type_dependencies(type_expr, dependencies);
+                    }
+                }
+
+                // Extract dependencies from return type
+                if let Some(return_type) = &function.return_type {
+                    self.extract_type_dependencies(return_type, dependencies);
+                }
+            }
+            TsNode::Enum(_) => {
+                // Enums typically don't have dependencies
+            }
+            TsNode::Import(_) | TsNode::Export(_) => {
+                // These are already import/export statements, skip analysis
+            }
+        }
+    }
+
+    /// Extract dependencies from a type expression recursively
+    fn extract_type_dependencies(
+        &self,
+        type_expr: &TypeExpression,
+        dependencies: &mut DependencySet,
+    ) {
+        match type_expr {
+            TypeExpression::Reference(type_name) => {
+                // Only add non-primitive types as dependencies
+                if !self.is_primitive_type(type_name) {
+                    if self.is_runtime_type(type_name) {
+                        dependencies.add_runtime_dependency(type_name.clone());
+                    } else {
+                        dependencies.add_model_dependency(type_name.clone());
+                    }
+                }
+            }
+            TypeExpression::Array(item_type) => {
+                self.extract_type_dependencies(item_type, dependencies);
+            }
+            TypeExpression::Union(types) => {
+                for type_expr in types {
+                    self.extract_type_dependencies(type_expr, dependencies);
+                }
+            }
+            TypeExpression::Intersection(types) => {
+                for type_expr in types {
+                    self.extract_type_dependencies(type_expr, dependencies);
+                }
+            }
+            TypeExpression::Object(properties) => {
+                for type_expr in properties.values() {
+                    self.extract_type_dependencies(type_expr, dependencies);
+                }
+            }
+            TypeExpression::Function(func_sig) => {
+                // Extract dependencies from function signature parameters
+                for param in &func_sig.parameters {
+                    if let Some(type_expr) = &param.type_expr {
+                        self.extract_type_dependencies(type_expr, dependencies);
+                    }
+                }
+
+                // Extract dependencies from return type
+                if let Some(return_type) = &func_sig.return_type {
+                    self.extract_type_dependencies(return_type, dependencies);
+                }
+            }
+            TypeExpression::IndexSignature(_, value_type) => {
+                self.extract_type_dependencies(value_type, dependencies);
+            }
+            TypeExpression::Tuple(types) => {
+                for type_expr in types {
+                    self.extract_type_dependencies(type_expr, dependencies);
+                }
+            }
+            TypeExpression::Generic(_)
+            | TypeExpression::Literal(_)
+            | TypeExpression::Primitive(_) => {
+                // These don't have dependencies to extract
+            }
+        }
+    }
+
+    /// Check if a type name is a primitive TypeScript type
+    fn is_primitive_type(&self, type_name: &str) -> bool {
+        // Handle generic types like Promise<T>, Array<T>, etc.
+        if type_name.contains('<') {
+            let base_type = type_name.split('<').next().unwrap_or(type_name);
+            return matches!(
+                base_type,
+                "Promise"
+                    | "Array"
+                    | "Map"
+                    | "Set"
+                    | "WeakMap"
+                    | "WeakSet"
+                    | "ReadonlyArray"
+                    | "ReadonlyMap"
+                    | "ReadonlySet"
+            );
+        }
+
+        matches!(
+            type_name,
+            "string"
+                | "number"
+                | "boolean"
+                | "any"
+                | "unknown"
+                | "null"
+                | "undefined"
+                | "void"
+                | "object"
+                | "Promise"
+                | "Array"
+                | "Response"
+                | "Error"
+                | "Date"
+                | "RegExp"
+                | "Map"
+                | "Set"
+                | "WeakMap"
+                | "WeakSet"
+                | "ReadonlyArray"
+                | "ReadonlyMap"
+                | "ReadonlySet"
+                | "Partial"
+                | "Required"
+                | "Pick"
+                | "Omit"
+                | "Record"
+                | "Exclude"
+                | "Extract"
+                | "NonNullable"
+                | "Parameters"
+                | "ReturnType"
+                | "InstanceType"
+                | "RequestInit"
+        )
+    }
+
+    /// Check if a type name is a runtime type (from our runtime library)
+    fn is_runtime_type(&self, type_name: &str) -> bool {
+        matches!(
+            type_name,
+            "BaseAPI" | "Configuration" | "RequestContext" | "ApiResponse" | "HttpMethod"
+        )
+    }
+}
+
+impl Default for DependencyAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Set of dependencies categorized by type
+#[derive(Debug, Clone)]
+pub struct DependencySet {
+    /// Dependencies on other generated model types
+    pub model_dependencies: HashSet<String>,
+    /// Dependencies on runtime library types
+    pub runtime_dependencies: HashSet<String>,
+    /// Dependencies on external library types
+    pub external_dependencies: HashSet<String>,
+}
+
+impl DependencySet {
+    /// Create a new empty dependency set
+    pub fn new() -> Self {
+        Self {
+            model_dependencies: HashSet::new(),
+            runtime_dependencies: HashSet::new(),
+            external_dependencies: HashSet::new(),
+        }
+    }
+
+    /// Add a model dependency
+    pub fn add_model_dependency(&mut self, type_name: String) {
+        self.model_dependencies.insert(type_name);
+    }
+
+    /// Add a runtime dependency
+    pub fn add_runtime_dependency(&mut self, type_name: String) {
+        self.runtime_dependencies.insert(type_name);
+    }
+
+    /// Add an external dependency
+    pub fn add_external_dependency(&mut self, type_name: String) {
+        self.external_dependencies.insert(type_name);
+    }
+
+    /// Check if there are any dependencies
+    pub fn is_empty(&self) -> bool {
+        self.model_dependencies.is_empty()
+            && self.runtime_dependencies.is_empty()
+            && self.external_dependencies.is_empty()
+    }
+
+    /// Get all dependencies as a single set
+    pub fn all_dependencies(&self) -> HashSet<String> {
+        let mut all = HashSet::new();
+        all.extend(self.model_dependencies.iter().cloned());
+        all.extend(self.runtime_dependencies.iter().cloned());
+        all.extend(self.external_dependencies.iter().cloned());
+        all
+    }
+}
+
+impl Default for DependencySet {
+    fn default() -> Self {
+        Self::new()
+    }
+}

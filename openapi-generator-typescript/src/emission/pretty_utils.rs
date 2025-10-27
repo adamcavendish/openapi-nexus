@@ -52,7 +52,13 @@ impl TypeScriptPrettyUtils {
     pub fn indent_lines(&self, content: &str) -> String {
         content
             .lines()
-            .map(|line| if line.trim().is_empty() { line.to_string() } else { format!("  {}", line) })
+            .map(|line| {
+                if line.trim().is_empty() {
+                    line.to_string()
+                } else {
+                    format!("  {}", line)
+                }
+            })
             .collect::<Vec<_>>()
             .join("\n")
     }
@@ -63,12 +69,12 @@ impl TypeScriptPrettyUtils {
         if lines.is_empty() {
             return content.to_string();
         }
-        
-        let mut result = lines[..lines.len()-1].join("\n");
+
+        let mut result = lines[..lines.len() - 1].join("\n");
         if !result.is_empty() {
             result.push('\n');
         }
-        result.push_str(&format!("{},", lines[lines.len()-1]));
+        result.push_str(&format!("{},", lines[lines.len() - 1]));
         result
     }
 
@@ -106,10 +112,8 @@ impl TypeScriptPrettyUtils {
         if extends.is_empty() {
             RcDoc::nil()
         } else {
-            let extend_docs: Vec<RcDoc<'static, ()>> = extends
-                .iter()
-                .map(|e| RcDoc::text(e.clone()))
-                .collect();
+            let extend_docs: Vec<RcDoc<'static, ()>> =
+                extends.iter().map(|e| RcDoc::text(e.clone())).collect();
             RcDoc::space()
                 .append(RcDoc::text("extends"))
                 .append(RcDoc::space())
@@ -122,10 +126,8 @@ impl TypeScriptPrettyUtils {
         if implements.is_empty() {
             RcDoc::nil()
         } else {
-            let impl_docs: Vec<RcDoc<'static, ()>> = implements
-                .iter()
-                .map(|i| RcDoc::text(i.clone()))
-                .collect();
+            let impl_docs: Vec<RcDoc<'static, ()>> =
+                implements.iter().map(|i| RcDoc::text(i.clone())).collect();
             RcDoc::space()
                 .append(RcDoc::text("implements"))
                 .append(RcDoc::space())
@@ -134,7 +136,10 @@ impl TypeScriptPrettyUtils {
     }
 
     /// Create parameter list for functions/methods
-    pub fn parameter_list(&self, parameters: &[Parameter]) -> Result<RcDoc<'static, ()>, EmitError> {
+    pub fn parameter_list(
+        &self,
+        parameters: &[Parameter],
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
         if parameters.is_empty() {
             Ok(RcDoc::text("()"))
         } else {
@@ -143,7 +148,7 @@ impl TypeScriptPrettyUtils {
                 .map(|param| self.parameter(param))
                 .collect();
             let params = param_docs?;
-            
+
             // For long parameter lists, format across multiple lines
             if parameters.len() > 3 {
                 Ok(RcDoc::text("(")
@@ -162,21 +167,24 @@ impl TypeScriptPrettyUtils {
     /// Create a single parameter
     pub fn parameter(&self, param: &Parameter) -> Result<RcDoc<'static, ()>, EmitError> {
         let mut doc = RcDoc::text(param.name.clone());
-        
+
         if param.optional {
             doc = doc.append(RcDoc::text("?"));
         }
-        
+
         if let Some(type_expr) = &param.type_expr {
             let type_doc = self.type_emitter.emit_type_expression_doc(type_expr)?;
             doc = doc.append(RcDoc::text(": ")).append(type_doc);
         }
-        
+
         Ok(doc)
     }
 
     /// Create return type annotation (e.g., `: Promise<User>`)
-    pub fn return_type(&self, return_type: &Option<TypeExpression>) -> Result<RcDoc<'static, ()>, EmitError> {
+    pub fn return_type(
+        &self,
+        return_type: &Option<TypeExpression>,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
         match return_type {
             Some(type_expr) => {
                 let type_doc = self.type_emitter.emit_type_expression_doc(type_expr)?;

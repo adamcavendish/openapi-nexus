@@ -20,7 +20,9 @@ impl EnumEmitter {
 
     /// Emit a TypeScript enum as RcDoc
     pub fn emit_enum_doc(&self, enum_def: &Enum) -> Result<RcDoc<'static, ()>, EmitError> {
-        let mut doc = self.utils.export_prefix()
+        let mut doc = self
+            .utils
+            .export_prefix()
             .append(RcDoc::text("enum"))
             .append(RcDoc::space())
             .append(RcDoc::text(enum_def.name.clone()));
@@ -29,7 +31,8 @@ impl EnumEmitter {
         if enum_def.variants.is_empty() {
             doc = doc.append(RcDoc::space()).append(self.utils.empty_block());
         } else {
-            let variant_docs: Vec<RcDoc<'static, ()>> = enum_def.variants
+            let variant_docs: Vec<RcDoc<'static, ()>> = enum_def
+                .variants
                 .iter()
                 .map(|variant| {
                     let mut variant_doc = RcDoc::text(variant.name.clone());
@@ -44,7 +47,7 @@ impl EnumEmitter {
 
             let force_multiline = self.utils.should_format_multiline(
                 enum_def.variants.len(),
-                false // enum variants are typically simple
+                false, // enum variants are typically simple
             );
 
             let body_content = if force_multiline {
@@ -67,15 +70,23 @@ impl EnumEmitter {
                         RcDoc::text(self.utils.indent_lines(&variant_string))
                     })
                     .collect();
-                self.utils.comma_separated(variant_strings).append(RcDoc::text(",")) // trailing comma
+                self.utils
+                    .comma_separated(variant_strings)
+                    .append(RcDoc::text(",")) // trailing comma
             };
 
-            doc = doc.append(RcDoc::space()).append(self.utils.block(body_content));
+            doc = doc
+                .append(RcDoc::space())
+                .append(self.utils.block(body_content));
         }
 
         // Add documentation if present
         if let Some(docs) = &enum_def.documentation {
-            doc = self.utils.doc_comment(docs).append(RcDoc::line()).append(doc);
+            doc = self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)
