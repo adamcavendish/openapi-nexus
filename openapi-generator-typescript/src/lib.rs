@@ -22,5 +22,5 @@ pub mod generator;
 // Re-export main types for convenience
 pub use config::FileConfig;
 pub use core::GeneratorError;
-pub use emission::{TypeScriptFileGenerator, GeneratedFile, TypeScriptFileCategory};
+pub use emission::{GeneratedFile, TypeScriptFileCategory, TypeScriptFileGenerator};
 pub use generator::TypeScriptGenerator;

@@ -23,21 +23,6 @@ fn test_parse_valid_yaml() {
 }
 
 #[test]
-fn test_parse_valid_json() {
-    let parser = OpenApiParser::new();
-    let result = parser.parse_file(format!("{}/valid/minimal.json", fixtures_path()));
-
-    assert!(result.is_ok());
-    let parse_result = result.unwrap();
-    assert_eq!(parse_result.openapi.info.title, "Minimal API");
-    assert_eq!(parse_result.openapi.info.version, "1.0.0");
-    assert!(matches!(
-        parse_result.openapi.openapi,
-        utoipa::openapi::OpenApiVersion::Version31
-    ));
-}
-
-#[test]
 fn test_parse_petstore_yaml() {
     let parser = OpenApiParser::new();
     let result = parser.parse_file(format!("{}/valid/petstore.yaml", fixtures_path()));

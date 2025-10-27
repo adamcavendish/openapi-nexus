@@ -2,11 +2,14 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
+import { BaseAPI, RequestContext } from '../runtime/api';
+
+import { Configuration } from '../runtime/config';
 
 /**
  * API client for pet operations
  */
-export class PetApi extends runtime.BaseAPI {
+export class PetApi extends BaseAPI {
   /**
    * Initialize the API client
    */
@@ -18,47 +21,55 @@ export class PetApi extends runtime.BaseAPI {
    */
   addPet(body: Pet): Promise<Pet> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Update an existing pet
    */
   updatePet(body: Pet): Promise<Pet> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Find pets by status
    */
   findPetsByStatus(status: string): Promise<Array<string>> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Find pets by tags
    */
   findPetsByTags(tags: Array<string>): Promise<Array<string>> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Find pet by ID
    */
   getPetById(petId: string): Promise<Pet> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Update a pet in the store with form data
    */
   updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Delete a pet
    */
   deletePet(petId: string): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Upload an image
    */
   uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
 }

@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use crate::ast::{
-    Class, Function, Interface, Method, Parameter, PrimitiveType, Property, TsNode, TypeAlias,
-    TypeExpression, Visibility,
+    Class, Function, Interface, Method, Parameter, PrimitiveType, Property, TsNode, TypeExpression,
+    Visibility,
 };
 use crate::core::GeneratorError;
 use crate::emission::{GeneratedFile, TypeScriptEmitter, TypeScriptFileCategory};
@@ -24,7 +24,6 @@ impl RuntimeGenerator {
 
         // Generate core runtime utilities
         let core_nodes = vec![
-            self.generate_promise_type()?,
             self.generate_to_json_function()?,
             self.generate_from_json_function()?,
         ];
@@ -53,7 +52,10 @@ impl RuntimeGenerator {
         ];
         files.push(GeneratedFile {
             filename: "api.ts".to_string(),
-            content: self.nodes_to_string(&api_nodes)?,
+            content: self.nodes_to_string_with_imports(
+                &api_nodes,
+                "import { Configuration } from './config';\n",
+            )?,
             file_category: TypeScriptFileCategory::Runtime,
         });
 
@@ -68,15 +70,30 @@ impl RuntimeGenerator {
         })
     }
 
+    /// Convert nodes to string with additional imports
+    fn nodes_to_string_with_imports(
+        &self,
+        nodes: &[TsNode],
+        imports: &str,
+    ) -> Result<String, GeneratorError> {
+        let emitter = TypeScriptEmitter;
+        let mut content = emitter.emit(nodes).map_err(|e| GeneratorError::Generic {
+            message: format!("Emission error: {}", e),
+        })?;
+
+        // Insert imports after the generated file header
+        let header_end = content.find("\n\n").unwrap_or(0) + 2;
+        content.insert_str(header_end, imports);
+
+        Ok(content)
+    }
+
     /// Generate the complete runtime module (legacy method for backward compatibility)
     pub fn generate_runtime_module(&self) -> Result<Vec<TsNode>, GeneratorError> {
         let mut nodes = Vec::new();
 
         // Generate in the expected order to match golden files
-        // Type aliases first
-        nodes.push(self.generate_promise_type()?);
-
-        // Functions
+        // Functions first
         nodes.push(self.generate_to_json_function()?);
 
         // Interfaces
@@ -346,20 +363,6 @@ impl RuntimeGenerator {
         }))
     }
 
-    /// Generate Promise type alias
-    fn generate_promise_type(&self) -> Result<TsNode, GeneratorError> {
-        Ok(TsNode::TypeAlias(TypeAlias {
-            name: "Promise".to_string(),
-            type_expr: TypeExpression::Reference("Promise<T>".to_string()),
-            generics: vec![crate::ast::Generic {
-                name: "T".to_string(),
-                constraint: None,
-                default: None,
-            }],
-            documentation: Some("Promise type for parsed response value".to_string()),
-        }))
-    }
-
     /// Generate FromJSON function
     fn generate_from_json_function(&self) -> Result<TsNode, GeneratorError> {
         Ok(TsNode::Function(Function {
@@ -371,6 +374,11 @@ impl RuntimeGenerator {
                 default_value: None,
             }],
             return_type: Some(TypeExpression::Reference("T".to_string())),
+            generics: vec![crate::ast::Generic {
+                name: "T".to_string(),
+                constraint: None,
+                default: None,
+            }],
             is_async: false,
             is_export: true,
             documentation: Some("Convert JSON object to typed object".to_string()),
@@ -388,6 +396,11 @@ impl RuntimeGenerator {
                 default_value: None,
             }],
             return_type: Some(TypeExpression::Primitive(PrimitiveType::Any)),
+            generics: vec![crate::ast::Generic {
+                name: "T".to_string(),
+                constraint: None,
+                default: None,
+            }],
             is_async: false,
             is_export: true,
             documentation: Some("Convert typed object to JSON".to_string()),

@@ -2,7 +2,7 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
+import { Configuration } from './config';
 /**
  * Base API class for all API clients
  */
@@ -13,13 +13,14 @@ export class BaseAPI {
    * Initialize the BaseAPI
    */
   constructor(configuration?: Configuration) {
-    super(configuration);
+    this.configuration = configuration;
   }
   /**
    * Make an HTTP request
    */
   request(context: RequestContext): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
 }
 /**
@@ -32,7 +33,8 @@ export class RequiredError extends Error {
    * Create a new RequiredError
    */
   constructor(field: string) {
-    super(configuration);
+    super(field);
+    this.field = field;
   }
 }
 /**

@@ -36,6 +36,12 @@ pub struct ParameterInfo {
 /// Parameter extractor for OpenAPI operations
 pub struct ParameterExtractor;
 
+impl Default for ParameterExtractor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParameterExtractor {
     /// Create a new parameter extractor
     pub fn new() -> Self {
@@ -55,7 +61,7 @@ impl ParameterExtractor {
 
         // Extract path parameters from the path string
         let path_param_names = self.extract_path_parameter_names(path);
-        
+
         // Extract parameters from the operation
         if let Some(parameters) = &operation.parameters {
             for param in parameters {
@@ -95,19 +101,20 @@ impl ParameterExtractor {
         }
 
         // Extract request body parameter
-        if let Some(request_body) = &operation.request_body {
-            if let Some(json_content) = request_body.content.get("application/json") {
-                if let Some(schema_ref) = &json_content.schema {
+        if let Some(request_body) = &operation.request_body
+            && let Some(json_content) = request_body.content.get("application/json")
+                && let Some(schema_ref) = &json_content.schema {
                     body_param = Some(ParameterInfo {
                         name: "body".to_string(),
                         type_expr: self.map_schema_ref_to_type(schema_ref),
-                        required: matches!(request_body.required, Some(utoipa::openapi::Required::True)),
+                        required: matches!(
+                            request_body.required,
+                            Some(utoipa::openapi::Required::True)
+                        ),
                         description: request_body.description.clone(),
                         default_value: None,
                     });
                 }
-            }
-        }
 
         Ok(ExtractedParameters {
             path_params,
@@ -121,11 +128,11 @@ impl ParameterExtractor {
     fn extract_path_parameter_names(&self, path: &str) -> Vec<String> {
         let mut param_names = Vec::new();
         let mut chars = path.chars();
-        
+
         while let Some(c) = chars.next() {
             if c == '{' {
                 let mut param_name = String::new();
-                while let Some(c) = chars.next() {
+                for c in chars.by_ref() {
                     if c == '}' {
                         break;
                     }
@@ -136,12 +143,15 @@ impl ParameterExtractor {
                 }
             }
         }
-        
+
         param_names
     }
 
     /// Map parameter schema to TypeScript type
-    fn map_parameter_schema_to_type(&self, schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>) -> TypeExpression {
+    fn map_parameter_schema_to_type(
+        &self,
+        schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
+    ) -> TypeExpression {
         match schema_ref {
             utoipa::openapi::RefOr::T(schema) => {
                 match schema {
@@ -153,9 +163,9 @@ impl ParameterExtractor {
                             TypeExpression::Reference("object".to_string())
                         }
                     }
-                    utoipa::openapi::Schema::Array(_) => {
-                        TypeExpression::Array(Box::new(TypeExpression::Primitive(crate::ast::PrimitiveType::String)))
-                    }
+                    utoipa::openapi::Schema::Array(_) => TypeExpression::Array(Box::new(
+                        TypeExpression::Primitive(crate::ast::PrimitiveType::String),
+                    )),
                     _ => TypeExpression::Primitive(crate::ast::PrimitiveType::String),
                 }
             }
@@ -171,12 +181,20 @@ impl ParameterExtractor {
     }
 
     /// Map schema reference to TypeScript type
-    fn map_schema_ref_to_type(&self, schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>) -> TypeExpression {
+    fn map_schema_ref_to_type(
+        &self,
+        schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
+    ) -> TypeExpression {
         self.map_parameter_schema_to_type(schema_ref)
     }
 
     /// Generate a request interface name from operation details
-    pub fn generate_request_interface_name(&self, operation_id: Option<&str>, method: &str, path: &str) -> String {
+    pub fn generate_request_interface_name(
+        &self,
+        operation_id: Option<&str>,
+        method: &str,
+        path: &str,
+    ) -> String {
         let base_name = if let Some(id) = operation_id {
             // Use operation ID if available
             id.to_string()
@@ -189,7 +207,7 @@ impl ParameterExtractor {
                 .collect::<String>()
                 .trim_matches('_')
                 .to_string();
-            
+
             format!("{}{}Request", method_upper, path_clean)
         };
 

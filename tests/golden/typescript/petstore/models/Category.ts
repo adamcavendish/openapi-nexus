@@ -2,11 +2,12 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 /**
  * Category model
  */
 export interface Category {
-  id?: number | null | null;
-  name?: string | null | null;
+  /** Category ID */
+  id?: number | null;
+  /** Category name */
+  name?: string | null;
 }

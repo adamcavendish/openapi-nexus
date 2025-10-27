@@ -6,4 +6,4 @@ pub mod file_generator;
 
 pub use emitter::TypeScriptEmitter;
 pub use file_category::TypeScriptFileCategory;
-pub use file_generator::{TypeScriptFileGenerator, GeneratedFile};
+pub use file_generator::{GeneratedFile, TypeScriptFileGenerator};

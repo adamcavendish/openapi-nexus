@@ -1,0 +1,11 @@
+{
+  "description": "OpenAPI TypeScript client",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "name": "openapi-client",
+  "type": "module",
+  "types": "./src/index.ts",
+  "version": "1.0.0"
+}

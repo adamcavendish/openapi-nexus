@@ -72,11 +72,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("Languages: {:?}", languages);
 
             let mut generator = OpenApiCodeGenerator::new();
-            
+
             // Register TypeScript generator
-            generator.register_language_generator("typescript".to_string(), TypeScriptGenerator::new())?;
+            generator.register_language_generator(
+                "typescript".to_string(),
+                TypeScriptGenerator::new(),
+            )?;
             generator.register_language_generator("ts".to_string(), TypeScriptGenerator::new())?;
-            
+
             generator.generate_from_file(&input, &output, &languages)?;
 
             info!("Code generation completed successfully");

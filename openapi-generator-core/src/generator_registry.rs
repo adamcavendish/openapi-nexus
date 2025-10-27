@@ -27,9 +27,12 @@ impl GeneratorRegistry {
         G: LanguageGenerator + Send + Sync + 'static,
     {
         if self.generators.contains_key(&language) {
-            return Err(format!("Generator for language '{}' is already registered", language));
+            return Err(format!(
+                "Generator for language '{}' is already registered",
+                language
+            ));
         }
-        
+
         self.generators.insert(language, Box::new(generator));
         Ok(())
     }

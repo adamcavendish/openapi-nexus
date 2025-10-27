@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// TypeScript primitive types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Ord, PartialOrd, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PrimitiveType {
     String,
     Number,

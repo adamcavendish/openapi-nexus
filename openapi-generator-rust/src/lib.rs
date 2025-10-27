@@ -10,5 +10,5 @@ pub mod generator;
 pub mod type_mapping;
 
 pub use ast::*;
-pub use emitter::{RustEmitter, EmitError};
-pub use generator::{RustGenerator, GeneratorError};
+pub use emitter::{EmitError, RustEmitter};
+pub use generator::{GeneratorError, RustGenerator};

@@ -2,11 +2,14 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
+import { BaseAPI, RequestContext } from '../runtime/api';
+
+import { Configuration } from '../runtime/config';
 
 /**
  * API client for default operations
  */
-export class DefaultApi extends runtime.BaseAPI {
+export class DefaultApi extends BaseAPI {
   /**
    * Initialize the API client
    */
@@ -15,5 +18,6 @@ export class DefaultApi extends runtime.BaseAPI {
   }
   gettest(): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
 }

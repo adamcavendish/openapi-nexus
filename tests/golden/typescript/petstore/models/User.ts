@@ -2,17 +2,24 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 /**
  * User model
  */
 export interface User {
-  email?: string | null | null;
-  first_name?: string | null | null;
-  id?: number | null | null;
-  last_name?: string | null | null;
-  password?: string | null | null;
-  phone?: string | null | null;
-  user_status?: number | null | null;
-  username?: string | null | null;
+  /** Email */
+  email?: string | null;
+  /** First name */
+  first_name?: string | null;
+  /** User ID */
+  id?: number | null;
+  /** Last name */
+  last_name?: string | null;
+  /** Password */
+  password?: string | null;
+  /** Phone */
+  phone?: string | null;
+  /** User status */
+  user_status?: number | null;
+  /** Username */
+  username?: string | null;
 }

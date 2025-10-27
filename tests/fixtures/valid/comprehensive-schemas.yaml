@@ -1,0 +1,413 @@
+openapi: 3.1.0
+info:
+  title: Comprehensive Schema Types Example
+  description: Comprehensive test for all OpenAPI v3.1.2 schema types
+  version: 1.0.0
+
+paths:
+  /test:
+    get:
+      summary: Test endpoint
+      operationId: test
+      responses:
+        '200':
+          description: OK
+
+components:
+  schemas:
+    # ============================================================================
+    # 1. PRIMITIVE TYPES
+    # ============================================================================
+    
+    StringType:
+      type: string
+      description: Basic string type
+    
+    NullableString:
+      type: ['string', 'null']
+      description: Nullable string type (OpenAPI 3.1.2 style)
+    
+    EmailString:
+      type: string
+      format: email
+      description: String with email format
+    
+    DateTimeString:
+      type: string
+      format: date-time
+      description: String with date-time format
+    
+    UriString:
+      type: string
+      format: uri
+      description: String with URI format
+    
+    UuidString:
+      type: string
+      format: uuid
+      description: String with UUID format
+    
+    BinaryString:
+      type: string
+      format: binary
+      description: String with binary format
+    
+    ByteString:
+      type: string
+      format: byte
+      description: String with byte format (base64)
+    
+    PasswordString:
+      type: string
+      format: password
+      description: String with password format
+    
+    IntegerType:
+      type: integer
+      description: Basic integer type
+    
+    Integer32:
+      type: integer
+      format: int32
+      description: 32-bit integer
+    
+    Integer64:
+      type: integer
+      format: int64
+      description: 64-bit integer
+    
+    NumberType:
+      type: number
+      description: Basic number type
+    
+    FloatType:
+      type: number
+      format: float
+      description: Floating point number
+    
+    DoubleType:
+      type: number
+      format: double
+      description: Double precision floating point
+    
+    BooleanType:
+      type: boolean
+      description: Boolean type
+    
+    # ============================================================================
+    # 2. ARRAY TYPES
+    # ============================================================================
+    
+    StringArray:
+      type: array
+      items:
+        type: string
+      description: Array of strings
+    
+    NumberArray:
+      type: array
+      items:
+        type: number
+      description: Array of numbers
+    
+    BooleanArray:
+      type: array
+      items:
+        type: boolean
+      description: Array of booleans
+    
+    ObjectArray:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Name of the item in the array
+      description: Array of objects
+    
+    ReferenceArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/StringType'
+      description: Array of references
+    
+    NestedArray:
+      type: array
+      items:
+        type: array
+        items:
+          type: string
+      description: Array of arrays (nested)
+    
+    ArrayWithMinItems:
+      type: array
+      items:
+        type: string
+      minItems: 5
+      description: Array with minimum items constraint
+    
+    ArrayWithMaxItems:
+      type: array
+      items:
+        type: string
+      maxItems: 10
+      description: Array with maximum items constraint
+    
+    UniqueItemsArray:
+      type: array
+      items:
+        type: string
+      uniqueItems: true
+      description: Array with unique items constraint
+    
+    # ============================================================================
+    # 3. OBJECT TYPES & PROPERTIES
+    # ============================================================================
+    
+    BasicObject:
+      type: object
+      description: Basic object with properties
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the object
+        name:
+          type: string
+          description: Human-readable name of the object
+        active:
+          type: boolean
+          description: Whether the object is currently active
+      required:
+        - id
+        - name
+    
+    NestedObject:
+      type: object
+      description: Object with nested object property
+      properties:
+        user:
+          type: object
+          description: User information object
+          properties:
+            id:
+              type: integer
+              description: User's unique identifier
+            name:
+              type: string
+              description: User's display name
+          required:
+            - id
+        metadata:
+          type: object
+          description: Additional metadata about the object
+          properties:
+            created:
+              type: string
+              format: date-time
+              description: Timestamp when the object was created
+    
+    EmptyObject:
+      type: object
+      description: Object without properties
+    
+    ObjectWithAdditionalPropertiesTrue:
+      type: object
+      description: Object allowing any additional properties
+      properties:
+        name:
+          type: string
+      additionalProperties: true
+      required:
+        - name
+    
+    ObjectWithAdditionalPropertiesFalse:
+      type: object
+      description: Object not allowing additional properties
+      properties:
+        name:
+          type: string
+      additionalProperties: false
+      required:
+        - name
+    
+    ObjectWithTypedAdditionalProperties:
+      type: object
+      description: Object with typed additional properties
+      properties:
+        name:
+          type: string
+      additionalProperties:
+        type: number
+      required:
+        - name
+    
+    # ============================================================================
+    # 4. COMPOSITION SCHEMAS
+    # ============================================================================
+    
+    OneOfTypes:
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+      description: Union of multiple primitive types
+    
+    OneOfObjects:
+      oneOf:
+        - $ref: '#/components/schemas/BasicObject'
+        - $ref: '#/components/schemas/NestedObject'
+      description: Union of object types
+    
+    OneOfWithNull:
+      oneOf:
+        - type: string
+        - type: 'null'
+        - $ref: '#/components/schemas/BasicObject'
+      description: Union of string, null, and schema reference
+    
+    AnyOfTypes:
+      anyOf:
+        - type: string
+        - type: number
+      description: Any of multiple types
+    
+    AllOfObjects:
+      allOf:
+        - $ref: '#/components/schemas/BasicObject'
+        - type: object
+          properties:
+            metadata:
+              type: string
+      description: Intersection of object types (merge)
+    
+    # ============================================================================
+    # 5. ENUM & CONST TYPES
+    # ============================================================================
+    
+    StringEnum:
+      type: string
+      enum:
+        - active
+        - inactive
+        - pending
+      description: Enum of string values
+    
+    NumberEnum:
+      type: integer
+      enum:
+        - 1
+        - 2
+        - 3
+      description: Enum of number values
+    
+    RequiredEnumField:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, inactive]
+      required:
+        - status
+      description: Required enum field in object
+    
+    # ============================================================================
+    # 6. VALIDATION & CONSTRAINTS
+    # ============================================================================
+    
+    StringWithMinLength:
+      type: string
+      minLength: 5
+      description: String with minimum length
+    
+    StringWithMaxLength:
+      type: string
+      maxLength: 100
+      description: String with maximum length
+    
+    StringWithPattern:
+      type: string
+      pattern: '^[A-Z][a-z]+$'
+      description: String with regex pattern
+    
+    NumberWithMinimum:
+      type: number
+      minimum: 0
+      description: Number with minimum value
+    
+    NumberWithMaximum:
+      type: number
+      maximum: 100
+      description: Number with maximum value
+    
+    NumberWithMultipleOf:
+      type: number
+      multipleOf: 2
+      description: Number divisible by multipleOf
+    
+    # ============================================================================
+    # 7. DEFAULT VALUES
+    # ============================================================================
+    
+    ObjectWithDefaults:
+      type: object
+      properties:
+        name:
+          type: string
+          default: 'John Doe'
+          description: Full name of the person
+        age:
+          type: integer
+          default: 30
+          description: Age in years
+        active:
+          type: boolean
+          default: true
+          description: Whether the person is currently active
+      description: Object with default values
+    
+    # ============================================================================
+    # 8. COMPLEX/NESTED SCHEMAS
+    # ============================================================================
+    
+    ComplexNestedObject:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            profile:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                contact:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    phone:
+                      type: string
+                    addresses:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          street:
+                            type: string
+                          city:
+                            type: string
+                          zip:
+                            type: string
+      required:
+        - id
+        - user 

@@ -2,11 +2,14 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
+import { BaseAPI, RequestContext } from '../runtime/api';
+
+import { Configuration } from '../runtime/config';
 
 /**
  * API client for user operations
  */
-export class UserApi extends runtime.BaseAPI {
+export class UserApi extends BaseAPI {
   /**
    * Initialize the API client
    */
@@ -18,41 +21,48 @@ export class UserApi extends runtime.BaseAPI {
    */
   createUser(body: User): Promise<User> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Creates list of users with given input array
    */
   createUsersWithListInput(body: Array<string>): Promise<User> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Logs user into the system
    */
   loginUser(username?: string, password?: string): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Logs out current logged in user session
    */
   logoutUser(): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Get user by user name
    */
   getUserByName(username: string): Promise<User> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Update user
    */
   updateUser(username: string, body: User): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Delete user
    */
   deleteUser(username: string): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
 }

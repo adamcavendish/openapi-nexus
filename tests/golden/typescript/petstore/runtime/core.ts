@@ -2,20 +2,17 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
-/**
- * Promise type for parsed response value
- */
-export type Promise<T> = Promise<T>;
 /**
  * Convert typed object to JSON
  */
-export function ToJSON(value: T): any {
+export function ToJSON<T>(value: T): any {
   // TODO: Implement function body
+  throw new Error('Not implemented');
 }
 /**
  * Convert JSON object to typed object
  */
-export function FromJSON(json: any): T {
+export function FromJSON<T>(json: any): T {
   // TODO: Implement function body
+  throw new Error('Not implemented');
 }

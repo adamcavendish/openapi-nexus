@@ -2,7 +2,6 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 /**
  * Order status enum
  */

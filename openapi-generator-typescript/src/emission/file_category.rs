@@ -32,12 +32,14 @@ impl From<TypeScriptFileCategory> for FileCategory {
         match category {
             TypeScriptFileCategory::Api => FileCategory::Apis,
             TypeScriptFileCategory::Models | TypeScriptFileCategory::Schema => FileCategory::Models,
-            TypeScriptFileCategory::Index 
-                | TypeScriptFileCategory::PackageJson 
-                | TypeScriptFileCategory::TsConfig 
-                | TypeScriptFileCategory::TsConfigEsm 
-                | TypeScriptFileCategory::Readme => FileCategory::ProjectFiles,
-            TypeScriptFileCategory::Runtime | TypeScriptFileCategory::Utility => FileCategory::Runtime,
+            TypeScriptFileCategory::Index
+            | TypeScriptFileCategory::PackageJson
+            | TypeScriptFileCategory::TsConfig
+            | TypeScriptFileCategory::TsConfigEsm
+            | TypeScriptFileCategory::Readme => FileCategory::ProjectFiles,
+            TypeScriptFileCategory::Runtime | TypeScriptFileCategory::Utility => {
+                FileCategory::Runtime
+            }
         }
     }
 }

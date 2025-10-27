@@ -1,12 +1,11 @@
 //! Individual API class generator for TypeScript
 
-use crate::ast::{
-    Class, Method, Parameter, TsNode, TypeExpression, 
-    Visibility
-};
+use utoipa::openapi::path::Operation;
+use utoipa::openapi::{RefOr, Schema};
+
+use crate::ast::{Class, Method, Parameter, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
-use utoipa::openapi::path::Operation;
 
 /// Individual API class generator
 pub struct ApiClassGenerator {
@@ -29,19 +28,17 @@ impl ApiClassGenerator {
         _openapi: &utoipa::openapi::OpenApi,
     ) -> Result<TsNode, GeneratorError> {
         let class_name = format!("{}Api", self.to_pascal_case(tag));
-        
+
         let mut methods = vec![
             // Constructor method
             Method {
                 name: "constructor".to_string(),
-                parameters: vec![
-                    Parameter {
-                        name: "configuration".to_string(),
-                        type_expr: Some(TypeExpression::Reference("Configuration".to_string())),
-                        optional: true,
-                        default_value: None,
-                    },
-                ],
+                parameters: vec![Parameter {
+                    name: "configuration".to_string(),
+                    type_expr: Some(TypeExpression::Reference("Configuration".to_string())),
+                    optional: true,
+                    default_value: None,
+                }],
                 return_type: None,
                 is_async: false,
                 is_static: false,
@@ -55,12 +52,12 @@ impl ApiClassGenerator {
             let method = self.generate_operation_method(path, method_name, operation)?;
             methods.push(method);
         }
-        
+
         let api_class = Class {
             name: class_name.clone(),
             properties: vec![],
             methods,
-            extends: Some("runtime.BaseAPI".to_string()),
+            extends: Some("BaseAPI".to_string()),
             implements: vec![],
             generics: vec![],
             is_export: true,
@@ -80,7 +77,7 @@ impl ApiClassGenerator {
         let method_name = self.generate_method_name(path, operation, method_name);
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_return_type(operation)?;
-        
+
         Ok(Method {
             name: method_name,
             parameters,
@@ -88,7 +85,10 @@ impl ApiClassGenerator {
             is_async: true,
             is_static: false,
             visibility: Visibility::Public,
-            documentation: operation.summary.clone().or_else(|| operation.description.clone()),
+            documentation: operation
+                .summary
+                .clone()
+                .or_else(|| operation.description.clone()),
         })
     }
 
@@ -101,27 +101,33 @@ impl ApiClassGenerator {
             // Generate from path and HTTP method
             let path_parts: Vec<&str> = path.split('/').collect();
             let mut method_name = String::new();
-            
+
             // Add HTTP method prefix
             method_name.push_str(&http_method.to_lowercase());
-            
+
             // Add path parts
             for part in path_parts {
                 if !part.is_empty() && !part.starts_with('{') {
                     method_name.push_str(&self.to_pascal_case(part));
                 }
             }
-            
+
             self.to_camel_case(&method_name)
         }
     }
 
     /// Generate method parameters from operation
-    fn generate_method_parameters(&self, path: &str, operation: &Operation) -> Result<Vec<Parameter>, GeneratorError> {
+    fn generate_method_parameters(
+        &self,
+        path: &str,
+        operation: &Operation,
+    ) -> Result<Vec<Parameter>, GeneratorError> {
         let mut parameters = Vec::new();
 
         // Extract parameters using the parameter extractor
-        let extracted = self.parameter_extractor.extract_parameters(operation, path)?;
+        let extracted = self
+            .parameter_extractor
+            .extract_parameters(operation, path)?;
 
         // Add path parameters
         for param_info in extracted.path_params {
@@ -167,51 +173,58 @@ impl ApiClassGenerator {
     }
 
     /// Generate return type from operation
-    fn generate_return_type(&self, operation: &Operation) -> Result<Option<TypeExpression>, GeneratorError> {
+    fn generate_return_type(
+        &self,
+        operation: &Operation,
+    ) -> Result<Option<TypeExpression>, GeneratorError> {
         // Look for successful response (200, 201, etc.)
         for (status_code, response_ref) in operation.responses.responses.iter() {
-            if status_code.starts_with("2") { // 2xx status codes
+            if status_code.starts_with("2") {
+                // 2xx status codes
                 match response_ref {
-                    utoipa::openapi::RefOr::T(response) => {
-                        if let Some(json_content) = response.content.get("application/json") {
-                            if let Some(schema_ref) = &json_content.schema {
-                                let return_type = self.map_schema_ref_to_type(schema_ref);
-                                return Ok(Some(TypeExpression::Reference(format!("Promise<{}>", self.type_expression_to_string(&return_type)))));
-                            }
+                    RefOr::T(response) => {
+                        if let Some(json_content) = response.content.get("application/json")
+                            && let Some(schema_ref) = &json_content.schema
+                        {
+                            let return_type = self.map_schema_ref_to_type(schema_ref);
+                            return Ok(Some(TypeExpression::Reference(format!(
+                                "Promise<{}>",
+                                self.type_expression_to_string(&return_type)
+                            ))));
                         }
                         // If no JSON content, return generic response
-                        return Ok(Some(TypeExpression::Reference("Promise<Response>".to_string())));
+                        return Ok(Some(TypeExpression::Reference(
+                            "Promise<Response>".to_string(),
+                        )));
                     }
-                    utoipa::openapi::RefOr::Ref(_) => {
+                    RefOr::Ref(_) => {
                         // TODO: Handle response references
                     }
                 }
             }
         }
-        
+
         // Default return type
         Ok(Some(TypeExpression::Reference("Promise<any>".to_string())))
     }
 
     /// Map schema reference to TypeScript type
-    fn map_schema_ref_to_type(&self, schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>) -> TypeExpression {
+    fn map_schema_ref_to_type(&self, schema_ref: &RefOr<Schema>) -> TypeExpression {
         match schema_ref {
-            utoipa::openapi::RefOr::T(schema) => {
-                match schema {
-                    utoipa::openapi::Schema::Object(obj_schema) => {
-                        if obj_schema.properties.is_empty() {
-                            TypeExpression::Primitive(crate::ast::PrimitiveType::String)
-                        } else {
-                            TypeExpression::Reference("object".to_string())
-                        }
+            RefOr::T(schema) => match schema {
+                Schema::Object(obj_schema) => {
+                    if obj_schema.properties.is_empty() {
+                        TypeExpression::Primitive(crate::ast::PrimitiveType::String)
+                    } else {
+                        TypeExpression::Reference("object".to_string())
                     }
-                    utoipa::openapi::Schema::Array(_) => {
-                        TypeExpression::Array(Box::new(TypeExpression::Primitive(crate::ast::PrimitiveType::String)))
-                    }
-                    _ => TypeExpression::Primitive(crate::ast::PrimitiveType::String),
                 }
-            }
-            utoipa::openapi::RefOr::Ref(reference) => {
+                Schema::Array(_) => TypeExpression::Array(Box::new(TypeExpression::Primitive(
+                    crate::ast::PrimitiveType::String,
+                ))),
+                _ => TypeExpression::Primitive(crate::ast::PrimitiveType::String),
+            },
+            RefOr::Ref(reference) => {
                 let ref_path = &reference.ref_location;
                 if let Some(schema_name) = ref_path.strip_prefix("#/components/schemas/") {
                     TypeExpression::Reference(schema_name.to_string())
@@ -225,15 +238,13 @@ impl ApiClassGenerator {
     /// Convert TypeExpression to string representation
     fn type_expression_to_string(&self, type_expr: &TypeExpression) -> String {
         match type_expr {
-            TypeExpression::Primitive(primitive) => {
-                match primitive {
-                    crate::ast::PrimitiveType::String => "string".to_string(),
-                    crate::ast::PrimitiveType::Number => "number".to_string(),
-                    crate::ast::PrimitiveType::Boolean => "boolean".to_string(),
-                    crate::ast::PrimitiveType::Any => "any".to_string(),
-                    _ => "any".to_string(),
-                }
-            }
+            TypeExpression::Primitive(primitive) => match primitive {
+                crate::ast::PrimitiveType::String => "string".to_string(),
+                crate::ast::PrimitiveType::Number => "number".to_string(),
+                crate::ast::PrimitiveType::Boolean => "boolean".to_string(),
+                crate::ast::PrimitiveType::Any => "any".to_string(),
+                _ => "any".to_string(),
+            },
             TypeExpression::Reference(name) => name.clone(),
             TypeExpression::Array(item_type) => {
                 format!("Array<{}>", self.type_expression_to_string(item_type))

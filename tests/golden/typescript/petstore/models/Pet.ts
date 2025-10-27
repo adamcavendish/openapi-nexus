@@ -2,15 +2,16 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 /**
  * Pet model
  */
 export interface Pet {
-  category?: null | null | any;
-  id?: number | null | null;
+  category?: null | any;
+  /** Pet ID */
+  id?: number | null;
+  /** Pet name */
   name: string;
   photo_urls: Array<string>;
-  status?: null | null | "available" | "pending" | "sold";
+  status?: null | "available" | "pending" | "sold";
   tags?: Array<any>;
 }

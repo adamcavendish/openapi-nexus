@@ -2,11 +2,14 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
+import { BaseAPI, RequestContext } from '../runtime/api';
+
+import { Configuration } from '../runtime/config';
 
 /**
  * API client for store operations
  */
-export class StoreApi extends runtime.BaseAPI {
+export class StoreApi extends BaseAPI {
   /**
    * Initialize the API client
    */
@@ -18,23 +21,27 @@ export class StoreApi extends runtime.BaseAPI {
    */
   getInventory(): Promise<string> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Place an order for a pet
    */
   placeOrder(body: Order): Promise<Order> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Find purchase order by ID
    */
   getOrderById(orderId: string): Promise<Order> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
   /**
    * Delete purchase order by ID
    */
   deleteOrder(orderId: string): Promise<Response> {
     // TODO: Implement method
+    throw new Error('Not implemented');
   }
 }

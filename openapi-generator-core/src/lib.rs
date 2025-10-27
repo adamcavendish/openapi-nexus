@@ -7,5 +7,5 @@ pub mod openapi_code_generator;
 pub mod traits;
 
 // Re-export the main struct for convenience
-pub use openapi_code_generator::OpenApiCodeGenerator;
 pub use generator_registry::GeneratorRegistry;
+pub use openapi_code_generator::OpenApiCodeGenerator;

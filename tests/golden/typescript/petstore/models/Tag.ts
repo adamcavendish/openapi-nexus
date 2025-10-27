@@ -2,11 +2,12 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 /**
  * Tag model
  */
 export interface Tag {
-  id?: number | null | null;
-  name?: string | null | null;
+  /** Tag ID */
+  id?: number | null;
+  /** Tag name */
+  name?: string | null;
 }

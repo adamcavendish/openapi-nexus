@@ -38,13 +38,18 @@ impl OpenApiCodeGenerator {
     }
 
     /// Register a language generator
-    pub fn register_language_generator<G>(&mut self, language: String, generator: G) -> Result<(), error::Error>
+    pub fn register_language_generator<G>(
+        &mut self,
+        language: String,
+        generator: G,
+    ) -> Result<(), error::Error>
     where
         G: LanguageGenerator + Send + Sync + 'static,
     {
-        self.generator_registry.register_generator(language, generator)
+        self.generator_registry
+            .register_generator(language, generator)
             .map_err(|msg| error::Error::Generate {
-                source: Box::new(std::io::Error::new(std::io::ErrorKind::Other, msg)),
+                source: Box::new(std::io::Error::other(msg)),
             })
     }
 
@@ -71,7 +76,7 @@ impl OpenApiCodeGenerator {
 
         for language in languages {
             tracing::info!("Generating {} code", language);
-            
+
             // Check if generator is registered
             if !self.generator_registry.has_generator(language) {
                 return Err(error::Error::GeneratorNotFound {
@@ -83,31 +88,38 @@ impl OpenApiCodeGenerator {
             let mut language_openapi = openapi.clone();
 
             // Apply transformations - use language-specific pipeline if available, otherwise default
-            let pipeline = self.language_pipelines.get(language)
+            let pipeline = self
+                .language_pipelines
+                .get(language)
                 .unwrap_or(&self.transform_pipeline);
-            
+
             tracing::info!("Applying transformations for {}", language);
-            pipeline.transform(&mut language_openapi)
+            pipeline
+                .transform(&mut language_openapi)
                 .context(error::TransformSnafu)?;
 
             // Get the generator and generate files
-            let generator = self.generator_registry.get_generator(language)
+            let generator = self
+                .generator_registry
+                .get_generator(language)
                 .ok_or_else(|| error::Error::GeneratorNotFound {
                     language: language.clone(),
                 })?;
 
-            let files = generator.generate(&language_openapi)
-                .map_err(|e| error::Error::Generate {
-                    source: e,
-                })?;
+            let files = generator
+                .generate(&language_openapi)
+                .map_err(|e| error::Error::Generate { source: e })?;
 
             // Write files using the FileWriter trait
-            generator.write_files(output_dir.as_ref(), &files)
-                .map_err(|e| error::Error::Generate {
-                    source: e,
-                })?;
+            generator
+                .write_files(output_dir.as_ref(), &files)
+                .map_err(|e| error::Error::Generate { source: e })?;
 
-            tracing::info!("Successfully generated {} files for {}", files.len(), language);
+            tracing::info!(
+                "Successfully generated {} files for {}",
+                files.len(),
+                language
+            );
         }
 
         Ok(())
