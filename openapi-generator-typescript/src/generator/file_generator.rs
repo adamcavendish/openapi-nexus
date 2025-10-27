@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::slice;
 
+use heck::{ToKebabCase as _, ToLowerCamelCase as _, ToPascalCase as _, ToSnakeCase as _};
 use utoipa::openapi::OpenApi;
 
 use crate::ast::TsNode;
@@ -207,64 +208,13 @@ impl TypeScriptFileGenerator {
     /// Generate filename based on naming convention
     fn generate_filename(&self, name: &str) -> String {
         let base_name = match self.config.naming_convention {
-            NamingConvention::CamelCase => self.to_camel_case(name),
-            NamingConvention::KebabCase => self.to_kebab_case(name),
-            NamingConvention::SnakeCase => self.to_snake_case(name),
-            NamingConvention::PascalCase => self.to_pascal_case(name),
+            NamingConvention::CamelCase => name.to_lower_camel_case(),
+            NamingConvention::KebabCase => name.to_kebab_case(),
+            NamingConvention::SnakeCase => name.to_snake_case(),
+            NamingConvention::PascalCase => name.to_pascal_case(),
         };
 
         format!("{}.ts", base_name)
-    }
-
-    /// Convert to camelCase
-    fn to_camel_case(&self, s: &str) -> String {
-        let pascal = self.to_pascal_case(s);
-        if pascal.is_empty() {
-            return pascal;
-        }
-
-        let mut chars = pascal.chars();
-        let first = chars.next().unwrap().to_lowercase().next().unwrap();
-        format!("{}{}", first, chars.as_str())
-    }
-
-    /// Convert to kebab-case
-    fn to_kebab_case(&self, s: &str) -> String {
-        let mut result = String::new();
-        for (i, c) in s.chars().enumerate() {
-            if c.is_uppercase() && i > 0 {
-                result.push('-');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-        }
-        result
-    }
-
-    /// Convert to snake_case
-    fn to_snake_case(&self, s: &str) -> String {
-        let mut result = String::new();
-        for (i, c) in s.chars().enumerate() {
-            if c.is_uppercase() && i > 0 {
-                result.push('_');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-        }
-        result
-    }
-
-    /// Convert a string to PascalCase
-    fn to_pascal_case(&self, s: &str) -> String {
-        // If the string is already PascalCase, return it as-is
-        if s.chars().next().is_some_and(|c| c.is_uppercase()) {
-            return s.to_string();
-        }
-
-        // Convert first character to uppercase
-        let mut chars = s.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        }
     }
 
     /// Create a mapping from schema names to their corresponding filenames

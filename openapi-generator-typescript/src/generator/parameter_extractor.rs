@@ -1,9 +1,11 @@
 //! Parameter extraction utilities for OpenAPI operations
 
+use heck::ToPascalCase as _;
 use utoipa::openapi::path::Operation;
 
 use crate::ast::TypeExpression;
 use crate::core::GeneratorError;
+use crate::utils::schema_mapper::SchemaMapper;
 
 /// Extracted parameters from an OpenAPI operation
 #[derive(Debug, Clone)]
@@ -34,7 +36,9 @@ pub struct ParameterInfo {
 }
 
 /// Parameter extractor for OpenAPI operations
-pub struct ParameterExtractor;
+pub struct ParameterExtractor {
+    schema_mapper: SchemaMapper,
+}
 
 impl Default for ParameterExtractor {
     fn default() -> Self {
@@ -45,7 +49,9 @@ impl Default for ParameterExtractor {
 impl ParameterExtractor {
     /// Create a new parameter extractor
     pub fn new() -> Self {
-        Self
+        Self {
+            schema_mapper: SchemaMapper::new(),
+        }
     }
 
     /// Extract all parameters from an OpenAPI operation
@@ -150,32 +156,7 @@ impl ParameterExtractor {
         &self,
         schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
     ) -> TypeExpression {
-        match schema_ref {
-            utoipa::openapi::RefOr::T(schema) => {
-                match schema {
-                    utoipa::openapi::Schema::Object(obj_schema) => {
-                        if obj_schema.properties.is_empty() {
-                            // This is likely a primitive type
-                            TypeExpression::Primitive(crate::ast::PrimitiveType::String)
-                        } else {
-                            TypeExpression::Reference("object".to_string())
-                        }
-                    }
-                    utoipa::openapi::Schema::Array(_) => TypeExpression::Array(Box::new(
-                        TypeExpression::Primitive(crate::ast::PrimitiveType::String),
-                    )),
-                    _ => TypeExpression::Primitive(crate::ast::PrimitiveType::String),
-                }
-            }
-            utoipa::openapi::RefOr::Ref(reference) => {
-                let ref_path = &reference.ref_location;
-                if let Some(schema_name) = ref_path.strip_prefix("#/components/schemas/") {
-                    TypeExpression::Reference(schema_name.to_string())
-                } else {
-                    TypeExpression::Primitive(crate::ast::PrimitiveType::String)
-                }
-            }
-        }
+        self.schema_mapper.map_ref_or_schema_to_type(schema_ref)
     }
 
     /// Map schema reference to TypeScript type
@@ -183,7 +164,7 @@ impl ParameterExtractor {
         &self,
         schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
     ) -> TypeExpression {
-        self.map_parameter_schema_to_type(schema_ref)
+        self.schema_mapper.map_ref_or_schema_to_type(schema_ref)
     }
 
     /// Generate a request interface name from operation details
@@ -210,21 +191,6 @@ impl ParameterExtractor {
         };
 
         // Convert to PascalCase
-        self.to_pascal_case(&base_name)
-    }
-
-    /// Convert a string to PascalCase
-    fn to_pascal_case(&self, s: &str) -> String {
-        // If the string is already PascalCase, return it as-is
-        if s.chars().next().is_some_and(|c| c.is_uppercase()) {
-            return s.to_string();
-        }
-
-        // Convert first character to uppercase
-        let mut chars = s.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        }
+        base_name.to_pascal_case()
     }
 }

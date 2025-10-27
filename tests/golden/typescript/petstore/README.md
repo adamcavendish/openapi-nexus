@@ -1,4 +1,4 @@
-# open-a-p-i -client
+# open-api-client
 
 OpenAPI TypeScript client
 
@@ -22,19 +22,19 @@ This package provides a TypeScript/JavaScript client for the OpenAPI Client API.
 ### From npm (published package)
 
 ```bash
-npm install open-a-p-i -client
+npm install open-api-client
 ```
 
 ### From local path (development)
 
 ```bash
-npm install file:path/to/open-a-p-i -client
+npm install file:path/to/open-api-client
 ```
 
 ## Quick Start
 
 ```typescript
-import { Configuration, DefaultApi } from 'open-a-p-i -client';
+import { Configuration, DefaultApi } from 'open-api-client';
 
 // Create a configuration
 const config = new Configuration({
@@ -100,7 +100,7 @@ const config = new Configuration({
 Add custom middleware to intercept requests and responses:
 
 ```typescript
-import { Configuration, Middleware } from 'open-a-p-i -client';
+import { Configuration, Middleware } from 'open-api-client';
 
 const loggingMiddleware: Middleware = {
   pre: async (context) => {
@@ -128,7 +128,7 @@ const config = new Configuration({
 The client throws typed errors for different failure scenarios:
 
 ```typescript
-import { ResponseError, FetchError, RequiredError } from 'open-a-p-i -client';
+import { ResponseError, FetchError, RequiredError } from 'open-api-client';
 
 try {
   const result = await api.someMethod();
@@ -183,7 +183,7 @@ npm run build:esm
 This package includes TypeScript type definitions. No additional `@types` package is needed.
 
 ```typescript
-import type { User, CreateUserRequest } from 'open-a-p-i -client';
+import type { User, CreateUserRequest } from 'open-api-client';
 
 const user: User = {
   id: 1,

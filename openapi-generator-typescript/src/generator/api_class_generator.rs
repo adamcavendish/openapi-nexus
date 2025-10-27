@@ -1,15 +1,18 @@
 //! Individual API class generator for TypeScript
 
+use heck::{ToLowerCamelCase as _, ToPascalCase as _};
+use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
-use utoipa::openapi::{RefOr, Schema};
 
 use crate::ast::{Class, Method, Parameter, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
+use crate::utils::schema_mapper::SchemaMapper;
 
 /// Individual API class generator
 pub struct ApiClassGenerator {
     parameter_extractor: ParameterExtractor,
+    schema_mapper: SchemaMapper,
 }
 
 impl ApiClassGenerator {
@@ -17,6 +20,7 @@ impl ApiClassGenerator {
     pub fn new() -> Self {
         Self {
             parameter_extractor: ParameterExtractor::new(),
+            schema_mapper: SchemaMapper::new(),
         }
     }
 
@@ -27,7 +31,7 @@ impl ApiClassGenerator {
         operations: &[(String, String, Operation)],
         _openapi: &utoipa::openapi::OpenApi,
     ) -> Result<TsNode, GeneratorError> {
-        let class_name = format!("{}Api", self.to_pascal_case(tag));
+        let class_name = format!("{}Api", tag.to_pascal_case());
 
         let mut methods = vec![
             // Constructor method
@@ -96,7 +100,7 @@ impl ApiClassGenerator {
     fn generate_method_name(&self, path: &str, operation: &Operation, http_method: &str) -> String {
         // Use operationId if available, otherwise generate from path and method
         if let Some(operation_id) = &operation.operation_id {
-            self.to_camel_case(operation_id)
+            operation_id.to_lower_camel_case()
         } else {
             // Generate from path and HTTP method
             let path_parts: Vec<&str> = path.split('/').collect();
@@ -108,11 +112,11 @@ impl ApiClassGenerator {
             // Add path parts
             for part in path_parts {
                 if !part.is_empty() && !part.starts_with('{') {
-                    method_name.push_str(&self.to_pascal_case(part));
+                    method_name.push_str(&part.to_pascal_case());
                 }
             }
 
-            self.to_camel_case(&method_name)
+            method_name.to_lower_camel_case()
         }
     }
 
@@ -186,10 +190,11 @@ impl ApiClassGenerator {
                         if let Some(json_content) = response.content.get("application/json")
                             && let Some(schema_ref) = &json_content.schema
                         {
-                            let return_type = self.map_schema_ref_to_type(schema_ref);
+                            let return_type =
+                                self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
                             return Ok(Some(TypeExpression::Reference(format!(
                                 "Promise<{}>",
-                                Self::type_expression_to_string(&return_type)
+                                return_type
                             ))));
                         }
                         // If no JSON content, return generic response
@@ -206,104 +211,6 @@ impl ApiClassGenerator {
 
         // Default return type
         Ok(Some(TypeExpression::Reference("Promise<any>".to_string())))
-    }
-
-    /// Map schema reference to TypeScript type
-    fn map_schema_ref_to_type(&self, schema_ref: &RefOr<Schema>) -> TypeExpression {
-        match schema_ref {
-            RefOr::T(schema) => match schema {
-                Schema::Object(obj_schema) => {
-                    if obj_schema.properties.is_empty() {
-                        TypeExpression::Primitive(crate::ast::PrimitiveType::String)
-                    } else {
-                        TypeExpression::Reference("object".to_string())
-                    }
-                }
-                Schema::Array(_) => TypeExpression::Array(Box::new(TypeExpression::Primitive(
-                    crate::ast::PrimitiveType::String,
-                ))),
-                _ => TypeExpression::Primitive(crate::ast::PrimitiveType::String),
-            },
-            RefOr::Ref(reference) => {
-                let ref_path = &reference.ref_location;
-                if let Some(schema_name) = ref_path.strip_prefix("#/components/schemas/") {
-                    TypeExpression::Reference(schema_name.to_string())
-                } else {
-                    TypeExpression::Primitive(crate::ast::PrimitiveType::String)
-                }
-            }
-        }
-    }
-
-    /// Convert TypeExpression to string representation
-    fn type_expression_to_string(type_expr: &TypeExpression) -> String {
-        match type_expr {
-            TypeExpression::Primitive(primitive) => match primitive {
-                crate::ast::PrimitiveType::String => "string".to_string(),
-                crate::ast::PrimitiveType::Number => "number".to_string(),
-                crate::ast::PrimitiveType::Boolean => "boolean".to_string(),
-                crate::ast::PrimitiveType::Any => "any".to_string(),
-                _ => "any".to_string(),
-            },
-            TypeExpression::Reference(name) => name.clone(),
-            TypeExpression::Array(item_type) => {
-                format!("Array<{}>", Self::type_expression_to_string(item_type))
-            }
-            TypeExpression::Union(types) => {
-                let type_strings: Vec<String> =
-                    types.iter().map(Self::type_expression_to_string).collect();
-                type_strings.join(" | ")
-            }
-            TypeExpression::Intersection(types) => {
-                let type_strings: Vec<String> =
-                    types.iter().map(Self::type_expression_to_string).collect();
-                type_strings.join(" & ")
-            }
-            TypeExpression::Function(func) => {
-                let params: Vec<String> = func
-                    .parameters
-                    .iter()
-                    .map(|param| {
-                        let param_type = if let Some(type_expr) = &param.type_expr {
-                            Self::type_expression_to_string(type_expr)
-                        } else {
-                            "any".to_string()
-                        };
-                        if param.optional {
-                            format!("{}?: {}", param.name, param_type)
-                        } else {
-                            format!("{}: {}", param.name, param_type)
-                        }
-                    })
-                    .collect();
-                let return_type = if let Some(ret_type) = &func.return_type {
-                    Self::type_expression_to_string(ret_type)
-                } else {
-                    "void".to_string()
-                };
-                format!("({}) => {}", params.join(", "), return_type)
-            }
-            TypeExpression::Object(properties) => {
-                let prop_strings: Vec<String> = properties
-                    .iter()
-                    .map(|(name, type_expr)| {
-                        let prop_type = Self::type_expression_to_string(type_expr);
-                        format!("{}: {}", name, prop_type)
-                    })
-                    .collect();
-                format!("{{ {} }}", prop_strings.join("; "))
-            }
-            TypeExpression::Tuple(types) => {
-                let type_strings: Vec<String> =
-                    types.iter().map(Self::type_expression_to_string).collect();
-                format!("[{}]", type_strings.join(", "))
-            }
-            TypeExpression::Literal(value) => value.clone(),
-            TypeExpression::Generic(name) => name.clone(),
-            TypeExpression::IndexSignature(key, value_type) => {
-                format!("[{}: {}]", key, Self::type_expression_to_string(value_type))
-            }
-        }
     }
 
     /// Generate implementation body for an API method
@@ -423,39 +330,6 @@ impl ApiClassGenerator {
     /// Check if a parameter is a path parameter based on the path template
     fn is_path_parameter(&self, param_name: &str, path: &str) -> bool {
         path.contains(&format!("{{{}}}", param_name))
-    }
-
-    /// Convert to camelCase
-    fn to_camel_case(&self, s: &str) -> String {
-        let pascal = self.to_pascal_case(s);
-        if pascal.is_empty() {
-            return pascal;
-        }
-
-        let mut chars = pascal.chars();
-        let first = chars.next().unwrap().to_lowercase().next().unwrap();
-        format!("{}{}", first, chars.as_str())
-    }
-
-    /// Convert to PascalCase
-    fn to_pascal_case(&self, s: &str) -> String {
-        let mut result = String::new();
-        let mut capitalize_next = true;
-
-        for c in s.chars() {
-            if c.is_alphanumeric() {
-                if capitalize_next {
-                    result.push(c.to_uppercase().next().unwrap());
-                    capitalize_next = false;
-                } else {
-                    result.push(c.to_lowercase().next().unwrap());
-                }
-            } else {
-                capitalize_next = true;
-            }
-        }
-
-        result
     }
 }
 

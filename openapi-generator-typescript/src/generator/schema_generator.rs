@@ -5,6 +5,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use heck::ToPascalCase as _;
 use serde_json;
 use utoipa::openapi::schema::{
     AdditionalProperties, KnownFormat, Object, SchemaFormat, SchemaType, Type,
@@ -41,7 +42,7 @@ impl SchemaGenerator {
         context: &mut SchemaContext,
     ) -> Result<TsNode, GeneratorError> {
         // Ensure the name is PascalCase for TypeScript interfaces
-        let pascal_name = self.to_pascal_case(name);
+        let pascal_name = name.to_pascal_case();
 
         match schema_ref {
             RefOr::T(schema) => {
@@ -251,7 +252,11 @@ impl SchemaGenerator {
                             _ => enum_value.to_string().trim_matches('"').to_string(),
                         };
 
-                        let variant_name = self.enum_value_to_variant_name(&value_str);
+                        let variant_name = if value_str.chars().all(|c| c.is_ascii_digit()) {
+                            format!("_{}", value_str)
+                        } else {
+                            value_str.to_pascal_case()
+                        };
                         let variant = EnumVariant {
                             name: variant_name,
                             value: Some(value_str),
@@ -680,38 +685,6 @@ impl SchemaGenerator {
             // Unresolved reference - generate warning and fallback
             tracing::warn!("Unresolved schema reference: {}", schema_name);
             Ok(TypeExpression::Reference(schema_name.clone()))
-        }
-    }
-
-    // ============================================================================
-    // UTILITIES (Private Methods)
-    // ============================================================================
-
-    /// Convert enum value to variant name
-    fn enum_value_to_variant_name(&self, value: &str) -> String {
-        // Convert enum value to PascalCase variant name
-        // e.g., "available" -> "Available", "pending" -> "Pending"
-        // For numeric values, prefix with underscore to make valid TypeScript identifiers
-        // e.g., "1" -> "_1", "2" -> "_2"
-        if value.chars().all(|c| c.is_ascii_digit()) {
-            format!("_{}", value)
-        } else {
-            self.to_pascal_case(value)
-        }
-    }
-
-    /// Convert a string to PascalCase
-    fn to_pascal_case(&self, s: &str) -> String {
-        // If the string is already PascalCase, return it as-is
-        if s.chars().next().is_some_and(|c| c.is_uppercase()) {
-            return s.to_string();
-        }
-
-        // Convert first character to uppercase
-        let mut chars = s.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
         }
     }
 }

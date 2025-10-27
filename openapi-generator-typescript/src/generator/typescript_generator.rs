@@ -10,7 +10,7 @@ use super::runtime_generator::RuntimeGenerator;
 use super::schema_generator::SchemaGenerator;
 use crate::config::{FileConfig, GeneratorConfig};
 use crate::core::GeneratorError;
-use crate::emission::TypeScriptFileGenerator;
+use crate::generator::file_generator::TypeScriptFileGenerator;
 use crate::generator::schema_context::SchemaContext;
 use openapi_generator_core::generator_registry::LanguageGenerator;
 use openapi_generator_core::traits::code_generator::LanguageCodeGenerator;

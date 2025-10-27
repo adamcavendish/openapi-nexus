@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use crate::ast::{TsNode, TypeExpression};
+use crate::utils::typescript_types::{is_primitive_type, is_runtime_type};
 
 /// Analyzes TypeScript AST nodes to extract type dependencies
 pub struct DependencyAnalyzer;
@@ -66,7 +67,7 @@ impl DependencyAnalyzer {
                 // Extract dependencies from extends clause
                 if let Some(extends) = &class.extends {
                     // Check if it's a runtime dependency
-                    if self.is_runtime_type(extends) {
+                    if is_runtime_type(extends) {
                         dependencies.add_runtime_dependency(extends.clone());
                     } else {
                         dependencies.add_model_dependency(extends.clone());
@@ -109,8 +110,8 @@ impl DependencyAnalyzer {
         match type_expr {
             TypeExpression::Reference(type_name) => {
                 // Only add non-primitive types as dependencies
-                if !self.is_primitive_type(type_name) {
-                    if self.is_runtime_type(type_name) {
+                if !is_primitive_type(type_name) {
+                    if is_runtime_type(type_name) {
                         dependencies.add_runtime_dependency(type_name.clone());
                     } else {
                         dependencies.add_model_dependency(type_name.clone());
@@ -162,72 +163,6 @@ impl DependencyAnalyzer {
                 // These don't have dependencies to extract
             }
         }
-    }
-
-    /// Check if a type name is a primitive TypeScript type
-    fn is_primitive_type(&self, type_name: &str) -> bool {
-        // Handle generic types like Promise<T>, Array<T>, etc.
-        if type_name.contains('<') {
-            let base_type = type_name.split('<').next().unwrap_or(type_name);
-            return matches!(
-                base_type,
-                "Promise"
-                    | "Array"
-                    | "Map"
-                    | "Set"
-                    | "WeakMap"
-                    | "WeakSet"
-                    | "ReadonlyArray"
-                    | "ReadonlyMap"
-                    | "ReadonlySet"
-            );
-        }
-
-        matches!(
-            type_name,
-            "string"
-                | "number"
-                | "boolean"
-                | "any"
-                | "unknown"
-                | "null"
-                | "undefined"
-                | "void"
-                | "object"
-                | "Promise"
-                | "Array"
-                | "Response"
-                | "Error"
-                | "Date"
-                | "RegExp"
-                | "Map"
-                | "Set"
-                | "WeakMap"
-                | "WeakSet"
-                | "ReadonlyArray"
-                | "ReadonlyMap"
-                | "ReadonlySet"
-                | "Partial"
-                | "Required"
-                | "Pick"
-                | "Omit"
-                | "Record"
-                | "Exclude"
-                | "Extract"
-                | "NonNullable"
-                | "Parameters"
-                | "ReturnType"
-                | "InstanceType"
-                | "RequestInit"
-        )
-    }
-
-    /// Check if a type name is a runtime type (from our runtime library)
-    fn is_runtime_type(&self, type_name: &str) -> bool {
-        matches!(
-            type_name,
-            "BaseAPI" | "Configuration" | "RequestContext" | "ApiResponse" | "HttpMethod"
-        )
     }
 }
 

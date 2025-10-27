@@ -7,7 +7,8 @@ use crate::ast::{
     Visibility,
 };
 use crate::core::GeneratorError;
-use crate::emission::{GeneratedFile, TypeScriptEmitter, TypeScriptFileCategory};
+use crate::emission::{TypeScriptEmitter, TypeScriptFileCategory};
+use crate::generator::file_generator::GeneratedFile;
 
 /// Runtime module generator for creating TypeScript runtime utilities
 pub struct RuntimeGenerator {

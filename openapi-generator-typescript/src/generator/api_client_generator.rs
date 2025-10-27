@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
@@ -119,7 +120,7 @@ impl ApiClientGenerator {
             methods.push(api_method);
         }
 
-        let class_name = format!("{}Api", self.to_pascal_case(tag));
+        let class_name = format!("{}Api", tag.to_pascal_case());
         let api_class = Class {
             name: class_name.clone(),
             properties: vec![],
@@ -228,7 +229,7 @@ impl ApiClientGenerator {
         path: &str,
     ) -> String {
         if let Some(id) = operation_id {
-            return self.to_camel_case(id);
+            return id.to_lower_camel_case();
         }
 
         // Generate name from HTTP method and path
@@ -243,40 +244,7 @@ impl ApiClientGenerator {
             _ => "request",
         };
 
-        self.to_camel_case(&format!("{}{}", action, self.to_pascal_case(resource)))
-    }
-
-    /// Convert to PascalCase
-    fn to_pascal_case(&self, s: &str) -> String {
-        let mut result = String::new();
-        let mut capitalize_next = true;
-
-        for c in s.chars() {
-            if c.is_alphanumeric() {
-                if capitalize_next {
-                    result.push(c.to_uppercase().next().unwrap());
-                    capitalize_next = false;
-                } else {
-                    result.push(c.to_lowercase().next().unwrap());
-                }
-            } else {
-                capitalize_next = true;
-            }
-        }
-
-        result
-    }
-
-    /// Convert to camelCase
-    fn to_camel_case(&self, s: &str) -> String {
-        let pascal = self.to_pascal_case(s);
-        if pascal.is_empty() {
-            return pascal;
-        }
-
-        let mut chars = pascal.chars();
-        let first = chars.next().unwrap().to_lowercase().next().unwrap();
-        format!("{}{}", first, chars.as_str())
+        format!("{}{}", action, resource.to_pascal_case()).to_lower_camel_case()
     }
 }
 

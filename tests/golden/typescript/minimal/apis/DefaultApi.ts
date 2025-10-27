@@ -16,7 +16,7 @@ export class DefaultApi extends BaseAPI {
   constructor(configuration?: Configuration) {
     super(configuration);
   }
-  gettest(): Promise<Response> {
+  getTest(): Promise<Response> {
     const url = this.configuration?.basePath || '';
     return this.request({ url, init: { method: 'DELETE' } });
   }

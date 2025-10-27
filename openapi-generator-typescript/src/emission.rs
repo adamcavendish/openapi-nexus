@@ -7,7 +7,6 @@ pub mod emitter;
 pub mod enum_emitter;
 pub mod error;
 pub mod file_category;
-pub mod file_generator;
 pub mod function_emitter;
 pub mod import_emitter;
 pub mod import_manager;
@@ -19,5 +18,4 @@ pub mod type_expression_emitter;
 
 pub use emitter::TypeScriptEmitter;
 pub use file_category::TypeScriptFileCategory;
-pub use file_generator::{GeneratedFile, TypeScriptFileGenerator};
 pub use import_manager::ImportManager;

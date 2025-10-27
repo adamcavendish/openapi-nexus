@@ -1,9 +1,11 @@
 //! Package file generators for npm package structure
 
+use heck::ToKebabCase as _;
 use utoipa::openapi::OpenApi;
 
 use crate::config::{PackageConfig, TypeScriptModule};
-use crate::emission::{GeneratedFile, TypeScriptFileCategory};
+use crate::emission::TypeScriptFileCategory;
+use crate::generator::file_generator::GeneratedFile;
 
 /// Generator for npm package files
 pub struct PackageFilesGenerator {
@@ -23,7 +25,7 @@ impl PackageFilesGenerator {
         let description = "OpenAPI TypeScript client";
 
         // Convert title to kebab-case for package name
-        let package_name = self.to_kebab_case(title);
+        let package_name = title.to_kebab_case();
         let scoped_name = if let Some(scope) = &self.config.scope {
             format!("{}/{}", scope, package_name)
         } else {
@@ -123,9 +125,9 @@ impl PackageFilesGenerator {
         let description = "OpenAPI TypeScript client";
 
         let package_name = if let Some(scope) = &self.config.scope {
-            format!("{}/{}", scope, self.to_kebab_case(title))
+            format!("{}/{}", scope, title.to_kebab_case())
         } else {
-            self.to_kebab_case(title)
+            title.to_kebab_case()
         };
 
         // Determine install path based on scope
@@ -167,18 +169,6 @@ impl PackageFilesGenerator {
             content,
             file_category: TypeScriptFileCategory::Readme,
         }
-    }
-
-    /// Convert a string to kebab-case
-    fn to_kebab_case(&self, s: &str) -> String {
-        let mut result = String::new();
-        for (i, c) in s.chars().enumerate() {
-            if c.is_uppercase() && i > 0 {
-                result.push('-');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-        }
-        result
     }
 }
 
