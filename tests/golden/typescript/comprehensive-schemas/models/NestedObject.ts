@@ -7,7 +7,7 @@
  */
 export interface NestedObject {
   /** Additional metadata about the object */
-  metadata?: any;
+  metadata?: { created: string };
   /** User information object */
-  user?: any;
+  user?: { id: number; name: string };
 }

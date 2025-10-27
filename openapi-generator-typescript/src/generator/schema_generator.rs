@@ -3,10 +3,12 @@
 //! This module consolidates schema-to-TypeScript conversion and type mapping functionality
 //! into a single, well-architected generator that fully implements OpenAPI v3.1.2 features.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, BTreeMap};
 
 use serde_json;
-use utoipa::openapi::schema::{AdditionalProperties, KnownFormat, SchemaFormat, SchemaType, Type};
+use utoipa::openapi::schema::{
+    AdditionalProperties, KnownFormat, Object, SchemaFormat, SchemaType, Type,
+};
 use utoipa::openapi::{RefOr, Schema};
 
 use crate::ast::{
@@ -68,9 +70,10 @@ impl SchemaGenerator {
             Schema::Object(obj_schema) => {
                 // Check if this is an enum schema
                 if let Some(enum_values) = &obj_schema.enum_values
-                    && !enum_values.is_empty() {
-                        return Ok(TsNode::Enum(self.schema_to_enum(name, schema)?));
-                    }
+                    && !enum_values.is_empty()
+                {
+                    return Ok(TsNode::Enum(self.schema_to_enum(name, schema)?));
+                }
 
                 // Check if this is an object with properties
                 if !obj_schema.properties.is_empty() {
@@ -306,9 +309,15 @@ impl SchemaGenerator {
             Schema::Object(obj_schema) => {
                 // Handle enum schemas
                 if let Some(enum_values) = &obj_schema.enum_values
-                    && !enum_values.is_empty() {
-                        return self.map_enum_to_type(enum_values);
-                    }
+                    && !enum_values.is_empty()
+                {
+                    return self.map_enum_to_type(enum_values);
+                }
+
+                // Handle inline object schemas with properties
+                if !obj_schema.properties.is_empty() {
+                    return self.map_inline_object_to_type(obj_schema, context);
+                }
 
                 // Handle primitive types
                 self.map_primitive_type_from_schema(obj_schema)
@@ -343,10 +352,7 @@ impl SchemaGenerator {
     }
 
     /// Map primitive type from schema object using OpenAPI 3.1.2 features
-    fn map_primitive_type_from_schema(
-        &self,
-        obj_schema: &utoipa::openapi::schema::Object,
-    ) -> TypeExpression {
+    fn map_primitive_type_from_schema(&self, obj_schema: &Object) -> TypeExpression {
         // Handle nullable types (OpenAPI 3.1.2)
         let base_type = self.map_schema_type_to_primitive(&obj_schema.schema_type);
 
@@ -449,6 +455,23 @@ impl SchemaGenerator {
         } else {
             TypeExpression::Primitive(PrimitiveType::Any)
         }
+    }
+
+    /// Map inline object schema to TypeScript object type expression
+    fn map_inline_object_to_type(
+        &self,
+        obj_schema: &Object,
+        context: &mut SchemaContext,
+    ) -> TypeExpression {
+        let mut properties = BTreeMap::new();
+
+        // Map each property to its TypeScript type
+        for (prop_name, prop_schema) in &obj_schema.properties {
+            let type_expr = self.map_ref_or_schema_to_type(prop_schema, context);
+            properties.insert(prop_name.clone(), type_expr);
+        }
+
+        TypeExpression::Object(properties)
     }
 
     /// Map composition schemas (oneOf/anyOf) to TypeScript types with discriminator support

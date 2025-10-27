@@ -2,4 +2,4 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-export type OneOfObjects = any;
+export type OneOfObjects = { active: boolean; id: number; name: string } | { metadata: { created: string }; user: { id: number; name: string } };

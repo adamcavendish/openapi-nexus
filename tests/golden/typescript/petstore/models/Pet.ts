@@ -6,12 +6,12 @@
  * Pet model
  */
 export interface Pet {
-  category?: null | any;
+  category?: null | { id: number | null; name: string | null };
   /** Pet ID */
   id?: number | null;
   /** Pet name */
   name: string;
   photo_urls: Array<string>;
   status?: null | "available" | "pending" | "sold";
-  tags?: Array<any>;
+  tags?: Array<{ id: number | null; name: string | null }>;
 }
