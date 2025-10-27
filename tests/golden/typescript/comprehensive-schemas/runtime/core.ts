@@ -2,6 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
+import type { T } from './t';
+
+
 /**
  * Convert typed object to JSON
  */

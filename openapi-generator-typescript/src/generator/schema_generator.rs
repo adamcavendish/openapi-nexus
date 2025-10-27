@@ -354,7 +354,7 @@ impl SchemaGenerator {
     /// Map primitive type from schema object using OpenAPI 3.1.2 features
     fn map_primitive_type_from_schema(&self, obj_schema: &Object) -> TypeExpression {
         // Handle nullable types (OpenAPI 3.1.2)
-        let base_type = self.map_schema_type_to_primitive(&obj_schema.schema_type);
+        let base_type = Self::map_schema_type_to_primitive(&obj_schema.schema_type);
 
         // Apply format handling for better type inference
         let formatted_type = self.handle_known_format(base_type, &obj_schema.format);
@@ -364,8 +364,7 @@ impl SchemaGenerator {
     }
 
     /// Map schema type to primitive TypeScript type
-    #[allow(clippy::only_used_in_recursion)]
-    fn map_schema_type_to_primitive(&self, schema_type: &SchemaType) -> TypeExpression {
+    fn map_schema_type_to_primitive(schema_type: &SchemaType) -> TypeExpression {
         match schema_type {
             SchemaType::Type(openapi_type) => match openapi_type {
                 Type::String => TypeExpression::Primitive(PrimitiveType::String),
@@ -385,12 +384,12 @@ impl SchemaGenerator {
                 // Handle multi-type support (OpenAPI 3.1.2)
                 if types.len() == 1 {
                     // Single type in array
-                    self.map_schema_type_to_primitive(&SchemaType::Type(types[0].clone()))
+                    Self::map_schema_type_to_primitive(&SchemaType::Type(types[0].clone()))
                 } else {
                     // Multiple types - create union
                     let union_types: BTreeSet<TypeExpression> = types
                         .iter()
-                        .map(|t| self.map_schema_type_to_primitive(&SchemaType::Type(t.clone())))
+                        .map(|t| Self::map_schema_type_to_primitive(&SchemaType::Type(t.clone())))
                         .collect();
 
                     if union_types.len() == 1 {
@@ -515,7 +514,7 @@ impl SchemaGenerator {
 
         if is_nullable {
             // Check if base_type already contains null to avoid duplicates
-            if self.type_contains_null(&base_type) {
+            if Self::type_contains_null(&base_type) {
                 base_type
             } else {
                 TypeExpression::Union(BTreeSet::from_iter([
@@ -529,12 +528,11 @@ impl SchemaGenerator {
     }
 
     /// Check if a TypeExpression contains null
-    #[allow(clippy::only_used_in_recursion)]
-    fn type_contains_null(&self, type_expr: &TypeExpression) -> bool {
+    fn type_contains_null(type_expr: &TypeExpression) -> bool {
         match type_expr {
             TypeExpression::Primitive(PrimitiveType::Null) => true,
-            TypeExpression::Union(types) => types.iter().any(|t| self.type_contains_null(t)),
-            TypeExpression::Intersection(types) => types.iter().all(|t| self.type_contains_null(t)),
+            TypeExpression::Union(types) => types.iter().any(Self::type_contains_null),
+            TypeExpression::Intersection(types) => types.iter().all(Self::type_contains_null),
             _ => false,
         }
     }

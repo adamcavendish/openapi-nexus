@@ -3,6 +3,11 @@
 // To make changes, modify the source code and regenerate this file.
 
 import { Configuration } from './config';
+import { RequestContext } from '../runtime/api';
+import { Configuration } from '../runtime/config';
+import type { Error } from './error';
+
+
 /**
  * Base API class for all API clients
  */

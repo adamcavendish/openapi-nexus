@@ -104,12 +104,18 @@ impl RuntimeGenerator {
     /// Generate the complete runtime module (legacy method for backward compatibility)
     pub fn generate_runtime_module(&self) -> Result<Vec<TsNode>, GeneratorError> {
         let nodes = vec![
+            // Generate in the expected order to match golden files
+            // Functions first
             self.generate_to_json_function()?,
+            // Interfaces
             self.generate_configuration_interface()?,
             self.generate_configuration_parameters_interface()?,
+            // Classes
             self.generate_base_api_class()?,
             self.generate_required_error_class()?,
+            // More functions
             self.generate_from_json_function()?,
+            // More interfaces
             self.generate_request_context_interface()?,
         ];
 
@@ -119,36 +125,42 @@ impl RuntimeGenerator {
     /// Generate Configuration interface
     fn generate_configuration_interface(&self) -> Result<TsNode, GeneratorError> {
         let properties = vec![
+            // basePath property
             Property {
                 name: "basePath".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Base path for API requests".to_string()),
             },
+            // username property
             Property {
                 name: "username".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Username for authentication".to_string()),
             },
+            // password property
             Property {
                 name: "password".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Password for authentication".to_string()),
             },
+            // apiKey property
             Property {
                 name: "apiKey".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("API key for authentication".to_string()),
             },
+            // accessToken property
             Property {
                 name: "accessToken".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Access token for authentication".to_string()),
             },
+            // headers property
             Property {
                 name: "headers".to_string(),
                 type_expr: TypeExpression::Object(BTreeMap::from([
@@ -178,30 +190,35 @@ impl RuntimeGenerator {
     /// Generate ConfigurationParameters interface
     fn generate_configuration_parameters_interface(&self) -> Result<TsNode, GeneratorError> {
         let properties = vec![
+            // basePath property
             Property {
                 name: "basePath".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Base path for API requests".to_string()),
             },
+            // username property
             Property {
                 name: "username".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Username for authentication".to_string()),
             },
+            // password property
             Property {
                 name: "password".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("Password for authentication".to_string()),
             },
+            // apiKey property
             Property {
                 name: "apiKey".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: true,
                 documentation: Some("API key for authentication".to_string()),
             },
+            // accessToken property
             Property {
                 name: "accessToken".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
@@ -222,12 +239,14 @@ impl RuntimeGenerator {
     /// Generate RequestContext interface
     fn generate_request_context_interface(&self) -> Result<TsNode, GeneratorError> {
         let properties = vec![
+            // url property
             Property {
                 name: "url".to_string(),
                 type_expr: TypeExpression::Primitive(PrimitiveType::String),
                 optional: false,
                 documentation: Some("Request URL".to_string()),
             },
+            // init property
             Property {
                 name: "init".to_string(),
                 type_expr: TypeExpression::Reference("RequestInit".to_string()),

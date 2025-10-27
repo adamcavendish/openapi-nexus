@@ -59,7 +59,7 @@ impl MethodEmitter {
         class_name: &str,
         extends: &Option<String>,
     ) -> Result<String, EmitError> {
-        self.emit_method_string_with_indent(method, class_name, extends)
+        self.emit_method_string_with_indent(method, class_name, extends, true)
     }
 
     /// Emit a method as a string with optional indentation
@@ -68,6 +68,7 @@ impl MethodEmitter {
         method: &Method,
         class_name: &str,
         extends: &Option<String>,
+        _add_indentation: bool,
     ) -> Result<String, EmitError> {
         let mut result = String::new();
 

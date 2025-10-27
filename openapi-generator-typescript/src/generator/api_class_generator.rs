@@ -189,7 +189,7 @@ impl ApiClassGenerator {
                             let return_type = self.map_schema_ref_to_type(schema_ref);
                             return Ok(Some(TypeExpression::Reference(format!(
                                 "Promise<{}>",
-                                self.type_expression_to_string(&return_type)
+                                Self::type_expression_to_string(&return_type)
                             ))));
                         }
                         // If no JSON content, return generic response
@@ -236,8 +236,7 @@ impl ApiClassGenerator {
     }
 
     /// Convert TypeExpression to string representation
-    #[allow(clippy::only_used_in_recursion)]
-    fn type_expression_to_string(&self, type_expr: &TypeExpression) -> String {
+    fn type_expression_to_string(type_expr: &TypeExpression) -> String {
         match type_expr {
             TypeExpression::Primitive(primitive) => match primitive {
                 crate::ast::PrimitiveType::String => "string".to_string(),
@@ -248,20 +247,16 @@ impl ApiClassGenerator {
             },
             TypeExpression::Reference(name) => name.clone(),
             TypeExpression::Array(item_type) => {
-                format!("Array<{}>", self.type_expression_to_string(item_type))
+                format!("Array<{}>", Self::type_expression_to_string(item_type))
             }
             TypeExpression::Union(types) => {
-                let type_strings: Vec<String> = types
-                    .iter()
-                    .map(|t| self.type_expression_to_string(t))
-                    .collect();
+                let type_strings: Vec<String> =
+                    types.iter().map(Self::type_expression_to_string).collect();
                 type_strings.join(" | ")
             }
             TypeExpression::Intersection(types) => {
-                let type_strings: Vec<String> = types
-                    .iter()
-                    .map(|t| self.type_expression_to_string(t))
-                    .collect();
+                let type_strings: Vec<String> =
+                    types.iter().map(Self::type_expression_to_string).collect();
                 type_strings.join(" & ")
             }
             TypeExpression::Function(func) => {
@@ -270,7 +265,7 @@ impl ApiClassGenerator {
                     .iter()
                     .map(|param| {
                         let param_type = if let Some(type_expr) = &param.type_expr {
-                            self.type_expression_to_string(type_expr)
+                            Self::type_expression_to_string(type_expr)
                         } else {
                             "any".to_string()
                         };
@@ -282,7 +277,7 @@ impl ApiClassGenerator {
                     })
                     .collect();
                 let return_type = if let Some(ret_type) = &func.return_type {
-                    self.type_expression_to_string(ret_type)
+                    Self::type_expression_to_string(ret_type)
                 } else {
                     "void".to_string()
                 };
@@ -292,23 +287,21 @@ impl ApiClassGenerator {
                 let prop_strings: Vec<String> = properties
                     .iter()
                     .map(|(name, type_expr)| {
-                        let prop_type = self.type_expression_to_string(type_expr);
+                        let prop_type = Self::type_expression_to_string(type_expr);
                         format!("{}: {}", name, prop_type)
                     })
                     .collect();
                 format!("{{ {} }}", prop_strings.join("; "))
             }
             TypeExpression::Tuple(types) => {
-                let type_strings: Vec<String> = types
-                    .iter()
-                    .map(|t| self.type_expression_to_string(t))
-                    .collect();
+                let type_strings: Vec<String> =
+                    types.iter().map(Self::type_expression_to_string).collect();
                 format!("[{}]", type_strings.join(", "))
             }
             TypeExpression::Literal(value) => value.clone(),
             TypeExpression::Generic(name) => name.clone(),
             TypeExpression::IndexSignature(key, value_type) => {
-                format!("[{}: {}]", key, self.type_expression_to_string(value_type))
+                format!("[{}: {}]", key, Self::type_expression_to_string(value_type))
             }
         }
     }

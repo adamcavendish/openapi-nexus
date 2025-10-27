@@ -2,9 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI, RequestContext } from '../runtime/api';
-
+import { BaseAPI } from '../runtime/api';
 import { Configuration } from '../runtime/config';
+
 
 /**
  * API client for default operations

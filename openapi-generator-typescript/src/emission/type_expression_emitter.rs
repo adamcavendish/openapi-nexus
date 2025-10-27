@@ -204,7 +204,7 @@ impl TypeExpressionEmitter {
         }
 
         for type_expr in properties.values() {
-            if self.is_complex_type(type_expr) {
+            if Self::is_complex_type(type_expr) {
                 return true;
             }
         }
@@ -213,8 +213,7 @@ impl TypeExpressionEmitter {
     }
 
     /// Check if a type expression is complex (nested objects, arrays, unions, etc.)
-    #[allow(clippy::only_used_in_recursion)]
-    pub fn is_complex_type(&self, type_expr: &TypeExpression) -> bool {
+    pub fn is_complex_type(type_expr: &TypeExpression) -> bool {
         match type_expr {
             TypeExpression::Object(properties) => {
                 // Only consider objects complex if they have more than 2 properties
@@ -223,7 +222,7 @@ impl TypeExpressionEmitter {
                     return true;
                 }
                 for prop_type in properties.values() {
-                    if self.is_complex_type(prop_type) {
+                    if Self::is_complex_type(prop_type) {
                         return true;
                     }
                 }

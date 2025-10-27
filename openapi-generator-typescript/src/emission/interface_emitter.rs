@@ -145,6 +145,6 @@ impl InterfaceEmitter {
 
     /// Check if a property is complex (for formatting decisions)
     fn is_complex_property(&self, property: &Property) -> bool {
-        self.type_emitter.is_complex_type(&property.type_expr)
+        TypeExpressionEmitter::is_complex_type(&property.type_expr)
     }
 }
