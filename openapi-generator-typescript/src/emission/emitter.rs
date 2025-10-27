@@ -444,7 +444,7 @@ impl TypeScriptEmitter {
                 Ok(RcDoc::text(type_name))
             }
             TypeExpression::Array(item_type) => {
-                let item_doc = self.emit_type_expression_doc_with_indent(item_type, indent_level)?;
+                let item_doc = self.emit_type_expression_doc_with_indent(item_type, indent_level + 1)?;
                 Ok(RcDoc::text("Array<")
                     .append(item_doc)
                     .append(RcDoc::text(">")))
@@ -452,14 +452,14 @@ impl TypeScriptEmitter {
             TypeExpression::Union(types) => {
                 let type_docs: Result<Vec<RcDoc<'_, ()>>, _> = types
                     .iter()
-                    .map(|t| self.emit_type_expression_doc_with_indent(t, indent_level))
+                    .map(|t| self.emit_type_expression_doc_with_indent(t, indent_level + 1))
                     .collect();
                 let docs = type_docs?;
                 if docs.len() == 1 {
                     Ok(docs[0].clone())
                 } else {
                     let separator = RcDoc::text(" | ");
-                    Ok(RcDoc::intersperse(docs, separator).group())
+                    Ok(RcDoc::intersperse(docs, separator))
                 }
             }
             TypeExpression::Intersection(types) => {

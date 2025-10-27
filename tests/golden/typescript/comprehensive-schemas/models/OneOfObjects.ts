@@ -3,7 +3,7 @@
 // To make changes, modify the source code and regenerate this file.
 
 export type OneOfObjects = {
-  active: boolean;
-  id: number;
-  name: string;
-} | { metadata: { created: string }; user: { id: number; name: string } };
+    active: boolean;
+    id: number;
+    name: string;
+  } | { metadata: { created: string }; user: { id: number; name: string } };

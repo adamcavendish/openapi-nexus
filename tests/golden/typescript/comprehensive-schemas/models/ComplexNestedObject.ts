@@ -9,10 +9,10 @@ export interface ComplexNestedObject {
   profile: {
     contact: {
       addresses: Array<{
-        city: string;
-        street: string;
-        zip: string;
-      }>;
+          city: string;
+          street: string;
+          zip: string;
+        }>;
       email: string;
       phone: string;
     };
