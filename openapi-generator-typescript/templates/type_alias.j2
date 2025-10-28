@@ -1,6 +1,0 @@
-{%- if documentation -%}
-/**
- * {{ documentation }}
- */
-{%- endif -%}
-export type {{ name }}{% if generics -%}<{{ generics | join(', ') }}>{%- endif -%} = {{ type_expr }};

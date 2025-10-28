@@ -9,7 +9,7 @@ use crate::ast::code_block::SnippetLines;
 use crate::ast::{CodeBlock, Expression, Function, Statement, TsMethod};
 use crate::ast_trait::ToRcDoc;
 use crate::emission::error::EmitError;
-use crate::generator::template_generator::{ApiMethodData, TemplateGenerator};
+use crate::generator::template_generator::{ApiMethodData, Template, TemplateGenerator};
 
 /// Context information for method generation
 pub struct MethodContext {
@@ -34,7 +34,7 @@ impl BodyEmitter {
         // Use template for complex BaseAPI.request logic
         let lines = self
             .template_generator
-            .generate_base_api_request_lines()
+            .generate_lines(&Template::BaseApiRequest)
             .map_err(|e| EmitError::Generic {
                 message: format!("Template generation failed: {}", e),
             })?;
@@ -50,25 +50,24 @@ impl BodyEmitter {
         extends: &Option<String>,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         // Use specific templates for each constructor type
-        let lines = match class_name {
-            "BaseAPI" => self
-                .template_generator
-                .generate_base_api_constructor_lines(),
-            "RequiredError" => self
-                .template_generator
-                .generate_required_error_constructor_lines(),
+        let template = match class_name {
+            "BaseAPI" => Template::ConstructorBaseApi,
+            "RequiredError" => Template::ConstructorRequiredError,
             _ => {
                 if extends.is_some() {
-                    self.template_generator.generate_extends_constructor_lines()
+                    Template::ConstructorWithExtends
                 } else {
-                    self.template_generator.generate_default_constructor_lines()
+                    Template::ConstructorDefault
                 }
             }
         };
 
-        let lines = lines.map_err(|e| EmitError::Generic {
-            message: format!("Template generation failed: {}", e),
-        })?;
+        let lines = self
+            .template_generator
+            .generate_lines(&template)
+            .map_err(|e| EmitError::Generic {
+                message: format!("Template generation failed: {}", e),
+            })?;
 
         let code_block = CodeBlock::from_snippets(SnippetLines::MethodBody(lines));
         code_block.to_rcdoc()
@@ -92,22 +91,19 @@ impl BodyEmitter {
             has_error_handling: true,
         };
 
-        let lines = match method.name.as_str() {
-            "get" => self
-                .template_generator
-                .generate_get_method_lines(&api_method_data),
-            "post" | "put" | "patch" => self
-                .template_generator
-                .generate_post_put_method_lines(&api_method_data),
-            "delete" => self
-                .template_generator
-                .generate_delete_method_lines(&api_method_data),
-            _ => self.template_generator.generate_default_method_lines(),
+        let template = match method.name.as_str() {
+            "get" => Template::ApiMethodGet(api_method_data),
+            "post" | "put" | "patch" => Template::ApiMethodPostPutPatch(api_method_data),
+            "delete" => Template::ApiMethodDelete(api_method_data),
+            _ => Template::DefaultMethod,
         };
 
-        let lines = lines.map_err(|e| EmitError::Generic {
-            message: format!("Template generation failed: {}", e),
-        })?;
+        let lines = self
+            .template_generator
+            .generate_lines(&template)
+            .map_err(|e| EmitError::Generic {
+                message: format!("Template generation failed: {}", e),
+            })?;
 
         let code_block = CodeBlock::from_snippets(SnippetLines::MethodBody(lines));
         code_block.to_rcdoc()
@@ -116,24 +112,12 @@ impl BodyEmitter {
     /// Generate API method body using templates
     pub fn generate_api_method_body(
         &self,
-        method: &TsMethod,
+        _method: &TsMethod,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         // Use templates for API method implementations
-        let api_method_data = ApiMethodData {
-            method_name: method.name.clone(),
-            http_method: "GET".to_string(), // Default, would be determined from context
-            path: "/api/endpoint".to_string(), // Would be passed from context
-            path_params: vec![],
-            query_params: vec![],
-            body_param: None,
-            return_type: "Promise<any>".to_string(),
-            has_auth: true,
-            has_error_handling: true,
-        };
-
         let lines = self
             .template_generator
-            .generate_complex_api_method_lines(&api_method_data)
+            .generate_lines(&Template::DefaultMethod)
             .map_err(|e| EmitError::Generic {
                 message: format!("Template generation failed: {}", e),
             })?;

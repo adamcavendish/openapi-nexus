@@ -9,6 +9,7 @@ pub mod runtime_generator;
 pub mod schema_context;
 pub mod schema_generator;
 pub mod template_generator;
+pub mod templates;
 pub mod typescript_generator;
 
 pub use api_class_generator::ApiClassGenerator;

@@ -12,7 +12,7 @@ use crate::ast::{
     Visibility,
 };
 use crate::core::GeneratorError;
-use crate::generator::template_generator::{ApiMethodData, TemplateGenerator};
+use crate::generator::template_generator::{ApiMethodData, Template, TemplateGenerator};
 
 /// API client generator for creating TypeScript API client classes
 pub struct ApiClientGenerator {
@@ -238,22 +238,19 @@ impl ApiClientGenerator {
             has_error_handling: true,
         };
 
-        let lines = match http_method {
-            "GET" => self
-                .template_generator
-                .generate_get_method_lines(&api_method_data),
-            "POST" | "PUT" | "PATCH" => self
-                .template_generator
-                .generate_post_put_method_lines(&api_method_data),
-            "DELETE" => self
-                .template_generator
-                .generate_delete_method_lines(&api_method_data),
-            _ => self.template_generator.generate_default_method_lines(),
+        let template = match http_method {
+            "GET" => Template::ApiMethodGet(api_method_data),
+            "POST" | "PUT" | "PATCH" => Template::ApiMethodPostPutPatch(api_method_data),
+            "DELETE" => Template::ApiMethodDelete(api_method_data),
+            _ => Template::DefaultMethod,
         };
 
-        let lines = lines.map_err(|e| GeneratorError::Generic {
-            message: format!("Template generation failed: {}", e),
-        })?;
+        let lines = self
+            .template_generator
+            .generate_lines(&template)
+            .map_err(|e| GeneratorError::Generic {
+                message: format!("Template generation failed: {}", e),
+            })?;
 
         let method_body = CodeBlock::from_snippets(SnippetLines::MethodBody(lines));
 

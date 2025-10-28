@@ -12,7 +12,7 @@ use crate::ast::{
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
 use crate::generator::template_generator::{
-    ApiMethodData, ParameterData as TemplateParameterData, TemplateGenerator,
+    ApiMethodData, ParameterData as TemplateParameterData, Template, TemplateGenerator,
 };
 use crate::utils::schema_mapper::SchemaMapper;
 
@@ -319,22 +319,19 @@ impl ApiClassGenerator {
         };
 
         // Generate method body using appropriate template
-        let lines = match *http_method {
-            Method::GET => self
-                .template_generator
-                .generate_get_method_lines(&api_method_data),
-            Method::POST | Method::PUT | Method::PATCH => self
-                .template_generator
-                .generate_post_put_method_lines(&api_method_data),
-            Method::DELETE => self
-                .template_generator
-                .generate_delete_method_lines(&api_method_data),
-            _ => self.template_generator.generate_default_method_lines(),
+        let template = match *http_method {
+            Method::GET => Template::ApiMethodGet(api_method_data),
+            Method::POST | Method::PUT | Method::PATCH => Template::ApiMethodPostPutPatch(api_method_data),
+            Method::DELETE => Template::ApiMethodDelete(api_method_data),
+            _ => Template::DefaultMethod,
         };
 
-        let lines = lines.map_err(|e| GeneratorError::Generic {
-            message: format!("Template generation failed: {}", e),
-        })?;
+        let lines = self
+            .template_generator
+            .generate_lines(&template)
+            .map_err(|e| GeneratorError::Generic {
+                message: format!("Template generation failed: {}", e),
+            })?;
 
         Ok(CodeBlock::from_snippets(SnippetLines::MethodBody(lines)))
     }
