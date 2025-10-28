@@ -62,7 +62,7 @@ impl BodyEmitter {
             })),
         ];
 
-        let code_block = CodeBlock::new(statements);
+        let code_block = CodeBlock::from_statements(statements);
         code_block.to_rcdoc()
     }
 
@@ -98,7 +98,7 @@ impl BodyEmitter {
             }
         };
 
-        let code_block = CodeBlock::new(statements);
+        let code_block = CodeBlock::from_statements(statements);
         code_block.to_rcdoc()
     }
 
@@ -178,7 +178,7 @@ impl BodyEmitter {
             )],
         };
 
-        let code_block = CodeBlock::new(statements);
+        let code_block = CodeBlock::from_statements(statements);
         code_block.to_rcdoc()
     }
 
@@ -190,7 +190,7 @@ impl BodyEmitter {
         let statements = vec![Statement::Comment(
             "TODO: Implement API method body".to_string(),
         )];
-        let code_block = CodeBlock::new(statements);
+        let code_block = CodeBlock::from_statements(statements);
         code_block.to_rcdoc()
     }
 
@@ -227,7 +227,7 @@ impl BodyEmitter {
             ],
         };
 
-        let code_block = CodeBlock::new(statements);
+        let code_block = CodeBlock::from_statements(statements);
         code_block.to_rcdoc()
     }
 }

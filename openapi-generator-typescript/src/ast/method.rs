@@ -64,7 +64,7 @@ impl ToRcDocWithContext for TsMethod {
                 Statement::Comment("TODO: Implement method body".to_string()),
                 Statement::Simple("throw new Error('Not implemented')".to_string()),
             ];
-            let code_block = CodeBlock::new(statements);
+            let code_block = CodeBlock::from_statements(statements);
             code_block.to_rcdoc_with_context(context)?
         };
 
