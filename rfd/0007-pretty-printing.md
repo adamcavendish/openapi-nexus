@@ -27,7 +27,7 @@ This RFD defines the pretty printing strategy using the `pretty.rs` crate for co
 ### Core Pretty Printing Trait
 
 ```rust
-// openapi-generator-core/src/pretty_printing.rs
+// openapi-nexus-core/src/pretty_printing.rs
 pub trait PrettyPrinter {
     type AstType;
     type Error;

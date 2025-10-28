@@ -1,0 +1,16 @@
+[package]
+name = "openapi-nexus-ir"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+indexmap.workspace = true
+serde.workspace = true
+snafu.workspace = true
+utoipa.workspace = true
+
+openapi-nexus-common.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

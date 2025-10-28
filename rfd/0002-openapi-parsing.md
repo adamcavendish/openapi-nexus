@@ -22,7 +22,7 @@ This RFD defines the OpenAPI parsing strategy using utoipa as the foundation for
 We use utoipa's types directly as our intermediate representation:
 
 ```rust
-// From openapi-generator-ir/src/lib.rs
+// From openapi-nexus-ir/src/lib.rs
 pub use utoipa::openapi::{
     Components, ExternalDocs, Info, OpenApi, PathItem, Paths, RefOr, Response, Schema,
     SecurityRequirement, Server, Tag,
@@ -38,10 +38,10 @@ This approach provides:
 
 ### IR Utilities Layer
 
-The `openapi-generator-ir` crate provides utilities for working with utoipa types:
+The `openapi-nexus-ir` crate provides utilities for working with utoipa types:
 
 ```rust
-// openapi-generator-ir/src/lib.rs
+// openapi-nexus-ir/src/lib.rs
 pub mod analysis;
 pub mod traversal;
 pub mod utils;
@@ -61,7 +61,7 @@ pub use utoipa::openapi::{
 The IR layer provides common traversal patterns for OpenAPI specifications:
 
 ```rust
-// openapi-generator-ir/src/traversal.rs
+// openapi-nexus-ir/src/traversal.rs
 pub trait OpenApiVisitor {
     fn visit_openapi(&mut self, openapi: &OpenApi) -> Result<(), Error>;
     fn visit_paths(&mut self, paths: &Paths) -> Result<(), Error>;
@@ -76,7 +76,7 @@ pub trait OpenApiVisitor {
 Common analysis operations are provided as utilities:
 
 ```rust
-// openapi-generator-ir/src/analysis.rs
+// openapi-nexus-ir/src/analysis.rs
 pub struct SchemaAnalyzer {
     // Analysis state
 }
@@ -117,7 +117,7 @@ Our approach:
 ### Reference Utilities
 
 ```rust
-// openapi-generator-ir/src/utils.rs
+// openapi-nexus-ir/src/utils.rs
 pub struct ReferenceResolver {
     openapi: &OpenApi,
 }
@@ -135,7 +135,7 @@ impl ReferenceResolver {
 ### Error Types
 
 ```rust
-// openapi-generator-parser/src/error.rs
+// openapi-nexus-parser/src/error.rs
 #[derive(Debug, Snafu)]
 pub enum ParseError {
     #[snafu(display("Invalid OpenAPI specification: {}", message))]
@@ -183,7 +183,7 @@ pub struct ParseWarning {
 ### Main Parser Interface
 
 ```rust
-// openapi-generator-parser/src/parser.rs
+// openapi-nexus-parser/src/parser.rs
 pub struct OpenApiParser {
     config: ParserConfig,
 }
@@ -228,7 +228,7 @@ pub struct ParserConfig {
 The parser produces a `ParseResult` that can be fed into the transform pipeline:
 
 ```rust
-// openapi-generator-transforms/src/pipeline.rs
+// openapi-nexus-transforms/src/pipeline.rs
 impl TransformPipeline {
     pub fn process_parse_result(&self, result: ParseResult) -> Result<OpenApi, TransformError> {
         if !result.errors.is_empty() {

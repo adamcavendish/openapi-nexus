@@ -27,7 +27,7 @@ This RFD defines the plugin system architecture that enables extensibility and c
 ### Core Plugin Traits
 
 ```rust
-// openapi-generator-plugin/src/traits.rs
+// openapi-nexus-plugin/src/traits.rs
 pub trait Plugin {
     fn name(&self) -> &str;
     fn version(&self) -> &str;
@@ -201,7 +201,7 @@ impl TypeMappingPlugin for CustomTypeMappingPlugin {
 ### Plugin Registry Implementation
 
 ```rust
-// openapi-generator-plugin/src/registry.rs
+// openapi-nexus-plugin/src/registry.rs
 pub struct PluginRegistry {
     plugins: HashMap<String, Box<dyn Plugin>>,
     language_generators: HashMap<String, Box<dyn LanguageGeneratorPlugin>>,
@@ -275,8 +275,8 @@ impl PluginDiscovery {
         Self {
             search_paths: vec![
                 PathBuf::from("./plugins"),
-                PathBuf::from("~/.openapi-generator/plugins"),
-                PathBuf::from("/usr/local/lib/openapi-generator/plugins"),
+                PathBuf::from("~/.openapi-nexus/plugins"),
+                PathBuf::from("/usr/local/lib/openapi-nexus/plugins"),
             ],
             plugin_patterns: vec![
                 "libopenapi_*_plugin.*".to_string(),
@@ -417,8 +417,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-openapi-generator-plugin = "0.1.0"
-openapi-generator-core = "0.1.0"
+openapi-nexus-plugin = "0.1.0"
+openapi-nexus-core = "0.1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

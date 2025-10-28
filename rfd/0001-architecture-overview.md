@@ -77,7 +77,7 @@ graph TD
 
 - **Input**: OpenAPI 3.1 YAML/JSON specification
 - **Output**: utoipa `OpenApi` structure
-- **Component**: `openapi-generator-parser`
+- **Component**: `openapi-nexus-parser`
 - **Responsibilities**:
   - Parse and validate OpenAPI spec
   - Handle references and external documents
@@ -87,7 +87,7 @@ graph TD
 
 - **Input**: utoipa `OpenApi` structure
 - **Output**: Transformed `OpenApi` structure
-- **Component**: `openapi-generator-transforms`
+- **Component**: `openapi-nexus-transforms`
 - **Responsibilities**:
   - Apply normalization passes
   - Resolve references and dependencies
@@ -98,7 +98,7 @@ graph TD
 
 - **Input**: Transformed `OpenApi` structure
 - **Output**: Language-specific AST
-- **Components**: `openapi-generator-typescript`, `openapi-generator-rust`
+- **Components**: `openapi-nexus-typescript`, `openapi-nexus-rust`
 - **Responsibilities**:
   - Convert OpenAPI schemas to language types
   - Generate API client structures
@@ -120,28 +120,28 @@ graph TD
 
 ### Core Crates
 
-- **`openapi-generator-core`**: Common types, configuration, and error handling
-- **`openapi-generator-parser`**: OpenAPI specification parsing using utoipa
-- **`openapi-generator-ir`**: Intermediate representation utilities and helpers
-- **`openapi-generator-transforms`**: Transformation pass framework and built-in passes
+- **`openapi-nexus-core`**: Common types, configuration, and error handling
+- **`openapi-nexus-parser`**: OpenAPI specification parsing using utoipa
+- **`openapi-nexus-ir`**: Intermediate representation utilities and helpers
+- **`openapi-nexus-transforms`**: Transformation pass framework and built-in passes
 
 ### Language-Specific Crates
 
-- **`openapi-generator-typescript`**: TypeScript AST and code generation
-- **`openapi-generator-rust`**: Rust AST and code generation
-- **Future**: `openapi-generator-python`, `openapi-generator-go`, etc.
+- **`openapi-nexus-typescript`**: TypeScript AST and code generation
+- **`openapi-nexus-rust`**: Rust AST and code generation
+- **Future**: `openapi-nexus-python`, `openapi-nexus-go`, etc.
 
 ### Plugin and Extension Crates
 
-- **`openapi-generator-plugin`**: Plugin system traits and registry
+- **`openapi-nexus-plugin`**: Plugin system traits and registry
 
 ### Test Crates
 
-- **`openapi-generator-petstore-example`**: The petstore OpenAPI 3.1.0 specification based example generator.
+- **`openapi-nexus-petstore-example`**: The petstore OpenAPI 3.1.0 specification based example generator.
 
 ### Main Application
 
-- **`openapi-generator`**: CLI application and main entry point
+- **`openapi-nexus`**: CLI application and main entry point
 
 ## Key Architectural Principles
 
@@ -157,7 +157,7 @@ Each crate and module has one clear purpose:
 
 High-level modules don't depend on low-level modules:
 
-- Core types are defined in `openapi-generator-core`
+- Core types are defined in `openapi-nexus-core`
 - Language generators depend on core, not vice versa
 - Plugins implement traits defined in core
 
@@ -264,7 +264,7 @@ Each language generator can define its own configuration options:
 
 ### Adding New Languages
 
-1. Create new crate: `openapi-generator-{language}`
+1. Create new crate: `openapi-nexus-{language}`
 2. Implement `LanguageGenerator` trait
 3. Define language-specific AST types
 4. Implement type mapping from OpenAPI to language types

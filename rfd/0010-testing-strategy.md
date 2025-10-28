@@ -1124,7 +1124,7 @@ bench:
 # Generate code from test specs
 generate-test:
     @echo "Generating code from test specifications..."
-    cargo run --bin openapi-generator -- --input tests/fixtures/valid_specs/petstore.yaml --output test-output --languages typescript rust
+    cargo run --bin openapi-nexus -- --input tests/fixtures/valid_specs/petstore.yaml --output test-output --languages typescript rust
 
 # Format generated code
 format-generated:
@@ -1147,8 +1147,8 @@ golden:
 # Update golden files
 update-golden:
     @echo "Updating golden files..."
-    cargo run --bin openapi-generator -- --input tests/fixtures/valid_specs/petstore.yaml --output tests/golden/typescript/petstore --languages typescript
-    cargo run --bin openapi-generator -- --input tests/fixtures/valid_specs/petstore.yaml --output tests/golden/rust/petstore --languages rust
+    cargo run --bin openapi-nexus -- --input tests/fixtures/valid_specs/petstore.yaml --output tests/golden/typescript/petstore --languages typescript
+    cargo run --bin openapi-nexus -- --input tests/fixtures/valid_specs/petstore.yaml --output tests/golden/rust/petstore --languages rust
     @echo "Golden files updated. Review changes before committing."
 
 # Run integration tests
@@ -1212,13 +1212,13 @@ ci: lint test bench audit
 # Generate example from petstore
 example-petstore:
     @echo "Generating example from petstore spec..."
-    cargo run --bin openapi-generator -- --input petstore-api.yaml --output examples/petstore-generated --languages typescript rust
+    cargo run --bin openapi-nexus -- --input petstore-api.yaml --output examples/petstore-generated --languages typescript rust
     @echo "Example generated in examples/petstore-generated/"
 
 # Generate example from GitHub API
 example-github:
     @echo "Generating example from GitHub API spec..."
-    cargo run --bin openapi-generator -- --input github-api.yaml --output examples/github-generated --languages typescript rust
+    cargo run --bin openapi-nexus -- --input github-api.yaml --output examples/github-generated --languages typescript rust
     @echo "Example generated in examples/github-generated/"
 
 # Run all examples
@@ -1228,14 +1228,14 @@ examples: example-petstore example-github
 # Plugin development workflow
 plugin-dev:
     @echo "Setting up plugin development environment..."
-    cargo build --package openapi-generator-plugin
+    cargo build --package openapi-nexus-plugin
     @echo "Plugin development environment ready!"
 
 # Create new language generator
 new-language language:
     @echo "Creating new language generator for {{language}}..."
-    cargo new --lib openapi-generator-{{language}}
-    @echo "New language generator created: openapi-generator-{{language}}"
+    cargo new --lib openapi-nexus-{{language}}
+    @echo "New language generator created: openapi-nexus-{{language}}"
 
 # Run specific test file
 test-file file:

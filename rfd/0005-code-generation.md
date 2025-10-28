@@ -27,7 +27,7 @@ This RFD defines the code generation strategy and type mapping system for conver
 ### Core Type Mapper Trait
 
 ```rust
-// openapi-generator-core/src/type_mapping.rs
+// openapi-nexus-core/src/type_mapping.rs
 pub trait TypeMapper {
     type LanguageType;
     type Error;

@@ -1,0 +1,8 @@
+[package]
+name = "openapi-nexus-common"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+snafu.workspace = true

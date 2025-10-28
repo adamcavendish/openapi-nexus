@@ -977,44 +977,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
-name = "openapi-generator"
+name = "openapi-nexus"
 version = "0.1.0"
 dependencies = [
  "clap",
- "openapi-generator-core",
- "openapi-generator-typescript",
+ "openapi-nexus-core",
+ "openapi-nexus-typescript",
  "tracing",
  "tracing-subscriber",
 ]
 
 [[package]]
-name = "openapi-generator-common"
+name = "openapi-nexus-common"
 version = "0.1.0"
 dependencies = [
  "snafu",
 ]
 
 [[package]]
-name = "openapi-generator-core"
+name = "openapi-nexus-core"
 version = "0.1.0"
 dependencies = [
- "openapi-generator-common",
- "openapi-generator-ir",
- "openapi-generator-parser",
- "openapi-generator-plugin",
- "openapi-generator-rust",
- "openapi-generator-transforms",
+ "openapi-nexus-common",
+ "openapi-nexus-ir",
+ "openapi-nexus-parser",
+ "openapi-nexus-plugin",
+ "openapi-nexus-rust",
+ "openapi-nexus-transforms",
  "snafu",
  "tracing",
  "utoipa",
 ]
 
 [[package]]
-name = "openapi-generator-ir"
+name = "openapi-nexus-ir"
 version = "0.1.0"
 dependencies = [
  "indexmap",
- "openapi-generator-common",
+ "openapi-nexus-common",
  "serde",
  "snafu",
  "tempfile",
@@ -1022,10 +1022,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "openapi-generator-parser"
+name = "openapi-nexus-parser"
 version = "0.1.0"
 dependencies = [
- "openapi-generator-common",
+ "openapi-nexus-common",
  "serde_json",
  "serde_norway",
  "snafu",
@@ -1034,7 +1034,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "openapi-generator-petstore-example"
+name = "openapi-nexus-petstore-example"
 version = "0.1.0"
 dependencies = [
  "axum",
@@ -1055,7 +1055,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "openapi-generator-plugin"
+name = "openapi-nexus-plugin"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -1065,13 +1065,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "openapi-generator-rust"
+name = "openapi-nexus-rust"
 version = "0.1.0"
 dependencies = [
  "heck",
  "indexmap",
- "openapi-generator-ir",
- "openapi-generator-plugin",
+ "openapi-nexus-ir",
+ "openapi-nexus-plugin",
  "pretty",
  "serde",
  "snafu",
@@ -1080,20 +1080,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "openapi-generator-transforms"
+name = "openapi-nexus-transforms"
 version = "0.1.0"
 dependencies = [
  "heck",
  "indexmap",
- "openapi-generator-common",
- "openapi-generator-ir",
+ "openapi-nexus-common",
+ "openapi-nexus-ir",
  "snafu",
  "tracing",
  "utoipa",
 ]
 
 [[package]]
-name = "openapi-generator-typescript"
+name = "openapi-nexus-typescript"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -1101,9 +1101,9 @@ dependencies = [
  "http",
  "indexmap",
  "minijinja",
- "openapi-generator-core",
- "openapi-generator-ir",
- "openapi-generator-plugin",
+ "openapi-nexus-core",
+ "openapi-nexus-ir",
+ "openapi-nexus-plugin",
  "pretty",
  "rust-embed",
  "serde",

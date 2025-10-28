@@ -27,7 +27,7 @@ This RFD defines the multi-level transformation pass architecture that operates 
 These transforms operate on the utoipa `OpenApi` structure:
 
 ```rust
-// openapi-generator-transforms/src/passes.rs
+// openapi-nexus-transforms/src/passes.rs
 pub trait OpenApiTransformPass {
     fn name(&self) -> &str;
     fn transform(&self, openapi: &mut OpenApi) -> Result<(), TransformError>;

@@ -1,0 +1,13 @@
+[package]
+name = "openapi-nexus"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+openapi-nexus-core.workspace = true
+openapi-nexus-typescript.workspace = true
