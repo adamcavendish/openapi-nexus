@@ -3,10 +3,9 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, TypeExpression};
+use crate::ast::{DocComment, Generic, TypeExpression, GenericList};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 use crate::emission::type_expression_emitter::TypeExpressionEmitter;
 
 /// TypeScript type alias definition
@@ -23,17 +22,16 @@ impl ToRcDocWithContext for TypeAlias {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
         let type_emitter = TypeExpressionEmitter;
 
-        let mut doc = utils
-            .export_prefix()
+        let mut doc = RcDoc::text("export ")
             .append(RcDoc::text("type"))
             .append(RcDoc::space())
             .append(RcDoc::text(self.name.clone()));
 
         // Add generics
-        doc = doc.append(utils.generics(&self.generics)?);
+        let generic_list = GenericList::new(self.generics.clone());
+        doc = doc.append(generic_list.to_rcdoc_with_context(context)?);
 
         // Add type expression
         let type_doc = type_emitter.emit_type_expression_doc(&self.type_expr)?;

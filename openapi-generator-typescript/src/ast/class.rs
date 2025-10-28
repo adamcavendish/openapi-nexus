@@ -2,10 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, TsMethod, Property};
+use crate::ast::{DocComment, Generic, TsMethod, Property, GenericList, ExtendsClause, ImplementsClause};
 use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 use pretty::RcDoc;
 
 /// TypeScript class definition
@@ -26,10 +25,8 @@ impl ToRcDocWithContext for Class {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
         let mut doc = if self.is_export {
-            utils.export_prefix()
+            RcDoc::text("export ")
         } else {
             RcDoc::nil()
         };
@@ -40,29 +37,19 @@ impl ToRcDocWithContext for Class {
             .append(RcDoc::text(self.name.clone()));
 
         // Add generics
-        doc = doc.append(utils.generics(&self.generics)?);
+        let generic_list = GenericList::new(self.generics.clone());
+        doc = doc.append(generic_list.to_rcdoc_with_context(context)?);
 
         // Add extends clause
         if let Some(extends) = &self.extends {
-            doc = doc
-                .append(RcDoc::space())
-                .append(RcDoc::text("extends"))
-                .append(RcDoc::space())
-                .append(RcDoc::text(extends.clone()));
+            let extends_clause = ExtendsClause::single(extends.clone());
+            doc = doc.append(extends_clause.to_rcdoc_with_context(context)?);
         }
 
         // Add implements clause
         if !self.implements.is_empty() {
-            let impl_docs: Vec<RcDoc<'static, ()>> = self
-                .implements
-                .iter()
-                .map(|i| RcDoc::text(i.clone()))
-                .collect();
-            doc = doc
-                .append(RcDoc::space())
-                .append(RcDoc::text("implements"))
-                .append(RcDoc::space())
-                .append(utils.comma_separated(impl_docs));
+            let implements_clause = ImplementsClause::new(self.implements.clone());
+            doc = doc.append(implements_clause.to_rcdoc_with_context(context)?);
         }
 
         // Add class body
@@ -79,10 +66,16 @@ impl ToRcDocWithContext for Class {
         }
 
         if body_items.is_empty() {
-            doc = doc.append(RcDoc::space()).append(utils.empty_block());
+            doc = doc.append(RcDoc::space()).append(RcDoc::text("{}"));
         } else {
             let body_content = RcDoc::intersperse(body_items, RcDoc::line());
-            doc = doc.append(RcDoc::space()).append(utils.block(body_content));
+            doc = doc.append(RcDoc::space()).append(
+                RcDoc::text("{")
+                    .append(RcDoc::line())
+                    .append(body_content)
+                    .append(RcDoc::line())
+                    .append(RcDoc::text("}"))
+            );
         }
 
         // Add documentation if present and enabled

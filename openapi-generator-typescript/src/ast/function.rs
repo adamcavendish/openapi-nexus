@@ -2,11 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, Parameter, TypeExpression};
+use crate::ast::{DocComment, Generic, Parameter, TypeExpression, GenericList, ParameterList, ReturnType};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::body_emitter::BodyEmitter;
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 use pretty::RcDoc;
 
 /// TypeScript function definition
@@ -28,11 +27,10 @@ impl ToRcDocWithContext for Function {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
         let body_emitter = BodyEmitter::new();
 
         let mut signature_doc = if self.is_export {
-            utils.export_prefix()
+            RcDoc::text("export ")
         } else {
             RcDoc::nil()
         };
@@ -46,13 +44,16 @@ impl ToRcDocWithContext for Function {
             .append(RcDoc::text(self.name.clone()));
 
         // Add generics
-        signature_doc = signature_doc.append(utils.generics(&self.generics)?);
+        let generic_list = GenericList::new(self.generics.clone());
+        signature_doc = signature_doc.append(generic_list.to_rcdoc_with_context(context)?);
 
         // Add parameter list
-        signature_doc = signature_doc.append(utils.parameter_list(&self.parameters)?);
+        let parameter_list = ParameterList::new(self.parameters.clone());
+        signature_doc = signature_doc.append(parameter_list.to_rcdoc_with_context(context)?);
 
         // Add return type
-        signature_doc = signature_doc.append(utils.return_type(&self.return_type)?);
+        let return_type = ReturnType::new(self.return_type.clone());
+        signature_doc = signature_doc.append(return_type.to_rcdoc_with_context(context)?);
 
         // Generate function body
         let body_doc = if let Some(body) = &self.body {
@@ -66,7 +67,7 @@ impl ToRcDocWithContext for Function {
             .append(RcDoc::space())
             .append(RcDoc::text("{"))
             .append(RcDoc::line())
-            .append(utils.indent(body_doc))
+            .append(body_doc.nest(2))
             .append(RcDoc::line())
             .append(RcDoc::text("}"));
 

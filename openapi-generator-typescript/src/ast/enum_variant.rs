@@ -1,12 +1,11 @@
 //! TypeScript enum variant definition
 
+use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::DocComment;
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
-use pretty::RcDoc;
 
 /// TypeScript enum variant definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,13 +20,11 @@ impl ToRcDocWithContext for EnumVariant {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
         let mut variant_doc = RcDoc::text(self.name.clone());
         if let Some(value) = &self.value {
             variant_doc = variant_doc
                 .append(RcDoc::text(" = "))
-                .append(utils.quoted(value));
+                .append(RcDoc::text(format!("\"{}\"", value)));
         }
 
         // Add documentation if present and enabled

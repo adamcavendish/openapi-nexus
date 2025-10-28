@@ -1,11 +1,10 @@
 //! TypeScript export specifier definitions
 
+use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
-use pretty::RcDoc;
 
 /// TypeScript export specifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,8 +20,6 @@ impl ToRcDocWithContext for ExportSpecifier {
         &self,
         _context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
         match self {
             ExportSpecifier::Named(name) => Ok(RcDoc::text(name.clone())),
             ExportSpecifier::Default(name) => {
@@ -35,9 +32,9 @@ impl ToRcDocWithContext for ExportSpecifier {
                 let name_docs: Vec<RcDoc<'static, ()>> =
                     names.iter().map(|n| RcDoc::text(n.clone())).collect();
                 Ok(RcDoc::text("{ ")
-                    .append(utils.comma_separated(name_docs))
+                    .append(RcDoc::intersperse(name_docs, RcDoc::text(", ")))
                     .append(RcDoc::text(" } from "))
-                    .append(utils.single_quoted(module)))
+                    .append(RcDoc::text(format!("'{}'", module))))
             }
         }
     }

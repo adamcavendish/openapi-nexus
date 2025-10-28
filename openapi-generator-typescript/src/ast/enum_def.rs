@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::ast::{DocComment, EnumVariant};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 
 /// TypeScript enum definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,10 +21,7 @@ impl ToRcDocWithContext for Enum {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
-        let mut doc = utils
-            .export_prefix()
+        let mut doc = RcDoc::text("export ")
             .append(RcDoc::text(if self.is_const {
                 "const enum"
             } else {
@@ -36,7 +32,7 @@ impl ToRcDocWithContext for Enum {
 
         // Add enum body
         if self.variants.is_empty() {
-            doc = doc.append(RcDoc::space()).append(utils.empty_block());
+            doc = doc.append(RcDoc::space()).append(RcDoc::text("{}"));
         } else {
             let variant_docs: Result<Vec<_>, _> = self
                 .variants
@@ -45,16 +41,21 @@ impl ToRcDocWithContext for Enum {
                 .collect();
             let variants = variant_docs?;
 
-            let force_multiline = context.force_multiline
-                || utils.should_format_multiline(self.variants.len(), false);
+            let force_multiline = context.force_multiline || self.variants.len() > 2;
 
             let body_content = if force_multiline {
-                utils.comma_separated_breakable(variants)
+                RcDoc::intersperse(variants, RcDoc::text(",").append(RcDoc::line()))
             } else {
-                utils.comma_separated(variants)
+                RcDoc::intersperse(variants, RcDoc::text(", "))
             };
 
-            doc = doc.append(RcDoc::space()).append(utils.block(body_content));
+            doc = doc.append(RcDoc::space()).append(
+                RcDoc::text("{")
+                    .append(RcDoc::line())
+                    .append(body_content)
+                    .append(RcDoc::line())
+                    .append(RcDoc::text("}"))
+            );
         }
 
         // Add documentation if present and enabled

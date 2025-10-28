@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::ast::ImportSpecifier;
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 
 /// TypeScript import statement
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,8 +75,6 @@ impl ToRcDocWithContext for Import {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
         let mut doc = RcDoc::text("import");
 
         if self.is_type_only {
@@ -97,13 +94,13 @@ impl ToRcDocWithContext for Import {
             let imports = import_docs?;
             doc = doc
                 .append(RcDoc::text(" { "))
-                .append(utils.comma_separated(imports))
+                .append(RcDoc::intersperse(imports, RcDoc::text(", ")))
                 .append(RcDoc::text(" }"));
         }
 
         doc = doc
             .append(RcDoc::text(" from "))
-            .append(utils.single_quoted(&self.module));
+            .append(RcDoc::text(format!("'{}'", self.module)));
 
         Ok(doc)
     }

@@ -3,10 +3,9 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{CodeBlock, DocComment, Parameter, Statement, TypeExpression, Visibility};
+use crate::ast::{CodeBlock, DocComment, Parameter, Statement, TypeExpression, Visibility, ParameterList, ReturnType};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 
 /// TypeScript method definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,8 +26,6 @@ impl ToRcDocWithContext for TsMethod {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
         let mut doc = RcDoc::nil();
 
         // Add visibility modifier
@@ -51,10 +48,12 @@ impl ToRcDocWithContext for TsMethod {
         doc = doc.append(RcDoc::text(self.name.clone()));
 
         // Add parameter list
-        doc = doc.append(utils.parameter_list(&self.parameters)?);
+        let parameter_list = ParameterList::new(self.parameters.clone());
+        doc = doc.append(parameter_list.to_rcdoc_with_context(context)?);
 
         // Add return type
-        doc = doc.append(utils.return_type(&self.return_type)?);
+        let return_type = ReturnType::new(self.return_type.clone());
+        doc = doc.append(return_type.to_rcdoc_with_context(context)?);
 
         // Generate method body
         let body_doc = if let Some(body) = &self.body {
@@ -74,7 +73,7 @@ impl ToRcDocWithContext for TsMethod {
             .append(RcDoc::space())
             .append(RcDoc::text("{"))
             .append(RcDoc::line())
-            .append(utils.indent(body_doc))
+            .append(body_doc.nest(2))
             .append(RcDoc::line())
             .append(RcDoc::text("}"));
 

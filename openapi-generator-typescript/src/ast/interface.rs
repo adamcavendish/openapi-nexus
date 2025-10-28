@@ -3,10 +3,9 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, Property};
+use crate::ast::{DocComment, Generic, Property, GenericList, ExtendsClause};
 use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
 use crate::emission::error::EmitError;
-use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 use crate::emission::type_expression_emitter::TypeExpressionEmitter;
 
 /// TypeScript interface definition
@@ -24,23 +23,24 @@ impl ToRcDocWithContext for Interface {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let utils = TypeScriptPrettyUtils::new();
-
-        let mut doc = utils
-            .export_prefix()
+        let mut doc = RcDoc::text("export ")
             .append(RcDoc::text("interface"))
             .append(RcDoc::space())
             .append(RcDoc::text(self.name.clone()));
 
         // Add generics
-        doc = doc.append(utils.generics(&self.generics)?);
+        let generic_list = GenericList::new(self.generics.clone());
+        doc = doc.append(generic_list.to_rcdoc_with_context(context)?);
 
         // Add extends clause
-        doc = doc.append(utils.extends_clause(&self.extends));
+        if !self.extends.is_empty() {
+            let extends_clause = ExtendsClause::new(self.extends.clone());
+            doc = doc.append(extends_clause.to_rcdoc_with_context(context)?);
+        }
 
         // Add body with properties
         if self.properties.is_empty() {
-            doc = doc.append(RcDoc::space()).append(utils.empty_block());
+            doc = doc.append(RcDoc::space()).append(RcDoc::text("{}"));
         } else {
             let prop_docs: Result<Vec<_>, _> = self
                 .properties
@@ -50,20 +50,24 @@ impl ToRcDocWithContext for Interface {
             let properties = prop_docs?;
 
             let force_multiline = context.force_multiline
-                || utils.should_format_multiline(
-                    self.properties.len(),
-                    self.properties
-                        .iter()
-                        .any(|p| TypeExpressionEmitter::is_complex_type(&p.type_expr)),
-                );
+                || self.properties.len() > 2
+                || self.properties
+                    .iter()
+                    .any(|p| TypeExpressionEmitter::is_complex_type(&p.type_expr));
 
             let body_content = if force_multiline {
-                utils.comma_separated_breakable(properties)
+                RcDoc::intersperse(properties, RcDoc::text(",").append(RcDoc::line()))
             } else {
-                utils.comma_separated(properties)
+                RcDoc::intersperse(properties, RcDoc::text(", "))
             };
 
-            doc = doc.append(RcDoc::space()).append(utils.block(body_content));
+            doc = doc.append(RcDoc::space()).append(
+                RcDoc::text("{")
+                    .append(RcDoc::line())
+                    .append(body_content)
+                    .append(RcDoc::line())
+                    .append(RcDoc::text("}"))
+            );
         }
 
         // Add documentation if present and enabled
