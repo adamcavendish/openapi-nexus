@@ -3,7 +3,7 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, TypeExpression, GenericList};
+use crate::ast::{DocComment, Generic, GenericList, TypeExpression};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::type_expression_emitter::TypeExpressionEmitter;

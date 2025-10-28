@@ -13,11 +13,15 @@ export class DefaultApi extends BaseAPI {
  * Initialize the API client
  */
 constructor(configuration?: Configuration) {
-super(configuration);
+  super(configuration);
 }
 async getTest(): Promise<Response> {
-    const url = `${this.configuration?.basePath || ''}}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/test`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 }

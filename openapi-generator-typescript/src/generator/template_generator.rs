@@ -9,43 +9,95 @@ pub struct TemplateGenerator {
 
 impl TemplateGenerator {
     /// Create a new template generator
-    pub fn new() -> Result<Self, minijinja::Error> {
+    pub fn new() -> Self {
         let mut env = Environment::new();
 
         // Load AST templates from embedded strings
-        env.add_template("interface", include_str!("../../templates/interface.j2"))?;
-        env.add_template("type_alias", include_str!("../../templates/type_alias.j2"))?;
-        env.add_template("enum", include_str!("../../templates/enum.j2"))?;
-        env.add_template("class", include_str!("../../templates/class.j2"))?;
-        env.add_template("function", include_str!("../../templates/function.j2"))?;
+        env.add_template("interface", include_str!("../../templates/interface.j2"))
+            .unwrap();
+        env.add_template("type_alias", include_str!("../../templates/type_alias.j2"))
+            .unwrap();
+        env.add_template("enum", include_str!("../../templates/enum.j2"))
+            .unwrap();
+        env.add_template("class", include_str!("../../templates/class.j2"))
+            .unwrap();
+        env.add_template("function", include_str!("../../templates/function.j2"))
+            .unwrap();
 
         // Load package templates
-        env.add_template("runtime", include_str!("../../templates/runtime.ts.j2"))?;
-        env.add_template("readme", include_str!("../../templates/README.md.j2"))?;
+        env.add_template("runtime", include_str!("../../templates/runtime.ts.j2"))
+            .unwrap();
+        env.add_template("readme", include_str!("../../templates/README.md.j2"))
+            .unwrap();
 
         // Load method body templates
         env.add_template(
             "base_api_request",
             include_str!("../../templates/method_bodies/base_api_request.j2"),
-        )?;
+        )
+        .unwrap();
         env.add_template(
             "constructor",
             include_str!("../../templates/method_bodies/constructor.j2"),
-        )?;
+        )
+        .unwrap();
+        env.add_template(
+            "constructor_base_api",
+            include_str!("../../templates/method_bodies/constructor_base_api.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "constructor_required_error",
+            include_str!("../../templates/method_bodies/constructor_required_error.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "constructor_with_extends",
+            include_str!("../../templates/method_bodies/constructor_with_extends.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "constructor_default",
+            include_str!("../../templates/method_bodies/constructor_default.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "constructor_enhanced",
+            include_str!("../../templates/method_bodies/constructor_enhanced.j2"),
+        )
+        .unwrap();
         env.add_template(
             "http_method",
             include_str!("../../templates/method_bodies/http_method.j2"),
-        )?;
+        )
+        .unwrap();
         env.add_template(
             "api_method",
             include_str!("../../templates/method_bodies/api_method.j2"),
-        )?;
+        )
+        .unwrap();
+        env.add_template(
+            "api_method_get",
+            include_str!("../../templates/method_bodies/api_method_get.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "api_method_post_put",
+            include_str!("../../templates/method_bodies/api_method_post_put.j2"),
+        )
+        .unwrap();
+        env.add_template(
+            "api_method_delete",
+            include_str!("../../templates/method_bodies/api_method_delete.j2"),
+        )
+        .unwrap();
         env.add_template(
             "default_method",
             include_str!("../../templates/method_bodies/default.j2"),
-        )?;
+        )
+        .unwrap();
 
-        Ok(Self { env })
+        Self { env }
     }
 
     /// Generate interface code
@@ -139,6 +191,155 @@ impl TemplateGenerator {
     pub fn generate_default_method_body(&self) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("default_method")?;
         template.render(serde_json::Value::Null)
+    }
+
+    // === SnippetLines Integration Methods ===
+
+    /// Generate method body lines for BaseAPI.request
+    pub fn generate_base_api_request_lines(&self) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("base_api_request")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate constructor body lines
+    pub fn generate_constructor_lines(
+        &self,
+        class_name: &str,
+        extends: &Option<String>,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor")?;
+        let data = serde_json::json!({
+            "class_name": class_name,
+            "extends": extends
+        });
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate BaseAPI constructor body lines
+    pub fn generate_base_api_constructor_lines(&self) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor_base_api")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate RequiredError constructor body lines
+    pub fn generate_required_error_constructor_lines(
+        &self,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor_required_error")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate constructor body lines for classes with extends
+    pub fn generate_extends_constructor_lines(&self) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor_with_extends")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate default constructor body lines
+    pub fn generate_default_constructor_lines(&self) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor_default")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate HTTP method body lines
+    pub fn generate_http_method_lines(
+        &self,
+        method_name: &str,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("http_method")?;
+        let data = serde_json::json!({
+            "method_name": method_name
+        });
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate API method body lines
+    pub fn generate_api_method_lines(
+        &self,
+        return_type: &str,
+        has_body_param: bool,
+        http_method: &str,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("api_method")?;
+        let data = serde_json::json!({
+            "return_type": return_type,
+            "has_body_param": has_body_param,
+            "http_method": http_method
+        });
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate default method body lines
+    pub fn generate_default_method_lines(&self) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("default_method")?;
+        let rendered = template.render(serde_json::Value::Null)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate complex API method body lines
+    pub fn generate_complex_api_method_lines(
+        &self,
+        data: &ApiMethodData,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("api_method")?;
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate enhanced constructor body lines
+    pub fn generate_enhanced_constructor_lines(
+        &self,
+        data: &ConstructorData,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("constructor_enhanced")?;
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate GET method body lines
+    pub fn generate_get_method_lines(
+        &self,
+        data: &ApiMethodData,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("api_method_get")?;
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate POST/PUT method body lines
+    pub fn generate_post_put_method_lines(
+        &self,
+        data: &ApiMethodData,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("api_method_post_put")?;
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Generate DELETE method body lines
+    pub fn generate_delete_method_lines(
+        &self,
+        data: &ApiMethodData,
+    ) -> Result<Vec<String>, minijinja::Error> {
+        let template = self.env.get_template("api_method_delete")?;
+        let rendered = template.render(data)?;
+        Ok(self.split_template_lines(&rendered))
+    }
+
+    /// Split template output into individual lines, trimming whitespace
+    fn split_template_lines(&self, template_output: &str) -> Vec<String> {
+        template_output
+            .lines()
+            .map(|line| line.trim_end().to_string())
+            .collect()
     }
 }
 
@@ -246,9 +447,33 @@ pub struct ReadmeData {
     pub generated_date: String,
 }
 
+/// Data structure for complex API method generation
+#[derive(serde::Serialize)]
+pub struct ApiMethodData {
+    pub method_name: String,
+    pub http_method: String,
+    pub path: String,
+    pub path_params: Vec<ParameterData>,
+    pub query_params: Vec<ParameterData>,
+    pub body_param: Option<ParameterData>,
+    pub return_type: String,
+    pub has_auth: bool,
+    pub has_error_handling: bool,
+}
+
+/// Data structure for enhanced constructor generation
+#[derive(serde::Serialize)]
+pub struct ConstructorData {
+    pub class_name: String,
+    pub extends: Option<String>,
+    pub has_configuration: bool,
+    pub has_super_call: bool,
+    pub additional_statements: Vec<String>,
+}
+
 impl Default for TemplateGenerator {
     fn default() -> Self {
-        Self::new().expect("Failed to create template generator")
+        Self::new()
     }
 }
 
@@ -258,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_interface_template() {
-        let generator = TemplateGenerator::new().unwrap();
+        let generator = TemplateGenerator::new();
 
         let data = InterfaceData {
             name: "Pet".to_string(),

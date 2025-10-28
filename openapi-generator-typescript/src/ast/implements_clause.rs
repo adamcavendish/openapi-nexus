@@ -35,11 +35,8 @@ impl ToRcDocWithContext for ImplementsClause {
         if self.0.is_empty() {
             Ok(RcDoc::nil())
         } else {
-            let impl_docs: Vec<RcDoc<'static, ()>> = self
-                .0
-                .iter()
-                .map(|i| RcDoc::text(i.clone()))
-                .collect();
+            let impl_docs: Vec<RcDoc<'static, ()>> =
+                self.0.iter().map(|i| RcDoc::text(i.clone())).collect();
             Ok(RcDoc::space()
                 .append(RcDoc::text("implements"))
                 .append(RcDoc::space())

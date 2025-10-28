@@ -5,15 +5,22 @@ use http::Method;
 use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::{Class, Parameter, TsMethod, TsNode, TypeExpression, Visibility};
+use crate::ast::code_block::SnippetLines;
+use crate::ast::{
+    Class, CodeBlock, Parameter, Statement, TsMethod, TsNode, TypeExpression, Visibility,
+};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
+use crate::generator::template_generator::{
+    ApiMethodData, ParameterData as TemplateParameterData, TemplateGenerator,
+};
 use crate::utils::schema_mapper::SchemaMapper;
 
 /// Individual API class generator
 pub struct ApiClassGenerator {
     parameter_extractor: ParameterExtractor,
     schema_mapper: SchemaMapper,
+    template_generator: TemplateGenerator,
 }
 
 impl ApiClassGenerator {
@@ -22,6 +29,7 @@ impl ApiClassGenerator {
         Self {
             parameter_extractor: ParameterExtractor::new(),
             schema_mapper: SchemaMapper::new(),
+            template_generator: TemplateGenerator::new(),
         }
     }
 
@@ -49,16 +57,20 @@ impl ApiClassGenerator {
                 is_static: false,
                 visibility: Visibility::Public,
                 documentation: Some("Initialize the API client".to_string()),
-                body: Some("super(configuration);".to_string()),
+                body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                    "super(configuration);".to_string(),
+                )])),
             },
         ];
 
         // Generate methods for each operation
         for (path, method_name, operation) in operations {
-            let http_method = method_name.parse::<Method>()
-                .map_err(|e| GeneratorError::Generic {
-                    message: format!("Invalid HTTP method '{}': {}", method_name, e),
-                })?;
+            let http_method =
+                method_name
+                    .parse::<Method>()
+                    .map_err(|e| GeneratorError::Generic {
+                        message: format!("Invalid HTTP method '{}': {}", method_name, e),
+                    })?;
             let method = self.generate_operation_method(path, &http_method, operation)?;
             methods.push(method);
         }
@@ -227,14 +239,14 @@ impl ApiClassGenerator {
         Ok(Some(TypeExpression::Reference("Promise<any>".to_string())))
     }
 
-    /// Generate implementation body for an API method
+    /// Generate implementation body for an API method using templates
     pub fn generate_method_implementation(
         &self,
-        _method_name: &str,
+        method_name: &str,
         http_method: &Method,
         path: &str,
         operation: &Operation,
-    ) -> Result<String, GeneratorError> {
+    ) -> Result<CodeBlock, GeneratorError> {
         let params = self.generate_method_parameters(path, operation)?;
 
         // Extract path parameters
@@ -243,14 +255,7 @@ impl ApiClassGenerator {
             .filter(|p| self.is_path_parameter(p.name.as_str(), path))
             .collect();
 
-        // Build URL with path parameter substitution
-        let mut url = path.to_string();
-        for param in &path_params {
-            let placeholder = format!("{{{}}}", param.name);
-            url = url.replace(&placeholder, &format!("${{{}}}", param.name));
-        }
-
-        // Build query parameters string
+        // Build query parameters
         let query_params: Vec<_> = params
             .iter()
             .filter(|p| !self.is_path_parameter(p.name.as_str(), path))
@@ -260,82 +265,78 @@ impl ApiClassGenerator {
         // Build request body parameter
         let body_param = params.iter().find(|p| p.name == "body");
 
-        let mut body = String::new();
+        // Convert parameters to template format
+        let template_path_params: Vec<TemplateParameterData> = path_params
+            .iter()
+            .map(|p| TemplateParameterData {
+                name: p.name.clone(),
+                type_expr: Some(format!(
+                    "{}",
+                    p.type_expr
+                        .as_ref()
+                        .unwrap_or(&TypeExpression::Reference("any".to_string()))
+                )),
+                optional: p.optional,
+            })
+            .collect();
 
-        match *http_method {
-            Method::GET => {
-                if !query_params.is_empty() {
-                    let query_string = query_params
-                        .iter()
-                        .map(|p| {
-                            if p.optional {
-                                format!("{0} && `${{{0}}}=${{{0}.toString()}}`", p.name)
-                            } else {
-                                format!("`${{{0}}}=${{{0}.toString()}}`", p.name)
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" + '&' + ");
-                    body.push_str(&format!(
-                        "    const queryParams = [{}].filter(Boolean).join('&');\n",
-                        query_string
-                    ));
-                    body.push_str("    const url = `${this.configuration?.basePath || ''}");
-                    for param in &path_params {
-                        body.push_str("/${");
-                        body.push_str(&param.name);
-                        body.push_str("}");
-                    }
-                    body.push_str("}${queryParams ? '?' + queryParams : ''}`;\n");
-                } else {
-                    body.push_str("    const url = `${this.configuration?.basePath || ''}");
-                    for param in &path_params {
-                        body.push_str("/${");
-                        body.push_str(&param.name);
-                        body.push_str("}");
-                    }
-                    body.push_str("}`;\n");
-                }
-                body.push_str("    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());\n");
-            }
-            Method::POST | Method::PUT | Method::PATCH => {
-                body.push_str("    const url = `${this.configuration?.basePath || ''}");
-                body.push_str(&url);
-                body.push_str("`;\n");
-                if let Some(body_param) = body_param {
-                    body.push_str("    return this.request({\n");
-                    body.push_str("      url,\n");
-                    body.push_str("      init: {\n");
-                    body.push_str(&format!("        method: '{}',\n", http_method.as_str()));
-                    body.push_str("        headers: { 'Content-Type': 'application/json' },\n");
-                    body.push_str(&format!(
-                        "        body: JSON.stringify({})\n",
-                        body_param.name
-                    ));
-                    body.push_str("      }\n");
-                    body.push_str("    }).then(response => response.json());\n");
-                } else {
-                    body.push_str("    return this.request({ url, init: { method: '");
-                    body.push_str(http_method.as_str());
-                    body.push_str("' } }).then(response => response.json());\n");
-                }
-            }
-            Method::DELETE => {
-                body.push_str("    const url = `${this.configuration?.basePath || ''}");
-                body.push_str(&url);
-                body.push_str("`;\n");
-                body.push_str("    return this.request({ url, init: { method: 'DELETE' } });\n");
-            }
-            _ => {
-                body.push_str("    // Unsupported HTTP method\n");
-                body.push_str(&format!(
-                    "    throw new Error(`HTTP method {} is not supported`);\n",
-                    http_method.as_str()
-                ));
-            }
-        }
+        let template_query_params: Vec<TemplateParameterData> = query_params
+            .iter()
+            .map(|p| TemplateParameterData {
+                name: p.name.clone(),
+                type_expr: Some(format!(
+                    "{}",
+                    p.type_expr
+                        .as_ref()
+                        .unwrap_or(&TypeExpression::Reference("any".to_string()))
+                )),
+                optional: p.optional,
+            })
+            .collect();
 
-        Ok(body)
+        let template_body_param = body_param.map(|p| TemplateParameterData {
+            name: p.name.clone(),
+            type_expr: Some(format!(
+                "{}",
+                p.type_expr
+                    .as_ref()
+                    .unwrap_or(&TypeExpression::Reference("any".to_string()))
+            )),
+            optional: p.optional,
+        });
+
+        // Create API method data for template
+        let api_method_data = ApiMethodData {
+            method_name: method_name.to_string(),
+            http_method: http_method.as_str().to_string(),
+            path: path.to_string(),
+            path_params: template_path_params,
+            query_params: template_query_params,
+            body_param: template_body_param,
+            return_type: "Promise<any>".to_string(),
+            has_auth: true,
+            has_error_handling: true,
+        };
+
+        // Generate method body using appropriate template
+        let lines = match *http_method {
+            Method::GET => self
+                .template_generator
+                .generate_get_method_lines(&api_method_data),
+            Method::POST | Method::PUT | Method::PATCH => self
+                .template_generator
+                .generate_post_put_method_lines(&api_method_data),
+            Method::DELETE => self
+                .template_generator
+                .generate_delete_method_lines(&api_method_data),
+            _ => self.template_generator.generate_default_method_lines(),
+        };
+
+        let lines = lines.map_err(|e| GeneratorError::Generic {
+            message: format!("Template generation failed: {}", e),
+        })?;
+
+        Ok(CodeBlock::from_snippets(SnippetLines::MethodBody(lines)))
     }
 
     /// Check if a parameter is a path parameter based on the path template

@@ -14,84 +14,99 @@ export class UserApi extends BaseAPI {
  * Initialize the API client
  */
 constructor(configuration?: Configuration) {
-super(configuration);
+  super(configuration);
 }
 /**
  * Create user
  */
 async createUser(body: User): Promise<User> {
-    const url = `${this.configuration?.basePath || ''}/user`;
-    return this.request({
+    const url = `${this.configuration?.basePath || ''}/user`;return this.request({
       url,
       init: {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
     }).then(response => response.json());
-
 }
 /**
  * Creates list of users with given input array
  */
 async createUsersWithListInput(body: Array<string>): Promise<User> {
-    const url = `${this.configuration?.basePath || ''}/user/createWithList`;
-    return this.request({
+    const url = `${this.configuration?.basePath || ''}/user/createWithList`;return this.request({
       url,
       init: {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
     }).then(response => response.json());
-
 }
 /**
  * Logs user into the system
  */
 async loginUser(username?: string, password?: string): Promise<Response> {
-    const queryParams = [username && `${username}=${username.toString()}` + '&' + password && `${password}=${password.toString()}`].filter(Boolean).join('&');
-    const url = `${this.configuration?.basePath || ''}}${queryParams ? '?' + queryParams : ''}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/user/login`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 /**
  * Logs out current logged in user session
  */
 async logoutUser(): Promise<Response> {
-    const url = `${this.configuration?.basePath || ''}}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/user/logout`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 /**
  * Get user by user name
  */
 async getUserByName(username: string): Promise<User> {
-    const url = `${this.configuration?.basePath || ''}/${username}}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/user/${username}`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 /**
  * Update user
  */
 async updateUser(username: string, body: User): Promise<Response> {
-    const url = `${this.configuration?.basePath || ''}/user/${username}`;
-    return this.request({
+    const url = `${this.configuration?.basePath || ''}/user/${username}`;return this.request({
       url,
       init: {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
     }).then(response => response.json());
-
 }
 /**
  * Delete user
  */
 async deleteUser(username: string): Promise<Response> {
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
-    return this.request({ url, init: { method: 'DELETE' } });
-
+    return this.request({
+      url,
+      init: {
+        method: 'DELETE',
+      }
+    });
 }
 }

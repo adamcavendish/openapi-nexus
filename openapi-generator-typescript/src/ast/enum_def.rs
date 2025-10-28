@@ -54,7 +54,7 @@ impl ToRcDocWithContext for Enum {
                     .append(RcDoc::line())
                     .append(body_content)
                     .append(RcDoc::line())
-                    .append(RcDoc::text("}"))
+                    .append(RcDoc::text("}")),
             );
         }
 

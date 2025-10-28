@@ -1,0 +1,7 @@
+  const url = `${this.configuration?.basePath || ''}{{ path | replace('{', '${') }}`;
+  return this.request({ 
+    url, 
+    init: { 
+      method: 'DELETE',
+    } 
+  });

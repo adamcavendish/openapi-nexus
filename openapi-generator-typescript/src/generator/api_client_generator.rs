@@ -6,16 +6,25 @@ use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::{Class, Parameter, PrimitiveType, TsMethod, TsNode, TypeExpression, Visibility};
+use crate::ast::code_block::SnippetLines;
+use crate::ast::{
+    Class, CodeBlock, Parameter, PrimitiveType, Statement, TsMethod, TsNode, TypeExpression,
+    Visibility,
+};
 use crate::core::GeneratorError;
+use crate::generator::template_generator::{ApiMethodData, TemplateGenerator};
 
 /// API client generator for creating TypeScript API client classes
-pub struct ApiClientGenerator;
+pub struct ApiClientGenerator {
+    template_generator: TemplateGenerator,
+}
 
 impl ApiClientGenerator {
     /// Create a new API client generator
     pub fn new() -> Self {
-        Self
+        Self {
+            template_generator: TemplateGenerator::new(),
+        }
     }
 
     /// Generate API client class with methods from operations
@@ -108,7 +117,9 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
-            body: Some("super(configuration);".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "super(configuration);".to_string(),
+            )])),
         };
         methods.push(constructor);
 
@@ -151,7 +162,9 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
-            body: Some("super(configuration);".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "super(configuration);".to_string(),
+            )])),
         };
 
         let api_class = Class {
@@ -168,11 +181,11 @@ impl ApiClientGenerator {
         Ok(TsNode::Class(api_class))
     }
 
-    /// Generate method from OpenAPI operation
+    /// Generate method from OpenAPI operation using templates
     fn generate_method_from_operation(
         &self,
         method_name: &str,
-        _path: &str,
+        path: &str,
         http_method: &str,
         operation: &Operation,
     ) -> Result<TsMethod, GeneratorError> {
@@ -212,6 +225,38 @@ impl ApiClientGenerator {
 
         let return_type = TypeExpression::Reference("Promise<any>".to_string());
 
+        // Generate method body using templates
+        let api_method_data = ApiMethodData {
+            method_name: method_name.to_string(),
+            http_method: http_method.to_string(),
+            path: path.to_string(),
+            path_params: vec![],
+            query_params: vec![],
+            body_param: None,
+            return_type: "Promise<any>".to_string(),
+            has_auth: true,
+            has_error_handling: true,
+        };
+
+        let lines = match http_method {
+            "GET" => self
+                .template_generator
+                .generate_get_method_lines(&api_method_data),
+            "POST" | "PUT" | "PATCH" => self
+                .template_generator
+                .generate_post_put_method_lines(&api_method_data),
+            "DELETE" => self
+                .template_generator
+                .generate_delete_method_lines(&api_method_data),
+            _ => self.template_generator.generate_default_method_lines(),
+        };
+
+        let lines = lines.map_err(|e| GeneratorError::Generic {
+            message: format!("Template generation failed: {}", e),
+        })?;
+
+        let method_body = CodeBlock::from_snippets(SnippetLines::MethodBody(lines));
+
         Ok(TsMethod {
             name: method_name.to_string(),
             parameters,
@@ -220,7 +265,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: operation.description.clone(),
-            body: None,
+            body: Some(method_body),
         })
     }
 

@@ -37,7 +37,7 @@ impl ToRcDocWithContext for GenericList {
                 .map(|g| g.to_rcdoc_with_context(_context))
                 .collect();
             let docs = generic_docs?;
-            
+
             Ok(RcDoc::text("<")
                 .append(RcDoc::intersperse(docs, RcDoc::text(", ")))
                 .append(RcDoc::text(">")))

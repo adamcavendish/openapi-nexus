@@ -16,16 +16,14 @@ configuration?: Configuration
  * Initialize the BaseAPI
  */
 constructor(configuration?: Configuration) {
-this.configuration = configuration;
+  this.configuration = configuration;
 }
 /**
  * Make an HTTP request
  */
 async request(context: RequestContext): Promise<Response> {
-{
-    // TODO: Implement method body
-    throw new Error('Not implemented')
-  }
+  // TODO: Implement method body
+  throw new Error('Not implemented')
 }
 }
 /**
@@ -40,7 +38,7 @@ field: string
  * Create a new RequiredError
  */
 constructor(field: string) {
-super(`Field ${field} is required`); this.field = field;
+  super(`Field ${field} is required`); this.field = field;
 }
 }
 /**

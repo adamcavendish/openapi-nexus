@@ -14,45 +14,57 @@ export class StoreApi extends BaseAPI {
  * Initialize the API client
  */
 constructor(configuration?: Configuration) {
-super(configuration);
+  super(configuration);
 }
 /**
  * Returns pet inventories by status
  */
 async getInventory(): Promise<string> {
-    const url = `${this.configuration?.basePath || ''}}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/store/inventory`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 /**
  * Place an order for a pet
  */
 async placeOrder(body: Order): Promise<Order> {
-    const url = `${this.configuration?.basePath || ''}/store/order`;
-    return this.request({
+    const url = `${this.configuration?.basePath || ''}/store/order`;return this.request({
       url,
       init: {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
     }).then(response => response.json());
-
 }
 /**
  * Find purchase order by ID
  */
 async getOrderById(orderId: string): Promise<Order> {
-    const url = `${this.configuration?.basePath || ''}/${orderId}}`;
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-
+    const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
+    return this.request({
+      url,
+      init: {
+        method: 'GET',
+      }
+    }).then(response => response.json());
 }
 /**
  * Delete purchase order by ID
  */
 async deleteOrder(orderId: string): Promise<Response> {
     const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
-    return this.request({ url, init: { method: 'DELETE' } });
-
+    return this.request({
+      url,
+      init: {
+        method: 'DELETE',
+      }
+    });
 }
 }

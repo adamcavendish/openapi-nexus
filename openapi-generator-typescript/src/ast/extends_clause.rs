@@ -35,11 +35,8 @@ impl ToRcDocWithContext for ExtendsClause {
         if self.0.is_empty() {
             Ok(RcDoc::nil())
         } else {
-            let extend_docs: Vec<RcDoc<'static, ()>> = self
-                .0
-                .iter()
-                .map(|e| RcDoc::text(e.clone()))
-                .collect();
+            let extend_docs: Vec<RcDoc<'static, ()>> =
+                self.0.iter().map(|e| RcDoc::text(e.clone())).collect();
             Ok(RcDoc::space()
                 .append(RcDoc::text("extends"))
                 .append(RcDoc::space())

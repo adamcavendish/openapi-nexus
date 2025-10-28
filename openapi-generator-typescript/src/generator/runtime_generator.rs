@@ -1,8 +1,8 @@
 //! Runtime module generator for TypeScript
 
 use crate::ast::{
-    Class, Function, Interface, TsMethod, Parameter, PrimitiveType, Property, TsNode, TypeExpression,
-    Visibility,
+    Class, CodeBlock, Function, Interface, Parameter, PrimitiveType, Property, Statement, TsMethod,
+    TsNode, TypeExpression, Visibility,
 };
 use crate::ast_trait::to_rcdoc::ToRcDoc;
 use crate::core::GeneratorError;
@@ -302,7 +302,9 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Create a new RequiredError".to_string()),
-            body: Some("super(`Field ${field} is required`); this.field = field;".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "super(`Field ${field} is required`); this.field = field;".to_string(),
+            )])),
         });
 
         Ok(TsNode::Class(Class {
@@ -344,7 +346,9 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the BaseAPI".to_string()),
-            body: Some("this.configuration = configuration;".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "this.configuration = configuration;".to_string(),
+            )])),
         });
 
         // request method
@@ -395,7 +399,9 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert JSON object to typed object".to_string()),
-            body: Some("return json as T;".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "return json as T;".to_string(),
+            )])),
         }))
     }
 
@@ -418,7 +424,9 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert typed object to JSON".to_string()),
-            body: Some("return JSON.stringify(value);".to_string()),
+            body: Some(CodeBlock::from_statements(vec![Statement::Simple(
+                "return JSON.stringify(value);".to_string(),
+            )])),
         }))
     }
 }

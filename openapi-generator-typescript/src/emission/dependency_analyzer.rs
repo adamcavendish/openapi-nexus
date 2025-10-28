@@ -179,55 +179,54 @@ impl DependencyAnalyzer {
     /// Extract inner types from generic type strings like "Promise<ApiResponse>"
     fn extract_generic_types(type_name: &str) -> Vec<String> {
         let mut inner_types = Vec::new();
-        
+
         // Find the content between < and >
-        if let Some(start) = type_name.find('<') {
-            if let Some(end) = type_name.rfind('>') {
-                if start < end {
-                    let inner_content = &type_name[start + 1..end];
-                    
-                    // Handle nested generics and unions
-                    let mut depth = 0;
-                    let mut current_type = String::new();
-                    
-                    for ch in inner_content.chars() {
-                        match ch {
-                            '<' => {
-                                depth += 1;
-                                current_type.push(ch);
-                            }
-                            '>' => {
-                                depth -= 1;
-                                current_type.push(ch);
-                            }
-                            '|' if depth == 0 => {
-                                // Union separator at top level
-                                if !current_type.trim().is_empty() {
-                                    inner_types.push(current_type.trim().to_string());
-                                }
-                                current_type.clear();
-                            }
-                            ',' if depth == 0 => {
-                                // Generic parameter separator at top level
-                                if !current_type.trim().is_empty() {
-                                    inner_types.push(current_type.trim().to_string());
-                                }
-                                current_type.clear();
-                            }
-                            _ => {
-                                current_type.push(ch);
-                            }
-                        }
+        if let Some(start) = type_name.find('<')
+            && let Some(end) = type_name.rfind('>')
+            && start < end
+        {
+            let inner_content = &type_name[start + 1..end];
+
+            // Handle nested generics and unions
+            let mut depth = 0;
+            let mut current_type = String::new();
+
+            for ch in inner_content.chars() {
+                match ch {
+                    '<' => {
+                        depth += 1;
+                        current_type.push(ch);
                     }
-                    
-                    // Add the last type
-                    if !current_type.trim().is_empty() {
-                        inner_types.push(current_type.trim().to_string());
+                    '>' => {
+                        depth -= 1;
+                        current_type.push(ch);
+                    }
+                    '|' if depth == 0 => {
+                        // Union separator at top level
+                        if !current_type.trim().is_empty() {
+                            inner_types.push(current_type.trim().to_string());
+                        }
+                        current_type.clear();
+                    }
+                    ',' if depth == 0 => {
+                        // Generic parameter separator at top level
+                        if !current_type.trim().is_empty() {
+                            inner_types.push(current_type.trim().to_string());
+                        }
+                        current_type.clear();
+                    }
+                    _ => {
+                        current_type.push(ch);
                     }
                 }
             }
+
+            // Add the last type
+            if !current_type.trim().is_empty() {
+                inner_types.push(current_type.trim().to_string());
+            }
         }
-        
+
         inner_types
     }
 }

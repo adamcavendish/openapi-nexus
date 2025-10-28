@@ -3,7 +3,7 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, Property, GenericList, ExtendsClause};
+use crate::ast::{DocComment, ExtendsClause, Generic, GenericList, Property};
 use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::type_expression_emitter::TypeExpressionEmitter;
@@ -51,7 +51,8 @@ impl ToRcDocWithContext for Interface {
 
             let force_multiline = context.force_multiline
                 || self.properties.len() > 2
-                || self.properties
+                || self
+                    .properties
                     .iter()
                     .any(|p| TypeExpressionEmitter::is_complex_type(&p.type_expr));
 
@@ -66,7 +67,7 @@ impl ToRcDocWithContext for Interface {
                     .append(RcDoc::line())
                     .append(body_content)
                     .append(RcDoc::line())
-                    .append(RcDoc::text("}"))
+                    .append(RcDoc::text("}")),
             );
         }
 

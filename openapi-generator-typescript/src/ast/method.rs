@@ -3,7 +3,11 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{CodeBlock, DocComment, Parameter, Statement, TypeExpression, Visibility, ParameterList, ReturnType};
+use crate::ast::code_block::SnippetLines;
+use crate::ast::{
+    CodeBlock, DocComment, Parameter, ParameterList, ReturnType, Statement, TypeExpression,
+    Visibility,
+};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 
@@ -18,7 +22,7 @@ pub struct TsMethod {
     pub visibility: Visibility,
     pub documentation: Option<String>,
     /// Optional pre-generated method body (overrides automatic generation)
-    pub body: Option<String>,
+    pub body: Option<CodeBlock>,
 }
 
 impl ToRcDocWithContext for TsMethod {
@@ -55,27 +59,60 @@ impl ToRcDocWithContext for TsMethod {
         let return_type = ReturnType::new(self.return_type.clone());
         doc = doc.append(return_type.to_rcdoc_with_context(context)?);
 
-        // Generate method body
-        let body_doc = if let Some(body) = &self.body {
-            RcDoc::text(body.clone())
+        // Combine signature and body
+        let method_doc = if let Some(body) = &self.body {
+            // For CodeBlock content, emit it directly without extra braces
+            match body {
+                CodeBlock::Statements(statements) => {
+                    if statements.is_empty() {
+                        doc.append(RcDoc::space()).append(RcDoc::text("{}"))
+                    } else {
+                        let mut body_doc = RcDoc::text("{").append(RcDoc::line());
+                        for stmt in statements {
+                            body_doc = body_doc
+                                .append(RcDoc::text("  "))
+                                .append(stmt.to_rcdoc_with_context(context)?)
+                                .append(RcDoc::line());
+                        }
+                        doc.append(RcDoc::space())
+                            .append(body_doc.append(RcDoc::text("}")))
+                    }
+                }
+                CodeBlock::Snippets(snippets) => {
+                    let lines = match snippets {
+                        SnippetLines::MethodBody(lines) => lines,
+                        SnippetLines::InterfaceBody(lines) => lines,
+                        SnippetLines::ClassBody(lines) => lines,
+                        SnippetLines::FunctionBody(lines) => lines,
+                        SnippetLines::EnumBody(lines) => lines,
+                        SnippetLines::Generic(lines) => lines,
+                    };
+
+                    if lines.is_empty() {
+                        doc.append(RcDoc::space()).append(RcDoc::text("{}"))
+                    } else {
+                        let mut body_doc = RcDoc::text("{").append(RcDoc::line());
+                        for line in lines {
+                            body_doc = body_doc
+                                .append(RcDoc::text("  "))
+                                .append(RcDoc::text(line.clone()))
+                                .append(RcDoc::line());
+                        }
+                        doc.append(RcDoc::space())
+                            .append(body_doc.append(RcDoc::text("}")))
+                    }
+                }
+            }
         } else {
-            // For methods, we need to create a simple body since we don't have MethodContext here
+            // For methods without body, create a simple body
             let statements = vec![
                 Statement::Comment("TODO: Implement method body".to_string()),
                 Statement::Simple("throw new Error('Not implemented')".to_string()),
             ];
             let code_block = CodeBlock::from_statements(statements);
-            code_block.to_rcdoc_with_context(context)?
+            let body_doc = code_block.to_rcdoc_with_context(context)?;
+            doc.append(RcDoc::space()).append(body_doc)
         };
-
-        // Combine signature and body
-        let method_doc = doc
-            .append(RcDoc::space())
-            .append(RcDoc::text("{"))
-            .append(RcDoc::line())
-            .append(body_doc.nest(2))
-            .append(RcDoc::line())
-            .append(RcDoc::text("}"));
 
         // Add documentation if present and enabled
         if context.include_docs

@@ -2,7 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, Parameter, TypeExpression, GenericList, ParameterList, ReturnType};
+use crate::ast::{
+    CodeBlock, DocComment, Generic, GenericList, Parameter, ParameterList, ReturnType,
+    TypeExpression,
+};
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::body_emitter::BodyEmitter;
 use crate::emission::error::EmitError;
@@ -18,8 +21,7 @@ pub struct Function {
     pub is_async: bool,
     pub is_export: bool,
     pub documentation: Option<String>,
-    /// Optional pre-generated function body (overrides automatic generation)
-    pub body: Option<String>,
+    pub body: Option<CodeBlock>,
 }
 
 impl ToRcDocWithContext for Function {
@@ -57,7 +59,7 @@ impl ToRcDocWithContext for Function {
 
         // Generate function body
         let body_doc = if let Some(body) = &self.body {
-            RcDoc::text(body.clone())
+            body.to_rcdoc_with_context(context)?
         } else {
             body_emitter.generate_function_body(self)?
         };

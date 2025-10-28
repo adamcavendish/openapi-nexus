@@ -42,7 +42,9 @@ impl ToRcDocWithContext for ParameterList {
             if self.0.len() > 3 {
                 Ok(RcDoc::text("(")
                     .append(RcDoc::line_())
-                    .append(RcDoc::intersperse(params, RcDoc::text(",").append(RcDoc::line())).nest(2))
+                    .append(
+                        RcDoc::intersperse(params, RcDoc::text(",").append(RcDoc::line())).nest(2),
+                    )
                     .append(RcDoc::line_())
                     .append(RcDoc::text(")")))
             } else {

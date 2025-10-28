@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, TsMethod, Property, GenericList, ExtendsClause, ImplementsClause};
+use crate::ast::{
+    DocComment, ExtendsClause, Generic, GenericList, ImplementsClause, Property, TsMethod,
+};
 use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use pretty::RcDoc;
@@ -74,7 +76,7 @@ impl ToRcDocWithContext for Class {
                     .append(RcDoc::line())
                     .append(body_content)
                     .append(RcDoc::line())
-                    .append(RcDoc::text("}"))
+                    .append(RcDoc::text("}")),
             );
         }
 

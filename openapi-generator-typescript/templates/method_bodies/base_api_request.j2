@@ -5,7 +5,7 @@ const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
 // Build headers with authentication
 const headers = {
   'Content-Type': 'application/json',
-  ...this.configuration?.headers
+  ...this.configuration?.headers,
 };
 
 // Add authentication headers
@@ -25,8 +25,8 @@ const requestInit = {
   ...init,
   headers: {
     ...headers,
-    ...init?.headers
-  }
+    ...init?.headers,
+  },
 };
 
 // Make the fetch request

@@ -6,11 +6,15 @@
  * Convert typed object to JSON
  */
 export function ToJSON<T>(value: T): any {
-return JSON.stringify(value);
+{
+    return JSON.stringify(value);
+  }
 }
 /**
  * Convert JSON object to typed object
  */
 export function FromJSON<T>(json: any): T {
-return json as T;
+{
+    return json as T;
+  }
 }

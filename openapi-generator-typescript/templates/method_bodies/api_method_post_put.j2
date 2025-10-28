@@ -1,0 +1,20 @@
+  const url = `${this.configuration?.basePath || ''}{{ path | replace('{', '${') }}`;
+{%- if body_param -%}
+  return this.request({
+    url,
+    init: {
+      method: '{{ http_method }}',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({{ body_param.name }}),
+    },
+  }).then(response => response.json());
+{%- else -%}
+  return this.request({ 
+    url, 
+    init: { 
+      method: '{{ http_method }}',
+    } 
+  }).then(response => response.json());
+{%- endif -%}
