@@ -85,6 +85,7 @@ impl BodyEmitter {
             path: "/path".to_string(), // This would be passed from context
             path_params: vec![],
             query_params: vec![],
+            header_params: vec![],
             body_param: None,
             return_type: "Promise<any>".to_string(),
             has_auth: true,

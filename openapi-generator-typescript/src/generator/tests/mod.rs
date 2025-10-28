@@ -1,0 +1,3 @@
+mod api_class_generator_tests;
+mod parameter_extractor_tests;
+mod template_generator_tests;

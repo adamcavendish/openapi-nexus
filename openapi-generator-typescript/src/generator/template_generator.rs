@@ -3,7 +3,6 @@
 use std::fmt;
 
 use minijinja::Environment;
-use serde_json;
 
 use crate::generator::templates::Templates;
 
@@ -170,6 +169,7 @@ pub struct ApiMethodData {
     pub path: String,
     pub path_params: Vec<ParameterData>,
     pub query_params: Vec<ParameterData>,
+    pub header_params: Vec<ParameterData>,
     pub body_param: Option<ParameterData>,
     pub return_type: String,
     pub has_auth: bool,
@@ -230,6 +230,7 @@ mod tests {
                 path: "/test".to_string(),
                 path_params: vec![],
                 query_params: vec![],
+                header_params: vec![],
                 body_param: None,
                 return_type: "Promise<any>".to_string(),
                 has_auth: false,
@@ -245,6 +246,7 @@ mod tests {
                 path: "/test".to_string(),
                 path_params: vec![],
                 query_params: vec![],
+                header_params: vec![],
                 body_param: None,
                 return_type: "Promise<any>".to_string(),
                 has_auth: false,
@@ -260,6 +262,7 @@ mod tests {
                 path: "/test".to_string(),
                 path_params: vec![],
                 query_params: vec![],
+                header_params: vec![],
                 body_param: None,
                 return_type: "Promise<any>".to_string(),
                 has_auth: false,

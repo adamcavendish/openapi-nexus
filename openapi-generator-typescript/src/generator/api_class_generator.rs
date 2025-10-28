@@ -247,62 +247,44 @@ impl ApiClassGenerator {
         path: &str,
         operation: &Operation,
     ) -> Result<CodeBlock, GeneratorError> {
-        let params = self.generate_method_parameters(path, operation)?;
-
-        // Extract path parameters
-        let path_params: Vec<_> = params
-            .iter()
-            .filter(|p| self.is_path_parameter(p.name.as_str(), path))
-            .collect();
-
-        // Build query parameters
-        let query_params: Vec<_> = params
-            .iter()
-            .filter(|p| !self.is_path_parameter(p.name.as_str(), path))
-            .filter(|p| p.name != "body")
-            .collect();
-
-        // Build request body parameter
-        let body_param = params.iter().find(|p| p.name == "body");
+        // Use ParameterExtractor to get all parameters properly categorized
+        let extracted_params = self.parameter_extractor.extract_parameters(operation, path)?;
 
         // Convert parameters to template format
-        let template_path_params: Vec<TemplateParameterData> = path_params
+        let template_path_params: Vec<TemplateParameterData> = extracted_params
+            .path_params
             .iter()
             .map(|p| TemplateParameterData {
                 name: p.name.clone(),
-                type_expr: Some(format!(
-                    "{}",
-                    p.type_expr
-                        .as_ref()
-                        .unwrap_or(&TypeExpression::Reference("any".to_string()))
-                )),
-                optional: p.optional,
+                type_expr: Some(format!("{}", p.type_expr)),
+                optional: !p.required,
             })
             .collect();
 
-        let template_query_params: Vec<TemplateParameterData> = query_params
+        let template_query_params: Vec<TemplateParameterData> = extracted_params
+            .query_params
             .iter()
             .map(|p| TemplateParameterData {
                 name: p.name.clone(),
-                type_expr: Some(format!(
-                    "{}",
-                    p.type_expr
-                        .as_ref()
-                        .unwrap_or(&TypeExpression::Reference("any".to_string()))
-                )),
-                optional: p.optional,
+                type_expr: Some(format!("{}", p.type_expr)),
+                optional: !p.required,
             })
             .collect();
 
-        let template_body_param = body_param.map(|p| TemplateParameterData {
+        let template_header_params: Vec<TemplateParameterData> = extracted_params
+            .header_params
+            .iter()
+            .map(|p| TemplateParameterData {
+                name: p.name.clone(),
+                type_expr: Some(format!("{}", p.type_expr)),
+                optional: !p.required,
+            })
+            .collect();
+
+        let template_body_param = extracted_params.body_param.map(|p| TemplateParameterData {
             name: p.name.clone(),
-            type_expr: Some(format!(
-                "{}",
-                p.type_expr
-                    .as_ref()
-                    .unwrap_or(&TypeExpression::Reference("any".to_string()))
-            )),
-            optional: p.optional,
+            type_expr: Some(format!("{}", p.type_expr)),
+            optional: !p.required,
         });
 
         // Create API method data for template
@@ -312,6 +294,7 @@ impl ApiClassGenerator {
             path: path.to_string(),
             path_params: template_path_params,
             query_params: template_query_params,
+            header_params: template_header_params,
             body_param: template_body_param,
             return_type: "Promise<any>".to_string(),
             has_auth: true,

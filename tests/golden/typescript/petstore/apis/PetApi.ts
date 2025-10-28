@@ -21,13 +21,45 @@ constructor(configuration?: Configuration) {
  * Add a new pet to the store
  */
 async addPet(body: Pet): Promise<Pet> {
-    const url = `${this.configuration?.basePath || ''}/pet`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/pet`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
       },
     }).then(response => response.json());
@@ -36,13 +68,45 @@ async addPet(body: Pet): Promise<Pet> {
  * Update an existing pet
  */
 async updatePet(body: Pet): Promise<Pet> {
-    const url = `${this.configuration?.basePath || ''}/pet`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/pet`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
       },
     }).then(response => response.json());
@@ -51,70 +115,292 @@ async updatePet(body: Pet): Promise<Pet> {
  * Find pets by status
  */
 async findPetsByStatus(status: string): Promise<Array<string>> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/findByStatus`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+    if (status !== undefined) {
+      queryParams.append('status', String(status));
+    }
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Find pets by tags
  */
 async findPetsByTags(tags: Array<string>): Promise<Array<string>> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/findByTags`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+    if (tags !== undefined) {
+      queryParams.append('tags', String(tags));
+    }
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Find pet by ID
  */
 async getPetById(petId: string): Promise<Pet> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Update a pet in the store with form data
  */
 async updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
-    const url = `${this.configuration?.basePath || ''}/pet/${petId}`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+    if (name !== undefined) {
+      queryParams.append('name', String(name));
+    }
+  
+    if (status !== undefined) {
+      queryParams.append('status', String(status));
+    }
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+  
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'POST',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Delete a pet
  */
 async deletePet(petId: string): Promise<Response> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'DELETE',
-      }
+        headers,
+      },
     });
 }
 /**
  * Upload an image
  */
 async uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
-    const url = `${this.configuration?.basePath || ''}/pet/${petId}/uploadImage`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/pet/${petId}/uploadImage`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+    if (additionalMetadata !== undefined) {
+      queryParams.append('additionalMetadata', String(additionalMetadata));
+    }
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+  
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'POST',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 }

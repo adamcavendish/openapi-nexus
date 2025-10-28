@@ -12,6 +12,9 @@ pub mod template_generator;
 pub mod templates;
 pub mod typescript_generator;
 
+#[cfg(test)]
+mod tests;
+
 pub use api_class_generator::ApiClassGenerator;
 pub use file_generator::{GeneratedFile, TypeScriptFileGenerator};
 pub use parameter_extractor::ParameterExtractor;

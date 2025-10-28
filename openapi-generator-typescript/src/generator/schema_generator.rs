@@ -6,7 +6,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use heck::ToPascalCase as _;
-use serde_json;
 use utoipa::openapi::schema::{
     AdditionalProperties, KnownFormat, Object, SchemaFormat, SchemaType, Type,
 };

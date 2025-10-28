@@ -1,20 +1,60 @@
+  // Build URL with path parameters
   const url = `${this.configuration?.basePath || ''}{{ path | replace('{', '${') }}`;
-{%- if body_param -%}
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+{% for param in query_params %}
+  if ({{ param.name }} !== undefined) {
+    queryParams.append('{{ param.name }}', String({{ param.name }}));
+  }
+{% endfor %}
+
+  // Build headers
+  const headers: Record<string, string> = {
+    {% if body_param %}'Content-Type': 'application/json',{% endif %}
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+{% for param in header_params %}
+  if ({{ param.name }} !== undefined) {
+    headers['{{ param.name }}'] = String({{ param.name }});
+  }
+{% endfor %}
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Make request
+{%- if body_param %}
   return this.request({
-    url,
+    url: finalUrl,
     init: {
       method: '{{ http_method }}',
-      headers: { 
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({{ body_param.name }}),
     },
   }).then(response => response.json());
-{%- else -%}
-  return this.request({ 
-    url, 
-    init: { 
+{%- else %}
+  return this.request({
+    url: finalUrl,
+    init: {
       method: '{{ http_method }}',
-    } 
+      headers,
+    },
   }).then(response => response.json());
-{%- endif -%}
+{%- endif %}

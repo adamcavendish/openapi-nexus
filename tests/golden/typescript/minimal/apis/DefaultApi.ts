@@ -16,12 +16,45 @@ constructor(configuration?: Configuration) {
   super(configuration);
 }
 async getTest(): Promise<Response> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/test`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 }

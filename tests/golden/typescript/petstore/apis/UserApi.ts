@@ -20,13 +20,45 @@ constructor(configuration?: Configuration) {
  * Create user
  */
 async createUser(body: User): Promise<User> {
-    const url = `${this.configuration?.basePath || ''}/user`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/user`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
       },
     }).then(response => response.json());
@@ -35,13 +67,45 @@ async createUser(body: User): Promise<User> {
  * Creates list of users with given input array
  */
 async createUsersWithListInput(body: Array<string>): Promise<User> {
-    const url = `${this.configuration?.basePath || ''}/user/createWithList`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/user/createWithList`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
       },
     }).then(response => response.json());
@@ -50,49 +114,188 @@ async createUsersWithListInput(body: Array<string>): Promise<User> {
  * Logs user into the system
  */
 async loginUser(username?: string, password?: string): Promise<Response> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/login`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+    if (username !== undefined) {
+      queryParams.append('username', String(username));
+    }
+  
+    if (password !== undefined) {
+      queryParams.append('password', String(password));
+    }
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Logs out current logged in user session
  */
 async logoutUser(): Promise<Response> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/logout`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Get user by user name
  */
 async getUserByName(username: string): Promise<User> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'GET',
-      }
+        headers,
+      },
     }).then(response => response.json());
 }
 /**
  * Update user
  */
 async updateUser(username: string, body: User): Promise<Response> {
-    const url = `${this.configuration?.basePath || ''}/user/${username}`;return this.request({
-      url,
+    // Build URL with path parameters
+    const url = `${this.configuration?.basePath || ''}/user/${username}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
+    return this.request({
+      url: finalUrl,
       init: {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
       },
     }).then(response => response.json());
@@ -101,12 +304,45 @@ async updateUser(username: string, body: User): Promise<Response> {
  * Delete user
  */
 async deleteUser(username: string): Promise<Response> {
+    // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
+  
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+  
+  
+    // Build headers
+    const headers: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
+  
+    // Add header parameters
+  
+  
+    // Add authentication
+    if (this.configuration?.apiKey) {
+      headers['X-API-Key'] = this.configuration.apiKey;
+    }
+    if (this.configuration?.accessToken) {
+      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+    }
+    if (this.configuration?.username && this.configuration?.password) {
+      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+  
+    // Build final URL
+    const finalUrl = queryParams.toString()
+      ? `${url}?${queryParams.toString()}`
+      : url;
+  
+    // Make request
     return this.request({
-      url,
+      url: finalUrl,
       init: {
         method: 'DELETE',
-      }
+        headers,
+      },
     });
 }
 }
