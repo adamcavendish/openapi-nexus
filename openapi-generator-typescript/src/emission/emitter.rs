@@ -4,34 +4,20 @@ use pretty::RcDoc;
 
 use std::collections::HashMap;
 
-use crate::ast::TsNode;
-use crate::emission::class_emitter::ClassEmitter;
-use crate::emission::constants::GENERATED_FILE_HEADER;
-use crate::emission::enum_emitter::emit_enum_string;
+use crate::ast::{GeneratedFileHeader, ImportCollection, ImportResolver, TsNode};
+use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
+use crate::emission::dependency_analyzer::DependencyAnalyzer;
 use crate::emission::error::EmitError;
-use crate::emission::function_emitter::FunctionEmitter;
-use crate::emission::import_emitter::emit_import_string;
-use crate::emission::import_manager::ImportManager;
-use crate::emission::interface_emitter::InterfaceEmitter;
-use crate::emission::type_alias_emitter::TypeAliasEmitter;
 
 /// TypeScript code emitter
 pub struct TypeScriptEmitter {
-    interface_emitter: InterfaceEmitter,
-    type_alias_emitter: TypeAliasEmitter,
-    function_emitter: FunctionEmitter,
-    class_emitter: ClassEmitter,
-    import_manager: ImportManager,
+    dependency_analyzer: DependencyAnalyzer,
 }
 
 impl TypeScriptEmitter {
     pub fn new() -> Self {
         Self {
-            interface_emitter: InterfaceEmitter::new(),
-            type_alias_emitter: TypeAliasEmitter::new(),
-            function_emitter: FunctionEmitter::new(),
-            class_emitter: ClassEmitter::new(),
-            import_manager: ImportManager::new(),
+            dependency_analyzer: DependencyAnalyzer::new(),
         }
     }
 
@@ -50,22 +36,28 @@ impl TypeScriptEmitter {
         let mut docs = Vec::new();
 
         // Add generated file header
-        docs.push(RcDoc::text(GENERATED_FILE_HEADER));
+        let header = GeneratedFileHeader::new();
+        docs.push(header.to_rcdoc()?);
 
-        // Generate imports based on dependencies
-        let imports = self.import_manager.generate_imports_for_file(
-            nodes,
-            current_file,
-            schema_to_file_map,
-        )?;
+        // Generate imports based on dependencies using AST-centric approach
+        let dependencies = self.dependency_analyzer.analyze_dependencies(nodes);
+        let import_resolver =
+            ImportResolver::new(schema_to_file_map.clone(), current_file.to_string());
+        let imports = import_resolver.resolve_dependencies(&dependencies)?;
 
         if !imports.is_empty() {
-            let import_code = self.import_manager.emit_imports(&imports)?;
-            docs.push(RcDoc::text(import_code));
+            // Convert Vec<Import> to ImportCollection for rendering
+            let mut import_collection = ImportCollection::new();
+            for import in imports {
+                import_collection.add_import(import);
+            }
+            let import_doc = import_collection.to_rcdoc()?;
+            docs.push(import_doc);
         }
 
+        // Convert AST nodes to RcDoc using traits
         for node in nodes {
-            let doc = self.emit_node(node)?;
+            let doc = node.to_rcdoc()?;
             docs.push(doc);
         }
 
@@ -73,34 +65,44 @@ impl TypeScriptEmitter {
         Ok(combined.pretty(80).to_string())
     }
 
-    fn emit_node(&self, node: &TsNode) -> Result<RcDoc<'_, ()>, EmitError> {
-        match node {
-            TsNode::Interface(interface) => {
-                let result = self.interface_emitter.emit_interface_string(interface)?;
-                Ok(RcDoc::text(result))
+    /// Emit TypeScript code from AST nodes with custom context
+    pub fn emit_with_custom_context(
+        &self,
+        nodes: &[TsNode],
+        context: &EmissionContext,
+        current_file: &str,
+        schema_to_file_map: &HashMap<String, String>,
+    ) -> Result<String, EmitError> {
+        let mut docs = Vec::new();
+
+        // Add generated file header
+        let header = GeneratedFileHeader::new();
+        docs.push(header.to_rcdoc()?);
+
+        // Generate imports based on dependencies using AST-centric approach
+        let dependencies = self.dependency_analyzer.analyze_dependencies(nodes);
+        let import_resolver =
+            ImportResolver::new(schema_to_file_map.clone(), current_file.to_string());
+        let imports = import_resolver.resolve_dependencies(&dependencies)?;
+
+        if !imports.is_empty() {
+            // Convert Vec<Import> to ImportCollection for rendering
+            let mut import_collection = ImportCollection::new();
+            for import in imports {
+                import_collection.add_import(import);
             }
-            TsNode::TypeAlias(type_alias) => {
-                let result = self.type_alias_emitter.emit_type_alias_string(type_alias)?;
-                Ok(RcDoc::text(result))
-            }
-            TsNode::Enum(enum_def) => {
-                let result = emit_enum_string(enum_def)?;
-                Ok(RcDoc::text(result))
-            }
-            TsNode::Function(function) => {
-                let result = self.function_emitter.emit_function_string(function)?;
-                Ok(RcDoc::text(result))
-            }
-            TsNode::Class(class_def) => {
-                let result = self.class_emitter.emit_class_string(class_def)?;
-                Ok(RcDoc::text(result))
-            }
-            TsNode::Import(import) => {
-                let result = emit_import_string(import)?;
-                Ok(RcDoc::text(result))
-            }
-            TsNode::Export(_) => Ok(RcDoc::text("// TODO: Export emission")),
+            let import_doc = import_collection.to_rcdoc()?;
+            docs.push(import_doc);
         }
+
+        // Convert AST nodes to RcDoc using traits with context
+        for node in nodes {
+            let doc = node.to_rcdoc_with_context(context)?;
+            docs.push(doc);
+        }
+
+        let combined = RcDoc::intersperse(docs, RcDoc::line());
+        Ok(combined.pretty(80).to_string())
     }
 }
 

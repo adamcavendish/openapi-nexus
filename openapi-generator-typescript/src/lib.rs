@@ -14,6 +14,7 @@
 //! - `generator` - Code generators
 
 pub mod ast;
+pub mod ast_trait;
 pub mod config;
 pub mod core;
 pub mod emission;

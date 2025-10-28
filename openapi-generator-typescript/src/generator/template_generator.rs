@@ -24,11 +24,26 @@ impl TemplateGenerator {
         env.add_template("readme", include_str!("../../templates/README.md.j2"))?;
 
         // Load method body templates
-        env.add_template("base_api_request", include_str!("../../templates/method_bodies/base_api_request.j2"))?;
-        env.add_template("constructor", include_str!("../../templates/method_bodies/constructor.j2"))?;
-        env.add_template("http_method", include_str!("../../templates/method_bodies/http_method.j2"))?;
-        env.add_template("api_method", include_str!("../../templates/method_bodies/api_method.j2"))?;
-        env.add_template("default_method", include_str!("../../templates/method_bodies/default.j2"))?;
+        env.add_template(
+            "base_api_request",
+            include_str!("../../templates/method_bodies/base_api_request.j2"),
+        )?;
+        env.add_template(
+            "constructor",
+            include_str!("../../templates/method_bodies/constructor.j2"),
+        )?;
+        env.add_template(
+            "http_method",
+            include_str!("../../templates/method_bodies/http_method.j2"),
+        )?;
+        env.add_template(
+            "api_method",
+            include_str!("../../templates/method_bodies/api_method.j2"),
+        )?;
+        env.add_template(
+            "default_method",
+            include_str!("../../templates/method_bodies/default.j2"),
+        )?;
 
         Ok(Self { env })
     }
@@ -82,7 +97,11 @@ impl TemplateGenerator {
     }
 
     /// Generate constructor body
-    pub fn generate_constructor_body(&self, class_name: &str, extends: &Option<String>) -> Result<String, minijinja::Error> {
+    pub fn generate_constructor_body(
+        &self,
+        class_name: &str,
+        extends: &Option<String>,
+    ) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("constructor")?;
         let data = serde_json::json!({
             "class_name": class_name,
@@ -101,7 +120,12 @@ impl TemplateGenerator {
     }
 
     /// Generate API method body
-    pub fn generate_api_method_body(&self, return_type: &str, has_body_param: bool, http_method: &str) -> Result<String, minijinja::Error> {
+    pub fn generate_api_method_body(
+        &self,
+        return_type: &str,
+        has_body_param: bool,
+        http_method: &str,
+    ) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("api_method")?;
         let data = serde_json::json!({
             "return_type": return_type,
