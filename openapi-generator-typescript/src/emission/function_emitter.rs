@@ -3,12 +3,14 @@
 use pretty::RcDoc;
 
 use crate::ast::Function;
+use crate::emission::body_emitter::BodyEmitter;
 use crate::emission::error::EmitError;
 use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 
 /// Helper struct for emitting TypeScript functions
 pub struct FunctionEmitter {
     utils: TypeScriptPrettyUtils,
+    body_emitter: BodyEmitter,
 }
 
 impl Default for FunctionEmitter {
@@ -21,6 +23,7 @@ impl FunctionEmitter {
     pub fn new() -> Self {
         Self {
             utils: TypeScriptPrettyUtils::new(),
+            body_emitter: BodyEmitter::new(),
         }
     }
 
@@ -60,33 +63,59 @@ impl FunctionEmitter {
         Ok(doc)
     }
 
-    /// Emit a TypeScript function as string
-    pub fn emit_function_string(&self, function: &Function) -> Result<String, EmitError> {
-        let mut result = String::new();
+    /// Emit a complete function as RcDoc (signature + body)
+    pub fn emit_function_doc(&self, function: &Function) -> Result<RcDoc<'static, ()>, EmitError> {
+        // Generate function signature
+        let mut signature_doc = self.utils.export_prefix();
 
-        // Use RcDoc for the signature part
-        let signature_doc = self.emit_function_signature_doc(function)?;
-        let signature_string = signature_doc.pretty(80).to_string();
-
-        result.push_str(&signature_string);
-        result.push_str(" {\n");
-
-        // Add function implementation based on function name
-        match function.name.as_str() {
-            "ToJSON" => {
-                result.push_str("  return JSON.parse(JSON.stringify(value));\n");
-            }
-            "FromJSON" => {
-                result.push_str("  return json as T;\n");
-            }
-            _ => {
-                result.push_str("  // TODO: Implement function body\n");
-                result.push_str("  throw new Error('Not implemented');\n");
-            }
+        if function.is_async {
+            signature_doc = signature_doc.append(RcDoc::text("async "));
         }
 
-        result.push('}');
+        signature_doc = signature_doc
+            .append(RcDoc::text("function "))
+            .append(RcDoc::text(function.name.clone()));
 
-        Ok(result)
+        // Add generics
+        signature_doc = signature_doc.append(self.utils.generics(&function.generics)?);
+
+        // Add parameter list
+        signature_doc = signature_doc.append(self.utils.parameter_list(&function.parameters)?);
+
+        // Add return type
+        signature_doc = signature_doc.append(self.utils.return_type(&function.return_type)?);
+
+        // Generate function body (use pre-generated body if available)
+        let body_doc = if let Some(body) = &function.body {
+            RcDoc::text(body.clone())
+        } else {
+            self.body_emitter.generate_function_body(function)
+        };
+
+        // Combine signature and body
+        let function_doc = signature_doc
+            .append(RcDoc::space())
+            .append(RcDoc::text("{"))
+            .append(RcDoc::line())
+            .append(self.utils.indent(body_doc))
+            .append(RcDoc::line())
+            .append(RcDoc::text("}"));
+
+        // Add documentation if present
+        if let Some(docs) = &function.documentation {
+            Ok(self
+                .utils
+                .doc_comment(docs)
+                .append(RcDoc::line())
+                .append(function_doc))
+        } else {
+            Ok(function_doc)
+        }
+    }
+
+    /// Emit a TypeScript function as string
+    pub fn emit_function_string(&self, function: &Function) -> Result<String, EmitError> {
+        let doc = self.emit_function_doc(function)?;
+        Ok(doc.pretty(80).to_string())
     }
 }

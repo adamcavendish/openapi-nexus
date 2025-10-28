@@ -11,73 +11,67 @@ import type { User } from '../models/User';
  * API client for user operations
  */
 export class UserApi extends BaseAPI {
-  /**
-   * Initialize the API client
-   */
-  constructor(configuration?: Configuration) {
-    super(configuration);
-  }
-  /**
-   * Create user
-   */
-  createUser(body: User): Promise<User> {
-    const url = this.configuration?.basePath || '';
-    return this.request({
-      url,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
-    }).then(response => response.json());
-  }
-  /**
-   * Creates list of users with given input array
-   */
-  createUsersWithListInput(body: Array<string>): Promise<User> {
-    const url = this.configuration?.basePath || '';
-    return this.request({
-      url,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
-    }).then(response => response.json());
-  }
-  /**
-   * Logs user into the system
-   */
-  loginUser(username?: string, password?: string): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
-  /**
-   * Logs out current logged in user session
-   */
-  logoutUser(): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
-  /**
-   * Get user by user name
-   */
-  getUserByName(username: string): Promise<User> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
-  /**
-   * Update user
-   */
-  updateUser(username: string, body: User): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
-  /**
-   * Delete user
-   */
-  deleteUser(username: string): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
+/**
+ * Initialize the API client
+ */
+constructor(configuration?: Configuration) {
+super(configuration);
+}
+/**
+ * Create user
+ */
+createUser(body: User): Promise<User> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: {
+  method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  } }).then(response => response.json());
+}
+/**
+ * Creates list of users with given input array
+ */
+createUsersWithListInput(body: Array<string>): Promise<User> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: {
+  method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  } }).then(response => response.json());
+}
+/**
+ * Logs user into the system
+ */
+loginUser(username?: string, password?: string): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
+/**
+ * Logs out current logged in user session
+ */
+logoutUser(): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
+/**
+ * Get user by user name
+ */
+getUserByName(username: string): Promise<User> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
+/**
+ * Update user
+ */
+updateUser(username: string, body: User): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
+/**
+ * Delete user
+ */
+deleteUser(username: string): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
 }

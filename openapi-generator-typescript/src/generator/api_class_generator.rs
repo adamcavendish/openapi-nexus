@@ -48,6 +48,7 @@ impl ApiClassGenerator {
                 is_static: false,
                 visibility: Visibility::Public,
                 documentation: Some("Initialize the API client".to_string()),
+                body: None,
             },
         ];
 
@@ -93,6 +94,7 @@ impl ApiClassGenerator {
                 .summary
                 .clone()
                 .or_else(|| operation.description.clone()),
+            body: None,
         })
     }
 

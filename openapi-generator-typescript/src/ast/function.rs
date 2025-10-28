@@ -14,4 +14,6 @@ pub struct Function {
     pub is_async: bool,
     pub is_export: bool,
     pub documentation: Option<String>,
+    /// Optional pre-generated function body (overrides automatic generation)
+    pub body: Option<String>,
 }

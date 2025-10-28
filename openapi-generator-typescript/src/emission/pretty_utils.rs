@@ -255,6 +255,99 @@ impl TypeScriptPrettyUtils {
                 .append(RcDoc::text(close.to_string()))
         }
     }
+
+    /// Create a code block with multiple statements
+    pub fn code_block(&self, statements: Vec<RcDoc<'static, ()>>) -> RcDoc<'static, ()> {
+        if statements.is_empty() {
+            RcDoc::nil()
+        } else {
+            RcDoc::intersperse(statements, RcDoc::line())
+        }
+    }
+
+    /// Create a simple statement (adds semicolon if not present)
+    pub fn statement(&self, text: &str) -> RcDoc<'static, ()> {
+        let text = text.trim_end_matches(';');
+        RcDoc::text(format!("{};", text))
+    }
+
+    /// Create a comment
+    pub fn comment(&self, text: &str) -> RcDoc<'static, ()> {
+        RcDoc::text(format!("// {}", text))
+    }
+
+    /// Create an if statement with a single statement body
+    pub fn if_statement(&self, condition: RcDoc<'static, ()>, body: RcDoc<'static, ()>) -> RcDoc<'static, ()> {
+        RcDoc::text("if (")
+            .append(condition)
+            .append(RcDoc::text(") {"))
+            .append(RcDoc::line())
+            .append(self.indent(body))
+            .append(RcDoc::line())
+            .append(RcDoc::text("}"))
+    }
+
+    /// Create an if statement with multiple statements in body
+    pub fn if_statement_block(&self, condition: RcDoc<'static, ()>, body: Vec<RcDoc<'static, ()>>) -> RcDoc<'static, ()> {
+        RcDoc::text("if (")
+            .append(condition)
+            .append(RcDoc::text(") {"))
+            .append(RcDoc::line())
+            .append(self.indent(self.code_block(body)))
+            .append(RcDoc::line())
+            .append(RcDoc::text("}"))
+    }
+
+    /// Create an object literal
+    pub fn object_literal(&self, properties: Vec<(String, Option<RcDoc<'static, ()>>)>) -> RcDoc<'static, ()> {
+        if properties.is_empty() {
+            RcDoc::text("{}")
+        } else {
+            let prop_docs: Vec<RcDoc<'static, ()>> = properties
+                .into_iter()
+                .map(|(key, value)| {
+                    match value {
+                        Some(val) => RcDoc::text(key).append(RcDoc::text(": ")).append(val),
+                        None => RcDoc::text(key),
+                    }
+                })
+                .collect();
+
+            if prop_docs.len() > 2 {
+                RcDoc::text("{")
+                    .append(RcDoc::line())
+                    .append(self.indent(RcDoc::intersperse(prop_docs, RcDoc::text(",").append(RcDoc::line()))))
+                    .append(RcDoc::line())
+                    .append(RcDoc::text("}"))
+            } else {
+                RcDoc::text("{ ")
+                    .append(RcDoc::intersperse(prop_docs, RcDoc::text(", ")))
+                    .append(RcDoc::text(" }"))
+            }
+        }
+    }
+
+    /// Create an object assignment (const name = { ... })
+    pub fn object_assignment(&self, name: &str, properties: Vec<(String, Option<RcDoc<'static, ()>>)>) -> RcDoc<'static, ()> {
+        RcDoc::text(format!("{} = ", name))
+            .append(self.object_literal(properties))
+            .append(RcDoc::text(";"))
+    }
+
+    /// Create a function call
+    pub fn function_call(&self, name: &str, args: Vec<RcDoc<'static, ()>>) -> RcDoc<'static, ()> {
+        RcDoc::text(name.to_string())
+            .append(RcDoc::text("("))
+            .append(self.comma_separated(args))
+            .append(RcDoc::text(")"))
+    }
+
+    /// Create a return statement
+    pub fn return_statement(&self, expr: RcDoc<'static, ()>) -> RcDoc<'static, ()> {
+        RcDoc::text("return ")
+            .append(expr)
+            .append(RcDoc::text(";"))
+    }
 }
 
 impl Default for TypeScriptPrettyUtils {

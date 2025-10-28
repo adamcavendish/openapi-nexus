@@ -4,5 +4,10 @@
  */
 {%- endif -%}
 export {% if is_async %}async {% endif %}function {{ name }}({% for param in parameters %}{{ param.name }}{% if param.optional %}?{% endif %}{% if param.type_expr %}: {{ param.type_expr }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}){% if return_type %}: {{ return_type }}{% endif %} {
+{%- if body %}
+{{ body | indent(2, true) }}
+{%- else %}
   // TODO: Implement function body
+  throw new Error('Not implemented');
+{%- endif %}
 }

@@ -108,6 +108,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
+            body: None,
         };
         methods.push(constructor);
 
@@ -150,6 +151,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
+            body: None,
         };
 
         let api_class = Class {
@@ -218,6 +220,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: operation.description.clone(),
+            body: None,
         })
     }
 

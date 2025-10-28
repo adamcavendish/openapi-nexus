@@ -292,6 +292,7 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Create a new RequiredError".to_string()),
+            body: None,
         });
 
         Ok(TsNode::Class(Class {
@@ -333,6 +334,7 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the BaseAPI".to_string()),
+            body: None,
         });
 
         // request method
@@ -349,6 +351,7 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Make an HTTP request".to_string()),
+            body: None,
         });
 
         Ok(TsNode::Class(Class {
@@ -382,6 +385,7 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert JSON object to typed object".to_string()),
+            body: None,
         }))
     }
 
@@ -404,6 +408,7 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert typed object to JSON".to_string()),
+            body: None,
         }))
     }
 }

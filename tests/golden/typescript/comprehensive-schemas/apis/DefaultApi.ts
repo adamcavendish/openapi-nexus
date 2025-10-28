@@ -10,17 +10,17 @@ import { Configuration } from '../runtime/config';
  * API client for default operations
  */
 export class DefaultApi extends BaseAPI {
-  /**
-   * Initialize the API client
-   */
-  constructor(configuration?: Configuration) {
-    super(configuration);
-  }
-  /**
-   * Test endpoint
-   */
-  test(): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
+/**
+ * Initialize the API client
+ */
+constructor(configuration?: Configuration) {
+super(configuration);
+}
+/**
+ * Test endpoint
+ */
+test(): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
 }

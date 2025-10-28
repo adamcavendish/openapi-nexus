@@ -14,4 +14,6 @@ pub struct Method {
     pub is_static: bool,
     pub visibility: Visibility,
     pub documentation: Option<String>,
+    /// Optional pre-generated method body (overrides automatic generation)
+    pub body: Option<String>,
 }

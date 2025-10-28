@@ -23,6 +23,13 @@ impl TemplateGenerator {
         env.add_template("runtime", include_str!("../../templates/runtime.ts.j2"))?;
         env.add_template("readme", include_str!("../../templates/README.md.j2"))?;
 
+        // Load method body templates
+        env.add_template("base_api_request", include_str!("../../templates/method_bodies/base_api_request.j2"))?;
+        env.add_template("constructor", include_str!("../../templates/method_bodies/constructor.j2"))?;
+        env.add_template("http_method", include_str!("../../templates/method_bodies/http_method.j2"))?;
+        env.add_template("api_method", include_str!("../../templates/method_bodies/api_method.j2"))?;
+        env.add_template("default_method", include_str!("../../templates/method_bodies/default.j2"))?;
+
         Ok(Self { env })
     }
 
@@ -66,6 +73,48 @@ impl TemplateGenerator {
     pub fn generate_readme(&self, data: &ReadmeData) -> Result<String, minijinja::Error> {
         let template = self.env.get_template("readme")?;
         template.render(data)
+    }
+
+    /// Generate method body for BaseAPI.request
+    pub fn generate_base_api_request_body(&self) -> Result<String, minijinja::Error> {
+        let template = self.env.get_template("base_api_request")?;
+        template.render(serde_json::Value::Null)
+    }
+
+    /// Generate constructor body
+    pub fn generate_constructor_body(&self, class_name: &str, extends: &Option<String>) -> Result<String, minijinja::Error> {
+        let template = self.env.get_template("constructor")?;
+        let data = serde_json::json!({
+            "class_name": class_name,
+            "extends": extends
+        });
+        template.render(data)
+    }
+
+    /// Generate HTTP method body
+    pub fn generate_http_method_body(&self, method_name: &str) -> Result<String, minijinja::Error> {
+        let template = self.env.get_template("http_method")?;
+        let data = serde_json::json!({
+            "method_name": method_name
+        });
+        template.render(data)
+    }
+
+    /// Generate API method body
+    pub fn generate_api_method_body(&self, return_type: &str, has_body_param: bool, http_method: &str) -> Result<String, minijinja::Error> {
+        let template = self.env.get_template("api_method")?;
+        let data = serde_json::json!({
+            "return_type": return_type,
+            "has_body_param": has_body_param,
+            "http_method": http_method
+        });
+        template.render(data)
+    }
+
+    /// Generate default method body
+    pub fn generate_default_method_body(&self) -> Result<String, minijinja::Error> {
+        let template = self.env.get_template("default_method")?;
+        template.render(serde_json::Value::Null)
     }
 }
 
@@ -114,6 +163,7 @@ pub struct FunctionData {
     pub is_async: bool,
     pub parameters: Vec<ParameterData>,
     pub return_type: Option<String>,
+    pub body: Option<String>,
 }
 
 /// Data structure for property generation
@@ -133,6 +183,7 @@ pub struct MethodData {
     pub is_async: bool,
     pub parameters: Vec<ParameterData>,
     pub return_type: Option<String>,
+    pub body: Option<String>,
 }
 
 /// Data structure for parameter generation

@@ -1,5 +1,6 @@
 //! Code emission and formatting for TypeScript
 
+pub mod body_emitter;
 pub mod class_emitter;
 pub mod constants;
 pub mod dependency_analyzer;

@@ -3,6 +3,7 @@
 use pretty::RcDoc;
 
 use crate::ast::Class;
+use crate::emission::body_emitter::MethodContext;
 use crate::emission::error::EmitError;
 use crate::emission::interface_emitter::InterfaceEmitter;
 use crate::emission::method_emitter::MethodEmitter;
@@ -62,14 +63,14 @@ impl ClassEmitter {
             body_items.push(self.interface_emitter.emit_property_doc(prop)?);
         }
 
-        // Add methods - use the full method string for now to preserve functionality
+        // Add methods using RcDoc
         for method in &class_def.methods {
-            let method_string = self.method_emitter.emit_method_string(
-                method,
-                &class_def.name,
-                &class_def.extends,
-            )?;
-            body_items.push(RcDoc::text(method_string));
+            let context = MethodContext {
+                class_name: class_def.name.clone(),
+                extends: class_def.extends.clone(),
+            };
+            let method_doc = self.method_emitter.emit_method_doc(method, &context)?;
+            body_items.push(method_doc);
         }
 
         let force_multiline = self.utils.should_format_multiline(

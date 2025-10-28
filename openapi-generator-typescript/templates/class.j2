@@ -17,7 +17,9 @@ export class {{ name }}{% if generics -%}<{{ generics | join(', ') }}>{%- endif 
    */
 {%- endif %}
   {%- if method.is_async %}async {% endif %}{{ method.name }}({% for param in method.parameters %}{{ param.name }}{% if param.optional %}?{% endif %}{% if param.type_expr %}: {{ param.type_expr }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}){% if method.return_type %}: {{ method.return_type }}{% endif %} {
-{%- if method.name == "constructor" %}
+{%- if method.body %}
+{{ method.body | indent(4, true) }}
+{%- elif method.name == "constructor" %}
     this.baseUrl = baseUrl;
     this.headers = headers;
 {%- elif method.name == "get" %}

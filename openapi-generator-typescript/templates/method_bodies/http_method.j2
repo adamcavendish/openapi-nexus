@@ -1,0 +1,31 @@
+{%- if method_name == "get" -%}
+return fetch(`${this.baseUrl}${path}`, {
+  method: 'GET',
+  headers: this.headers,
+}).then(response => response.json());
+{%- elif method_name == "post" -%}
+return fetch(`${this.baseUrl}${path}`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    ...this.headers,
+  },
+  body: body ? JSON.stringify(body) : undefined,
+}).then(response => response.json());
+{%- elif method_name == "put" -%}
+return fetch(`${this.baseUrl}${path}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    ...this.headers,
+  },
+  body: body ? JSON.stringify(body) : undefined,
+}).then(response => response.json());
+{%- elif method_name == "delete" -%}
+return fetch(`${this.baseUrl}${path}`, {
+  method: 'DELETE',
+  headers: this.headers,
+}).then(response => response.json());
+{%- else -%}
+// TODO: Implement HTTP method
+{%- endif -%}

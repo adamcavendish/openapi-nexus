@@ -11,80 +11,74 @@ import type { Pet } from '../models/Pet';
  * API client for pet operations
  */
 export class PetApi extends BaseAPI {
-  /**
-   * Initialize the API client
-   */
-  constructor(configuration?: Configuration) {
-    super(configuration);
-  }
-  /**
-   * Add a new pet to the store
-   */
-  addPet(body: Pet): Promise<Pet> {
-    const url = this.configuration?.basePath || '';
-    return this.request({
-      url,
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
-    }).then(response => response.json());
-  }
-  /**
-   * Update an existing pet
-   */
-  updatePet(body: Pet): Promise<Pet> {
-    const url = this.configuration?.basePath || '';
-    return this.request({
-      url,
-      init: {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
-    }).then(response => response.json());
-  }
-  /**
-   * Find pets by status
-   */
-  findPetsByStatus(status: string): Promise<Array<string>> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
-  /**
-   * Find pets by tags
-   */
-  findPetsByTags(tags: Array<string>): Promise<Array<string>> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
-  /**
-   * Find pet by ID
-   */
-  getPetById(petId: string): Promise<Pet> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
-  /**
-   * Update a pet in the store with form data
-   */
-  updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
-  /**
-   * Delete a pet
-   */
-  deletePet(petId: string): Promise<Response> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'DELETE' } });
-  }
-  /**
-   * Upload an image
-   */
-  uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
-    const url = this.configuration?.basePath || '';
-    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
-  }
+/**
+ * Initialize the API client
+ */
+constructor(configuration?: Configuration) {
+super(configuration);
+}
+/**
+ * Add a new pet to the store
+ */
+addPet(body: Pet): Promise<Pet> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: {
+  method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  } }).then(response => response.json());
+}
+/**
+ * Update an existing pet
+ */
+updatePet(body: Pet): Promise<Pet> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: {
+  method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  } }).then(response => response.json());
+}
+/**
+ * Find pets by status
+ */
+findPetsByStatus(status: string): Promise<Array<string>> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
+/**
+ * Find pets by tags
+ */
+findPetsByTags(tags: Array<string>): Promise<Array<string>> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
+/**
+ * Find pet by ID
+ */
+getPetById(petId: string): Promise<Pet> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
+/**
+ * Update a pet in the store with form data
+ */
+updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
+/**
+ * Delete a pet
+ */
+deletePet(petId: string): Promise<Response> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'DELETE' } });
+}
+/**
+ * Upload an image
+ */
+uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
+const url = this.configuration?.basePath || '';
+  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+}
 }

@@ -1,0 +1,33 @@
+const { url, init } = context;
+const baseUrl = this.configuration?.basePath || '';
+const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
+
+// Build headers with authentication
+const headers = {
+  'Content-Type': 'application/json',
+  ...this.configuration?.headers
+};
+
+// Add authentication headers
+if (this.configuration?.apiKey) {
+  headers['X-API-Key'] = this.configuration.apiKey;
+}
+if (this.configuration?.accessToken) {
+  headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+}
+if (this.configuration?.username && this.configuration?.password) {
+  const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+  headers['Authorization'] = `Basic ${credentials}`;
+}
+
+// Merge request init options
+const requestInit = {
+  ...init,
+  headers: {
+    ...headers,
+    ...init?.headers
+  }
+};
+
+// Make the fetch request
+return fetch(fullUrl, requestInit);

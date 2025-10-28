@@ -16,50 +16,45 @@ export class BaseAPI {
  * API configuration
  */
 configuration?: Configuration
-  /**
-   * Initialize the BaseAPI
-   */
-  constructor(configuration?: Configuration) {
-    this.configuration = configuration;
+/**
+ * Initialize the BaseAPI
+ */
+constructor(configuration?: Configuration) {
+this.configuration = configuration;
+}
+/**
+ * Make an HTTP request
+ */
+request(context: RequestContext): Promise<Response> {
+const { url, init } = context;
+  const baseUrl = this.configuration?.basePath || '';
+  const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
+  
+  
+  // Build headers with authentication
+  const headers = { 'Content-Type': 'application/json', ...this.configuration?.headers };
+  
+  
+  // Add authentication headers
+  if (this.configuration?.apiKey) {
+  headers['X-API-Key'] = this.configuration.apiKey;
   }
-  /**
-   * Make an HTTP request
-   */
-  request(context: RequestContext): Promise<Response> {
-    const { url, init } = context;
-    const baseUrl = this.configuration?.basePath || '';
-    const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
-
-    // Build headers with authentication
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...this.configuration?.headers,
-    };
-
-    // Add authentication headers
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
-    }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-    }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
-    }
-
-    // Merge request init options
-    const requestInit: RequestInit = {
-      ...init,
-      headers: {
-        ...headers,
-        ...init?.headers,
-      },
-    };
-
-    // Make the fetch request
-    return fetch(fullUrl, requestInit);
+  if (this.configuration?.accessToken) {
+  headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
   }
+  if (this.configuration?.username && this.configuration?.password) {
+  const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+  
+  
+  // Merge request init options
+  const requestInit = { ...init, headers: { ...headers, ...init?.headers } };
+  
+  
+  // Make the fetch request
+  return fetch(fullUrl, requestInit);
+}
 }
 /**
  * Error thrown when a required parameter is missing
@@ -69,13 +64,13 @@ export class RequiredError extends Error {
  * The field that is required
  */
 field: string
-  /**
-   * Create a new RequiredError
-   */
-  constructor(field: string) {
-    super(field);
-    this.field = field;
-  }
+/**
+ * Create a new RequiredError
+ */
+constructor(field: string) {
+super(field);
+  this.field = field;
+}
 }
 /**
  * Request context for API calls
