@@ -2,57 +2,61 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Configuration for API client
- */
-export interface Configuration {
-/**
- * Base path for API requests
- */
-basePath?: string,
-/**
- * Username for authentication
- */
-username?: string,
-/**
- * Password for authentication
- */
-password?: string,
-/**
- * API key for authentication
- */
-apiKey?: string,
-/**
- * Access token for authentication
- */
-accessToken?: string,
-/**
- * Additional headers for requests
- */
-headers?: Record<string, string>
-}
-/**
- * Configuration parameters for API client
- */
 export interface ConfigurationParameters {
+    basePath?: string;
+    fetchApi?: FetchAPI;
+    middleware?: Middleware[];
+    queryParamsStringify?: (params: HTTPQuery) => string;
+    username?: string;
+    password?: string;
+    apiKey?: string | Promise<string> | ((name: string) => string | Promise<string>);
+    accessToken?: string | Promise<string> | ((name?: string, scopes?: string[]) => string | Promise<string>);
+    headers?: HTTPHeaders;
+    credentials?: RequestCredentials;
+}
+
+
+export const BASE_PATH = "http://localhost".replace(/\/+$/, "");
+
+
+export const DefaultConfig = new Configuration();
+
 /**
- * Base path for API requests
+ * Configuration class for API client
  */
-basePath?: string,
-/**
- * Username for authentication
- */
-username?: string,
-/**
- * Password for authentication
- */
-password?: string,
-/**
- * API key for authentication
- */
-apiKey?: string,
-/**
- * Access token for authentication
- */
-accessToken?: string
+export class Configuration {
+configuration: ConfigurationParameters
+constructor(configuration?: ConfigurationParameters = {}) {
+  this.configuration = configuration;
+}
+get basePath(): string {
+  return this.configuration.basePath != null ? this.configuration.basePath : BASE_PATH;
+}
+get fetchApi(): FetchAPI | undefined {
+  return this.configuration.fetchApi;
+}
+get middleware(): Middleware[] {
+  return this.configuration.middleware || [];
+}
+get queryParamsStringify(): (params: HTTPQuery) => string {
+  return this.configuration.queryParamsStringify || querystring;
+}
+get username(): string | undefined {
+  return this.configuration.username;
+}
+get password(): string | undefined {
+  return this.configuration.password;
+}
+get apiKey(): ((name: string) => string | Promise<string>) | undefined {
+  const apiKey = this.configuration.apiKey; if (apiKey) { return typeof apiKey === 'function' ? apiKey : () => apiKey; } return undefined;
+}
+get accessToken(): ((name?: string, scopes?: string[]) => string | Promise<string>) | undefined {
+  const accessToken = this.configuration.accessToken; if (accessToken) { return typeof accessToken === 'function' ? accessToken : async () => accessToken; } return undefined;
+}
+get headers(): HTTPHeaders | undefined {
+  return this.configuration.headers;
+}
+get credentials(): RequestCredentials | undefined {
+  return this.configuration.credentials;
+}
 }

@@ -71,6 +71,8 @@ impl ApiClassGenerator {
                     .map_err(|e| GeneratorError::Generic {
                         message: format!("Invalid HTTP method '{}': {}", method_name, e),
                     })?;
+
+            // Generate single method (using default response mode)
             let method = self.generate_operation_method(path, &http_method, operation)?;
             methods.push(method);
         }
@@ -219,13 +221,13 @@ impl ApiClassGenerator {
                             let return_type =
                                 self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
                             return Ok(Some(TypeExpression::Reference(format!(
-                                "Promise<{}>",
+                                "Promise<JSONApiResponse<{}>>",
                                 return_type
                             ))));
                         }
-                        // If no JSON content, return generic response
+                        // If no JSON content, return VoidApiResponse for DELETE, JSONApiResponse for others
                         return Ok(Some(TypeExpression::Reference(
-                            "Promise<Response>".to_string(),
+                            "Promise<JSONApiResponse<any>>".to_string(),
                         )));
                     }
                     RefOr::Ref(_) => {
@@ -235,8 +237,10 @@ impl ApiClassGenerator {
             }
         }
 
-        // Default return type
-        Ok(Some(TypeExpression::Reference("Promise<any>".to_string())))
+        // Default return type - wrapped response
+        Ok(Some(TypeExpression::Reference(
+            "Promise<JSONApiResponse<any>>".to_string(),
+        )))
     }
 
     /// Generate implementation body for an API method using templates
@@ -248,7 +252,9 @@ impl ApiClassGenerator {
         operation: &Operation,
     ) -> Result<CodeBlock, GeneratorError> {
         // Use ParameterExtractor to get all parameters properly categorized
-        let extracted_params = self.parameter_extractor.extract_parameters(operation, path)?;
+        let extracted_params = self
+            .parameter_extractor
+            .extract_parameters(operation, path)?;
 
         // Convert parameters to template format
         let template_path_params: Vec<TemplateParameterData> = extracted_params
@@ -296,7 +302,7 @@ impl ApiClassGenerator {
             query_params: template_query_params,
             header_params: template_header_params,
             body_param: template_body_param,
-            return_type: "Promise<any>".to_string(),
+            return_type: "Promise<ApiResponse>".to_string(),
             has_auth: true,
             has_error_handling: true,
         };
@@ -304,7 +310,9 @@ impl ApiClassGenerator {
         // Generate method body using appropriate template
         let template = match *http_method {
             Method::GET => Template::ApiMethodGet(api_method_data),
-            Method::POST | Method::PUT | Method::PATCH => Template::ApiMethodPostPutPatch(api_method_data),
+            Method::POST | Method::PUT | Method::PATCH => {
+                Template::ApiMethodPostPutPatch(api_method_data)
+            }
             Method::DELETE => Template::ApiMethodDelete(api_method_data),
             _ => Template::DefaultMethod,
         };
@@ -317,11 +325,6 @@ impl ApiClassGenerator {
             })?;
 
         Ok(CodeBlock::from_snippets(SnippetLines::MethodBody(lines)))
-    }
-
-    /// Check if a parameter is a path parameter based on the path template
-    fn is_path_parameter(&self, param_name: &str, path: &str) -> bool {
-        path.contains(&format!("{{{}}}", param_name))
     }
 }
 

@@ -2,19 +2,6 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Convert typed object to JSON
- */
-export function ToJSON<T>(value: T): any {
-{
-    return JSON.stringify(value);
-  }
-}
-/**
- * Convert JSON object to typed object
- */
 export function FromJSON<T>(json: any): T {
-{
     return json as T;
-  }
 }

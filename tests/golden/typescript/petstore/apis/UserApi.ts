@@ -5,6 +5,8 @@
 import { BaseAPI } from '../runtime/api'
 import { Configuration } from '../runtime/config'
 import type { User } from '../models/User'
+import type { JSONApiResponse<any> } from './json-api-response-any'
+import type { JSONApiResponse<User> } from './json-api-response-user'
 
 /**
  * API client for user operations
@@ -19,7 +21,7 @@ constructor(configuration?: Configuration) {
 /**
  * Create user
  */
-async createUser(body: User): Promise<User> {
+async createUser(body: User): Promise<JSONApiResponse<User>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user`;
   
@@ -53,20 +55,31 @@ async createUser(body: User): Promise<User> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Creates list of users with given input array
  */
-async createUsersWithListInput(body: Array<string>): Promise<User> {
+async createUsersWithListInput(body: Array<string>): Promise<JSONApiResponse<User>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/createWithList`;
   
@@ -100,20 +113,31 @@ async createUsersWithListInput(body: Array<string>): Promise<User> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Logs user into the system
  */
-async loginUser(username?: string, password?: string): Promise<Response> {
+async loginUser(username?: string, password?: string): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/login`;
   
@@ -154,19 +178,25 @@ async loginUser(username?: string, password?: string): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Logs out current logged in user session
  */
-async logoutUser(): Promise<Response> {
+async logoutUser(): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/logout`;
   
@@ -199,19 +229,25 @@ async logoutUser(): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Get user by user name
  */
-async getUserByName(username: string): Promise<User> {
+async getUserByName(username: string): Promise<JSONApiResponse<User>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
   
@@ -244,19 +280,25 @@ async getUserByName(username: string): Promise<User> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Update user
  */
-async updateUser(username: string, body: User): Promise<Response> {
+async updateUser(username: string, body: User): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
   
@@ -290,20 +332,31 @@ async updateUser(username: string, body: User): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'PUT',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Delete user
  */
-async deleteUser(username: string): Promise<Response> {
+async deleteUser(username: string): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/user/${username}`;
   
@@ -336,13 +389,19 @@ async deleteUser(username: string): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'DELETE',
         headers,
       },
+    }).then(response => {
+      if (response.ok) {
+        return new VoidApiResponse(response);
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
     });
 }
 }

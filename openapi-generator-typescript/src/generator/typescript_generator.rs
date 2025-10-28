@@ -1,5 +1,6 @@
 //! Main TypeScript code generator
 
+use std::fs;
 use std::collections::{HashMap, HashSet};
 
 use utoipa::openapi::OpenApi;
@@ -204,7 +205,51 @@ impl FileWriter for TypeScriptGenerator {
         output_dir: &std::path::Path,
         files: &[FileInfo],
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Use the default implementation that organizes files by category
+        // Use custom implementation that handles subdirectories properly
         self.write_files_by_category(output_dir, files)
+    }
+
+    fn write_files_by_category(
+        &self,
+        output_dir: &std::path::Path,
+        files: &[FileInfo],
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Group files by category
+        let mut files_by_category: HashMap<FileCategory, Vec<&FileInfo>> = HashMap::new();
+        for file in files {
+            files_by_category
+                .entry(file.category.clone())
+                .or_default()
+                .push(file);
+        }
+
+        // Write files for each category
+        for (category, category_files) in files_by_category {
+            let category_dir = match category {
+                FileCategory::Apis => output_dir.join("apis"),
+                FileCategory::Models => output_dir.join("models"),
+                FileCategory::ProjectFiles => output_dir.to_path_buf(),
+                FileCategory::Runtime => output_dir.join("runtime"),
+            };
+
+            // Create directory if it doesn't exist
+            if !category_dir.exists() {
+                fs::create_dir_all(&category_dir)?;
+            }
+
+            // Write files in this category
+            for file in category_files {
+                let file_path = category_dir.join(&file.filename);
+                
+                // Create parent directories if they don't exist (for subdirectories)
+                if let Some(parent) = file_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                
+                fs::write(&file_path, &file.content)?;
+            }
+        }
+
+        Ok(())
     }
 }

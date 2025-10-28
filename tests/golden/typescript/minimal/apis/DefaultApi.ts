@@ -4,6 +4,7 @@
 
 import { BaseAPI } from '../runtime/api'
 import { Configuration } from '../runtime/config'
+import type { JSONApiResponse<any> } from './json-api-response-any'
 
 /**
  * API client for default operations
@@ -15,7 +16,7 @@ export class DefaultApi extends BaseAPI {
 constructor(configuration?: Configuration) {
   super(configuration);
 }
-async getTest(): Promise<Response> {
+async getTest(): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/test`;
   
@@ -48,13 +49,19 @@ async getTest(): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 }

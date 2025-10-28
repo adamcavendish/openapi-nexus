@@ -5,6 +5,9 @@
 import { BaseAPI } from '../runtime/api'
 import { Configuration } from '../runtime/config'
 import type { Order } from '../models/Order'
+import type { JSONApiResponse<any> } from './json-api-response-any'
+import type { JSONApiResponse<Order> } from './json-api-response-order'
+import type { JSONApiResponse<string> } from './json-api-response-string'
 
 /**
  * API client for store operations
@@ -19,7 +22,7 @@ constructor(configuration?: Configuration) {
 /**
  * Returns pet inventories by status
  */
-async getInventory(): Promise<string> {
+async getInventory(): Promise<JSONApiResponse<string>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/store/inventory`;
   
@@ -52,19 +55,25 @@ async getInventory(): Promise<string> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Place an order for a pet
  */
-async placeOrder(body: Order): Promise<Order> {
+async placeOrder(body: Order): Promise<JSONApiResponse<Order>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/store/order`;
   
@@ -98,20 +107,31 @@ async placeOrder(body: Order): Promise<Order> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Find purchase order by ID
  */
-async getOrderById(orderId: string): Promise<Order> {
+async getOrderById(orderId: string): Promise<JSONApiResponse<Order>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
   
@@ -144,19 +164,25 @@ async getOrderById(orderId: string): Promise<Order> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Delete purchase order by ID
  */
-async deleteOrder(orderId: string): Promise<Response> {
+async deleteOrder(orderId: string): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
   
@@ -189,13 +215,19 @@ async deleteOrder(orderId: string): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'DELETE',
         headers,
       },
+    }).then(response => {
+      if (response.ok) {
+        return new VoidApiResponse(response);
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
     });
 }
 }

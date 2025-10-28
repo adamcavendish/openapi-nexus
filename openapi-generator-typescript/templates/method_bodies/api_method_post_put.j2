@@ -39,22 +39,25 @@
     ? `${url}?${queryParams.toString()}`
     : url;
 
-  // Make request
-{%- if body_param %}
+  // Prepare request body
+{% if body_param %}
+  const body = {{ body_param.name }} ? JSON.stringify({{ body_param.name }}) : undefined;
+{% else %}
+  const body = undefined;
+{% endif %}
+
+  // Make request and return response with error handling
   return this.request({
     url: finalUrl,
     init: {
       method: '{{ http_method }}',
       headers,
-      body: JSON.stringify({{ body_param.name }}),
+      body,
     },
-  }).then(response => response.json());
-{%- else %}
-  return this.request({
-    url: finalUrl,
-    init: {
-      method: '{{ http_method }}',
-      headers,
-    },
-  }).then(response => response.json());
-{%- endif %}
+  }).then(response => {
+    if (response.ok) {
+      return response.json().then(data => new JSONApiResponse(data, response));
+    } else {
+      throw new ResponseError(response, 'Request failed');
+    }
+  });

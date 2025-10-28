@@ -3,8 +3,16 @@
 use std::fmt;
 
 use minijinja::Environment;
+use rust_embed::RustEmbed;
 
 use crate::generator::templates::Templates;
+
+/// Embedded template files
+#[derive(RustEmbed)]
+#[folder = "templates/"]
+#[include = "*.j2"]
+#[include = "*.ts"]
+struct AllTemplates;
 
 /// Available templates for TypeScript code generation
 #[derive(Debug, Clone)]
@@ -65,23 +73,6 @@ pub struct TemplateGenerator {
     env: Environment<'static>,
 }
 
-impl fmt::Display for Template {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Template::Readme(_) => write!(f, "readme"),
-            Template::BaseApiRequest => write!(f, "base_api_request"),
-            Template::ConstructorBaseApi => write!(f, "constructor_base_api"),
-            Template::ConstructorRequiredError => write!(f, "constructor_required_error"),
-            Template::ConstructorWithExtends => write!(f, "constructor_with_extends"),
-            Template::ConstructorDefault => write!(f, "constructor_default"),
-            Template::ApiMethodGet(_) => write!(f, "api_method_get"),
-            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put_patch"),
-            Template::ApiMethodDelete(_) => write!(f, "api_method_delete"),
-            Template::DefaultMethod => write!(f, "default_method"),
-        }
-    }
-}
-
 impl TemplateGenerator {
     /// Create a new empty template generator with no templates loaded
     fn new_empty() -> Self {
@@ -138,6 +129,73 @@ impl TemplateGenerator {
             .lines()
             .map(|line| line.trim_end().to_string())
             .collect()
+    }
+
+    /// Get all runtime static files (ending with .ts in runtime/ directory) with content
+    pub fn get_runtime_static_files() -> Vec<(String, String)> {
+        AllTemplates::iter()
+            .filter(|file| file.starts_with("runtime/") && file.ends_with(".ts"))
+            .filter_map(|file| {
+                AllTemplates::get(&file)
+                    .and_then(|file_data| String::from_utf8(file_data.data.to_vec()).ok())
+                    .map(|content| {
+                        // Extract filename without runtime/ prefix but keep .ts extension
+                        let filename = file.strip_prefix("runtime/").unwrap_or(&file).to_string();
+                        (filename, content)
+                    })
+            })
+            .collect()
+    }
+
+    /// Get runtime static files organized by category
+    pub fn get_runtime_files_by_category() -> std::collections::HashMap<String, Vec<(String, String)>> {
+        let mut categories = std::collections::HashMap::new();
+        
+        for (filename, content) in Self::get_runtime_static_files() {
+            let category = if filename.starts_with("interfaces/") {
+                "interfaces"
+            } else if filename.starts_with("classes/") {
+                "classes"
+            } else if filename.starts_with("functions/") {
+                "functions"
+            } else if filename.starts_with("constants/") {
+                "constants"
+            } else if filename.starts_with("types/") {
+                "types"
+            } else {
+                "core"
+            };
+            
+            categories.entry(category.to_string())
+                .or_insert_with(Vec::new)
+                .push((filename, content));
+        }
+        
+        categories
+    }
+
+    /// Get a specific runtime file by name
+    pub fn get_runtime_file(filename: &str) -> Option<String> {
+        let full_path = format!("runtime/{}", filename);
+        AllTemplates::get(&full_path)
+            .and_then(|file_data| String::from_utf8(file_data.data.to_vec()).ok())
+    }
+}
+
+impl fmt::Display for Template {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Template::Readme(_) => write!(f, "readme"),
+            Template::BaseApiRequest => write!(f, "base_api_request"),
+            Template::ConstructorBaseApi => write!(f, "constructor_base_api"),
+            Template::ConstructorRequiredError => write!(f, "constructor_required_error"),
+            Template::ConstructorWithExtends => write!(f, "constructor_with_extends"),
+            Template::ConstructorDefault => write!(f, "constructor_default"),
+            Template::ApiMethodGet(_) => write!(f, "api_method_get"),
+            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put_patch"),
+            Template::ApiMethodDelete(_) => write!(f, "api_method_delete"),
+            Template::DefaultMethod => write!(f, "default_method"),
+        }
     }
 }
 

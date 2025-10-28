@@ -99,8 +99,4 @@ fn test_template_lines_generation() {
 
     // Verify that lines are generated
     assert!(!lines.is_empty());
-    // Verify that each line is a string (just check it's not empty)
-    for line in &lines {
-        assert!(line.len() >= 0); // Allow empty lines
-    }
 }

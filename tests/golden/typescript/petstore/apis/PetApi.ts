@@ -4,8 +4,11 @@
 
 import { BaseAPI } from '../runtime/api'
 import { Configuration } from '../runtime/config'
-import type { ApiResponse } from '../models/ApiResponse'
 import type { Pet } from '../models/Pet'
+import type { JSONApiResponse<any> } from './json-api-response-any'
+import type { JSONApiResponse<ApiResponse> } from './json-api-response-api-response'
+import type { JSONApiResponse<Array<string>> } from './json-api-response-array-string'
+import type { JSONApiResponse<Pet> } from './json-api-response-pet'
 
 /**
  * API client for pet operations
@@ -20,7 +23,7 @@ constructor(configuration?: Configuration) {
 /**
  * Add a new pet to the store
  */
-async addPet(body: Pet): Promise<Pet> {
+async addPet(body: Pet): Promise<JSONApiResponse<Pet>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet`;
   
@@ -54,20 +57,31 @@ async addPet(body: Pet): Promise<Pet> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Update an existing pet
  */
-async updatePet(body: Pet): Promise<Pet> {
+async updatePet(body: Pet): Promise<JSONApiResponse<Pet>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet`;
   
@@ -101,20 +115,31 @@ async updatePet(body: Pet): Promise<Pet> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = body ? JSON.stringify(body) : undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'PUT',
         headers,
-        body: JSON.stringify(body),
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Find pets by status
  */
-async findPetsByStatus(status: string): Promise<Array<string>> {
+async findPetsByStatus(status: string): Promise<JSONApiResponse<Array<string>>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/findByStatus`;
   
@@ -151,19 +176,25 @@ async findPetsByStatus(status: string): Promise<Array<string>> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Find pets by tags
  */
-async findPetsByTags(tags: Array<string>): Promise<Array<string>> {
+async findPetsByTags(tags: Array<string>): Promise<JSONApiResponse<Array<string>>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/findByTags`;
   
@@ -200,19 +231,25 @@ async findPetsByTags(tags: Array<string>): Promise<Array<string>> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Find pet by ID
  */
-async getPetById(petId: string): Promise<Pet> {
+async getPetById(petId: string): Promise<JSONApiResponse<Pet>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
   
@@ -245,19 +282,25 @@ async getPetById(petId: string): Promise<Pet> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'GET',
         headers,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Update a pet in the store with form data
  */
-async updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
+async updatePetWithForm(petId: string, name?: string, status?: string): Promise<JSONApiResponse<Pet>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
   
@@ -299,19 +342,31 @@ async updatePetWithForm(petId: string, name?: string, status?: string): Promise<
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 /**
  * Delete a pet
  */
-async deletePet(petId: string): Promise<Response> {
+async deletePet(petId: string): Promise<JSONApiResponse<any>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
   
@@ -344,19 +399,25 @@ async deletePet(petId: string): Promise<Response> {
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'DELETE',
         headers,
       },
+    }).then(response => {
+      if (response.ok) {
+        return new VoidApiResponse(response);
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
     });
 }
 /**
  * Upload an image
  */
-async uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
+async uploadFile(petId: string, additionalMetadata?: string): Promise<JSONApiResponse<ApiResponse>> {
     // Build URL with path parameters
     const url = `${this.configuration?.basePath || ''}/pet/${petId}/uploadImage`;
   
@@ -394,13 +455,25 @@ async uploadFile(petId: string, additionalMetadata?: string): Promise<ApiRespons
       ? `${url}?${queryParams.toString()}`
       : url;
   
-    // Make request
+    // Prepare request body
+  
+    const body = undefined;
+  
+  
+    // Make request and return response with error handling
     return this.request({
       url: finalUrl,
       init: {
         method: 'POST',
         headers,
+        body,
       },
-    }).then(response => response.json());
+    }).then(response => {
+      if (response.ok) {
+        return response.json().then(data => new JSONApiResponse(data, response));
+      } else {
+        throw new ResponseError(response, 'Request failed');
+      }
+    });
 }
 }
