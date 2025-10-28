@@ -10,7 +10,7 @@ use crate::emission::pretty_utils::TypeScriptPrettyUtils;
 
 /// TypeScript method definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Method {
+pub struct TsMethod {
     pub name: String,
     pub parameters: Vec<Parameter>,
     pub return_type: Option<TypeExpression>,
@@ -22,7 +22,7 @@ pub struct Method {
     pub body: Option<String>,
 }
 
-impl ToRcDocWithContext for Method {
+impl ToRcDocWithContext for TsMethod {
     fn to_rcdoc_with_context(
         &self,
         context: &EmissionContext,
@@ -79,14 +79,14 @@ impl ToRcDocWithContext for Method {
             .append(RcDoc::text("}"));
 
         // Add documentation if present and enabled
-        if context.include_docs {
-            if let Some(docs) = &self.documentation {
-                let doc_comment = DocComment::new(docs.clone());
-                return Ok(doc_comment
-                    .to_rcdoc_with_context(context)?
-                    .append(RcDoc::line())
-                    .append(method_doc));
-            }
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
+            let doc_comment = DocComment::new(docs.clone());
+            return Ok(doc_comment
+                .to_rcdoc_with_context(context)?
+                .append(RcDoc::line())
+                .append(method_doc));
         }
 
         Ok(method_doc)

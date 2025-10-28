@@ -5,4 +5,4 @@
 /**
  * String with regex pattern
  */
-export type StringWithPattern = string;
+export type StringWithPattern = string

@@ -2,4 +2,4 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-export type AnyOfTypes = string | number;
+export type AnyOfTypes = string | number

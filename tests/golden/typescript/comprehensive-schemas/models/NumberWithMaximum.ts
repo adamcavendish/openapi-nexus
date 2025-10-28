@@ -5,4 +5,4 @@
 /**
  * Number with maximum value
  */
-export type NumberWithMaximum = number;
+export type NumberWithMaximum = number

@@ -5,4 +5,4 @@
 /**
  * String with byte format (base64)
  */
-export type ByteString = string;
+export type ByteString = string

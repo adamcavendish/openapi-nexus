@@ -48,7 +48,7 @@ pub use import_collection::ImportCollection;
 pub use import_resolver::ImportResolver;
 pub use import_specifier::ImportSpecifier;
 pub use interface::Interface;
-pub use method::Method;
+pub use method::TsMethod;
 pub use node::TsNode;
 pub use parameter::Parameter;
 pub use primitive_type::PrimitiveType;

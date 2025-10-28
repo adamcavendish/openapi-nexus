@@ -5,4 +5,4 @@
 /**
  * String with minimum length
  */
-export type StringWithMinLength = string;
+export type StringWithMinLength = string

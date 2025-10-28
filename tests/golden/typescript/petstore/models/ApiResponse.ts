@@ -6,16 +6,16 @@
  * API response model
  */
 export interface ApiResponse {
-  /**
-   * Response code
-   */
-  code?: number | null,
-  /**
-   * Response message
-   */
-  message?: string | null,
-  /**
-   * Response type
-   */
-  type?: string | null,
+/**
+ * Response code
+ */
+code?: number | null,
+/**
+ * Response message
+ */
+message?: string | null,
+/**
+ * Response type
+ */
+type?: string | null
 }

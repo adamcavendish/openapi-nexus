@@ -5,4 +5,4 @@
 /**
  * String with UUID format
  */
-export type UuidString = string;
+export type UuidString = string

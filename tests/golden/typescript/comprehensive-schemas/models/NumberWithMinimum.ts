@@ -5,4 +5,4 @@
 /**
  * Number with minimum value
  */
-export type NumberWithMinimum = number;
+export type NumberWithMinimum = number

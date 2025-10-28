@@ -62,6 +62,6 @@ pub fn is_primitive_type(type_name: &str) -> bool {
 pub fn is_runtime_type(type_name: &str) -> bool {
     matches!(
         type_name,
-        "BaseAPI" | "Configuration" | "RequestContext" | "ApiResponse" | "HttpMethod"
+        "BaseAPI" | "Configuration" | "RequestContext" | "HttpMethod"
     )
 }

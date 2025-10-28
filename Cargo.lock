@@ -1067,6 +1067,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "heck",
+ "http",
  "indexmap",
  "minijinja",
  "openapi-generator-core",

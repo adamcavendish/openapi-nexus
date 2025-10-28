@@ -6,4 +6,4 @@ export type AllOfObjects = {
   active: boolean;
   id: number;
   name: string;
-} & { metadata: string };
+} & { metadata: string }

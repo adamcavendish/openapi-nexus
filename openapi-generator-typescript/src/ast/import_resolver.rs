@@ -126,10 +126,8 @@ impl ImportResolver {
 
         for (file_path, types) in file_to_types {
             let relative_path = self.generate_relative_import_path(&self.current_file, &file_path);
-            let import_specifiers: Vec<ImportSpecifier> = types
-                .into_iter()
-                .map(|type_name| ImportSpecifier::new(type_name))
-                .collect();
+            let import_specifiers: Vec<ImportSpecifier> =
+                types.into_iter().map(ImportSpecifier::new).collect();
 
             imports.push(Import::type_only(relative_path).with_specifiers(import_specifiers));
         }

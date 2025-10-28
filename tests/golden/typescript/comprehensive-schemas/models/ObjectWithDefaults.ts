@@ -6,16 +6,16 @@
  * Object with default values
  */
 export interface ObjectWithDefaults {
-  /**
-   * Whether the person is currently active
-   */
-  active?: boolean,
-  /**
-   * Age in years
-   */
-  age?: number,
-  /**
-   * Full name of the person
-   */
-  name?: string,
+/**
+ * Whether the person is currently active
+ */
+active?: boolean,
+/**
+ * Age in years
+ */
+age?: number,
+/**
+ * Full name of the person
+ */
+name?: string
 }

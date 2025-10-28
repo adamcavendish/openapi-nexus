@@ -5,4 +5,4 @@
 /**
  * Object without properties
  */
-export type EmptyObject = any;
+export type EmptyObject = any

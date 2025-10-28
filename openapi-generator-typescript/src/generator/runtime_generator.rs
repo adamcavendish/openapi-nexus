@@ -1,32 +1,27 @@
 //! Runtime module generator for TypeScript
 
-use std::collections::BTreeMap;
-
 use crate::ast::{
-    Class, Function, Interface, Method, Parameter, PrimitiveType, Property, TsNode, TypeExpression,
+    Class, Function, Interface, TsMethod, Parameter, PrimitiveType, Property, TsNode, TypeExpression,
     Visibility,
 };
+use crate::ast_trait::to_rcdoc::ToRcDoc;
 use crate::core::GeneratorError;
-use crate::emission::{TypeScriptEmitter, TypeScriptFileCategory};
+use crate::emission::TypeScriptFileCategory;
 use crate::generator::file_generator::GeneratedFile;
 
 /// Runtime module generator for creating TypeScript runtime utilities
-pub struct RuntimeGenerator {
-    emitter: TypeScriptEmitter,
-}
+pub struct RuntimeGenerator;
 
 impl Default for RuntimeGenerator {
     fn default() -> Self {
-        Self::new()
+        Self
     }
 }
 
 impl RuntimeGenerator {
     /// Create a new runtime generator
     pub fn new() -> Self {
-        Self {
-            emitter: TypeScriptEmitter::new(),
-        }
+        Self
     }
 
     /// Generate multiple runtime files
@@ -75,11 +70,25 @@ impl RuntimeGenerator {
 
     /// Convert nodes to string using the TypeScript emitter
     fn nodes_to_string(&self, nodes: &[TsNode]) -> Result<String, GeneratorError> {
-        self.emitter
-            .emit(nodes)
-            .map_err(|e| GeneratorError::Generic {
-                message: format!("Emission error: {}", e),
-            })
+        // For runtime files, we don't want dependency analysis - just emit the nodes directly
+        let mut docs = Vec::new();
+
+        // Add generated file header
+        let header = crate::ast::GeneratedFileHeader::new();
+        docs.push(header.to_rcdoc().map_err(|e| GeneratorError::Generic {
+            message: format!("Header emission error: {}", e),
+        })?);
+
+        // Convert AST nodes to RcDoc using traits
+        for node in nodes {
+            let doc = node.to_rcdoc().map_err(|e| GeneratorError::Generic {
+                message: format!("Node emission error: {}", e),
+            })?;
+            docs.push(doc);
+        }
+
+        let combined = pretty::RcDoc::intersperse(docs, pretty::RcDoc::line());
+        Ok(combined.pretty(80).to_string())
     }
 
     /// Convert nodes to string with additional imports
@@ -88,18 +97,28 @@ impl RuntimeGenerator {
         nodes: &[TsNode],
         imports: &str,
     ) -> Result<String, GeneratorError> {
-        let mut content = self
-            .emitter
-            .emit(nodes)
-            .map_err(|e| GeneratorError::Generic {
-                message: format!("Emission error: {}", e),
+        // For runtime files, we don't want dependency analysis - just emit the nodes directly
+        let mut docs = Vec::new();
+
+        // Add generated file header
+        let header = crate::ast::GeneratedFileHeader::new();
+        docs.push(header.to_rcdoc().map_err(|e| GeneratorError::Generic {
+            message: format!("Header emission error: {}", e),
+        })?);
+
+        // Add manual imports
+        docs.push(pretty::RcDoc::text(imports.to_string()));
+
+        // Convert AST nodes to RcDoc using traits
+        for node in nodes {
+            let doc = node.to_rcdoc().map_err(|e| GeneratorError::Generic {
+                message: format!("Node emission error: {}", e),
             })?;
+            docs.push(doc);
+        }
 
-        // Insert imports after the generated file header
-        let header_end = content.find("\n\n").unwrap_or(0) + 2;
-        content.insert_str(header_end, imports);
-
-        Ok(content)
+        let combined = pretty::RcDoc::intersperse(docs, pretty::RcDoc::line());
+        Ok(combined.pretty(80).to_string())
     }
 
     /// Generate the complete runtime module (legacy method for backward compatibility)
@@ -164,16 +183,7 @@ impl RuntimeGenerator {
             // headers property
             Property {
                 name: "headers".to_string(),
-                type_expr: TypeExpression::Object(BTreeMap::from([
-                    (
-                        "key".to_string(),
-                        TypeExpression::Primitive(PrimitiveType::String),
-                    ),
-                    (
-                        "value".to_string(),
-                        TypeExpression::Primitive(PrimitiveType::String),
-                    ),
-                ])),
+                type_expr: TypeExpression::Reference("Record<string, string>".to_string()),
                 optional: true,
                 documentation: Some("Additional headers for requests".to_string()),
             },
@@ -279,7 +289,7 @@ impl RuntimeGenerator {
         });
 
         // Constructor method
-        methods.push(Method {
+        methods.push(TsMethod {
             name: "constructor".to_string(),
             parameters: vec![Parameter {
                 name: "field".to_string(),
@@ -292,7 +302,7 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Create a new RequiredError".to_string()),
-            body: None,
+            body: Some("super(`Field ${field} is required`); this.field = field;".to_string()),
         });
 
         Ok(TsNode::Class(Class {
@@ -321,7 +331,7 @@ impl RuntimeGenerator {
         });
 
         // Constructor method
-        methods.push(Method {
+        methods.push(TsMethod {
             name: "constructor".to_string(),
             parameters: vec![Parameter {
                 name: "configuration".to_string(),
@@ -334,11 +344,11 @@ impl RuntimeGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the BaseAPI".to_string()),
-            body: None,
+            body: Some("this.configuration = configuration;".to_string()),
         });
 
         // request method
-        methods.push(Method {
+        methods.push(TsMethod {
             name: "request".to_string(),
             parameters: vec![Parameter {
                 name: "context".to_string(),
@@ -376,7 +386,7 @@ impl RuntimeGenerator {
                 optional: false,
                 default_value: None,
             }],
-            return_type: Some(TypeExpression::Reference("T".to_string())),
+            return_type: Some(TypeExpression::Generic("T".to_string())),
             generics: vec![crate::ast::Generic {
                 name: "T".to_string(),
                 constraint: None,
@@ -385,7 +395,7 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert JSON object to typed object".to_string()),
-            body: None,
+            body: Some("return json as T;".to_string()),
         }))
     }
 
@@ -395,7 +405,7 @@ impl RuntimeGenerator {
             name: "ToJSON".to_string(),
             parameters: vec![Parameter {
                 name: "value".to_string(),
-                type_expr: Some(TypeExpression::Reference("T".to_string())),
+                type_expr: Some(TypeExpression::Generic("T".to_string())),
                 optional: false,
                 default_value: None,
             }],
@@ -408,7 +418,7 @@ impl RuntimeGenerator {
             is_async: false,
             is_export: true,
             documentation: Some("Convert typed object to JSON".to_string()),
-            body: None,
+            body: Some("return JSON.stringify(value);".to_string()),
         }))
     }
 }

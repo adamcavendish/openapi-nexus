@@ -6,7 +6,7 @@ use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::{Class, Method, Parameter, PrimitiveType, TsNode, TypeExpression, Visibility};
+use crate::ast::{Class, Parameter, PrimitiveType, TsMethod, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
 
 /// API client generator for creating TypeScript API client classes
@@ -95,7 +95,7 @@ impl ApiClientGenerator {
         let mut methods = Vec::new();
 
         // Add constructor
-        let constructor = Method {
+        let constructor = TsMethod {
             name: "constructor".to_string(),
             parameters: vec![Parameter {
                 name: "configuration".to_string(),
@@ -108,7 +108,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
-            body: None,
+            body: Some("super(configuration);".to_string()),
         };
         methods.push(constructor);
 
@@ -138,7 +138,7 @@ impl ApiClientGenerator {
 
     /// Generate a default API client
     fn generate_default_api_client(&self) -> Result<TsNode, GeneratorError> {
-        let constructor = Method {
+        let constructor = TsMethod {
             name: "constructor".to_string(),
             parameters: vec![Parameter {
                 name: "configuration".to_string(),
@@ -151,7 +151,7 @@ impl ApiClientGenerator {
             is_static: false,
             visibility: Visibility::Public,
             documentation: Some("Initialize the API client".to_string()),
-            body: None,
+            body: Some("super(configuration);".to_string()),
         };
 
         let api_class = Class {
@@ -175,7 +175,7 @@ impl ApiClientGenerator {
         _path: &str,
         http_method: &str,
         operation: &Operation,
-    ) -> Result<Method, GeneratorError> {
+    ) -> Result<TsMethod, GeneratorError> {
         let mut parameters = Vec::new();
 
         // Add path parameters (simplified for now)
@@ -212,7 +212,7 @@ impl ApiClientGenerator {
 
         let return_type = TypeExpression::Reference("Promise<any>".to_string());
 
-        Ok(Method {
+        Ok(TsMethod {
             name: method_name.to_string(),
             parameters,
             return_type: Some(return_type),

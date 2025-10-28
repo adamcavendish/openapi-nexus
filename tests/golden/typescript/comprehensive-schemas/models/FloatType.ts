@@ -5,4 +5,4 @@
 /**
  * Floating point number
  */
-export type FloatType = number;
+export type FloatType = number

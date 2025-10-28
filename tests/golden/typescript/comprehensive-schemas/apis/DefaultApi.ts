@@ -2,9 +2,8 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api';
-import { Configuration } from '../runtime/config';
-
+import { BaseAPI } from '../runtime/api'
+import { Configuration } from '../runtime/config'
 
 /**
  * API client for default operations
@@ -19,8 +18,9 @@ super(configuration);
 /**
  * Test endpoint
  */
-test(): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async test(): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 }

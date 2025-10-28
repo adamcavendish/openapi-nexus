@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{DocComment, Generic, Method, Property};
+use crate::ast::{DocComment, Generic, TsMethod, Property};
 use crate::ast_trait::{EmissionContext, ToRcDoc, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::pretty_utils::TypeScriptPrettyUtils;
@@ -13,7 +13,7 @@ use pretty::RcDoc;
 pub struct Class {
     pub name: String,
     pub properties: Vec<Property>,
-    pub methods: Vec<Method>,
+    pub methods: Vec<TsMethod>,
     pub extends: Option<String>,
     pub implements: Vec<String>,
     pub generics: Vec<Generic>,
@@ -86,15 +86,15 @@ impl ToRcDocWithContext for Class {
         }
 
         // Add documentation if present and enabled
-        if context.include_docs {
-            if let Some(docs) = &self.documentation {
-                let doc_comment = DocComment::new(docs.clone());
-                doc = doc_comment
-                    .to_rcdoc()
-                    .unwrap_or_else(|_| RcDoc::text("// Error generating comment"))
-                    .append(RcDoc::line())
-                    .append(doc);
-            }
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
+            let doc_comment = DocComment::new(docs.clone());
+            doc = doc_comment
+                .to_rcdoc()
+                .unwrap_or_else(|_| RcDoc::text("// Error generating comment"))
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)

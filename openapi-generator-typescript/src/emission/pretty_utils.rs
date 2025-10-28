@@ -36,7 +36,7 @@ impl TypeScriptPrettyUtils {
         if docs.is_empty() {
             RcDoc::nil()
         } else {
-            RcDoc::intersperse(docs, RcDoc::text(",").append(RcDoc::line_()))
+            RcDoc::intersperse(docs, RcDoc::text(",").append(RcDoc::line()))
         }
     }
 

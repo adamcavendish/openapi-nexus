@@ -2,10 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api';
-import { Configuration } from '../runtime/config';
-import type { User } from '../models/User';
-
+import { BaseAPI } from '../runtime/api'
+import { Configuration } from '../runtime/config'
+import type { User } from '../models/User'
 
 /**
  * API client for user operations
@@ -20,58 +19,79 @@ super(configuration);
 /**
  * Create user
  */
-createUser(body: User): Promise<User> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: {
-  method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  } }).then(response => response.json());
+async createUser(body: User): Promise<User> {
+    const url = `${this.configuration?.basePath || ''}/user`;
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Creates list of users with given input array
  */
-createUsersWithListInput(body: Array<string>): Promise<User> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: {
-  method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  } }).then(response => response.json());
+async createUsersWithListInput(body: Array<string>): Promise<User> {
+    const url = `${this.configuration?.basePath || ''}/user/createWithList`;
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Logs user into the system
  */
-loginUser(username?: string, password?: string): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async loginUser(username?: string, password?: string): Promise<Response> {
+    const queryParams = [username && `${username}=${username.toString()}` + '&' + password && `${password}=${password.toString()}`].filter(Boolean).join('&');
+    const url = `${this.configuration?.basePath || ''}}${queryParams ? '?' + queryParams : ''}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Logs out current logged in user session
  */
-logoutUser(): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async logoutUser(): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Get user by user name
  */
-getUserByName(username: string): Promise<User> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async getUserByName(username: string): Promise<User> {
+    const url = `${this.configuration?.basePath || ''}/${username}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Update user
  */
-updateUser(username: string, body: User): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async updateUser(username: string, body: User): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}/user/${username}`;
+    return this.request({
+      url,
+      init: {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Delete user
  */
-deleteUser(username: string): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async deleteUser(username: string): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}/user/${username}`;
+    return this.request({ url, init: { method: 'DELETE' } });
+
 }
 }

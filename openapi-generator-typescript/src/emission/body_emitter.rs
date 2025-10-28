@@ -5,7 +5,7 @@
 
 use pretty::RcDoc;
 
-use crate::ast::{CodeBlock, Expression, Function, Method, Statement};
+use crate::ast::{CodeBlock, Expression, Function, TsMethod, Statement};
 use crate::ast_trait::ToRcDoc;
 use crate::emission::error::EmitError;
 
@@ -105,7 +105,7 @@ impl BodyEmitter {
     /// Generate HTTP method body (GET, POST, PUT, DELETE)
     pub fn generate_http_method_body(
         &self,
-        method: &Method,
+        method: &TsMethod,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         let statements = match method.name.as_str() {
             "get" => vec![Statement::Return(Some(Expression::FunctionCall {
@@ -185,7 +185,7 @@ impl BodyEmitter {
     /// Generate API method body based on method signature and return type
     pub fn generate_api_method_body(
         &self,
-        _method: &Method,
+        _method: &TsMethod,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         let statements = vec![Statement::Comment(
             "TODO: Implement API method body".to_string(),
@@ -197,7 +197,7 @@ impl BodyEmitter {
     /// Generate method body based on method name and context
     pub fn generate_method_body(
         &self,
-        method: &Method,
+        method: &TsMethod,
         context: &MethodContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         match method.name.as_str() {

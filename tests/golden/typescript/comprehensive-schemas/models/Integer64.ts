@@ -5,4 +5,4 @@
 /**
  * 64-bit integer
  */
-export type Integer64 = number;
+export type Integer64 = number

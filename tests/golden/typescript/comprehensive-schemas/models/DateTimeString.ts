@@ -5,4 +5,4 @@
 /**
  * String with date-time format
  */
-export type DateTimeString = string;
+export type DateTimeString = string

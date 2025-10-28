@@ -1,10 +1,11 @@
 //! Individual API class generator for TypeScript
 
 use heck::{ToLowerCamelCase as _, ToPascalCase as _};
+use http::Method;
 use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::{Class, Method, Parameter, TsNode, TypeExpression, Visibility};
+use crate::ast::{Class, Parameter, TsMethod, TsNode, TypeExpression, Visibility};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
 use crate::utils::schema_mapper::SchemaMapper;
@@ -35,7 +36,7 @@ impl ApiClassGenerator {
 
         let mut methods = vec![
             // Constructor method
-            Method {
+            TsMethod {
                 name: "constructor".to_string(),
                 parameters: vec![Parameter {
                     name: "configuration".to_string(),
@@ -48,13 +49,17 @@ impl ApiClassGenerator {
                 is_static: false,
                 visibility: Visibility::Public,
                 documentation: Some("Initialize the API client".to_string()),
-                body: None,
+                body: Some("super(configuration);".to_string()),
             },
         ];
 
         // Generate methods for each operation
         for (path, method_name, operation) in operations {
-            let method = self.generate_operation_method(path, method_name, operation)?;
+            let http_method = method_name.parse::<Method>()
+                .map_err(|e| GeneratorError::Generic {
+                    message: format!("Invalid HTTP method '{}': {}", method_name, e),
+                })?;
+            let method = self.generate_operation_method(path, &http_method, operation)?;
             methods.push(method);
         }
 
@@ -76,14 +81,16 @@ impl ApiClassGenerator {
     fn generate_operation_method(
         &self,
         path: &str,
-        method_name: &str,
+        http_method: &Method,
         operation: &Operation,
-    ) -> Result<Method, GeneratorError> {
-        let method_name = self.generate_method_name(path, operation, method_name);
+    ) -> Result<TsMethod, GeneratorError> {
+        let method_name = self.generate_method_name(path, operation, http_method);
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_return_type(operation)?;
+        let body =
+            self.generate_method_implementation(&method_name, http_method, path, operation)?;
 
-        Ok(Method {
+        Ok(TsMethod {
             name: method_name,
             parameters,
             return_type,
@@ -94,12 +101,17 @@ impl ApiClassGenerator {
                 .summary
                 .clone()
                 .or_else(|| operation.description.clone()),
-            body: None,
+            body: Some(body),
         })
     }
 
     /// Generate method name from operation
-    fn generate_method_name(&self, path: &str, operation: &Operation, http_method: &str) -> String {
+    fn generate_method_name(
+        &self,
+        path: &str,
+        operation: &Operation,
+        http_method: &Method,
+    ) -> String {
         // Use operationId if available, otherwise generate from path and method
         if let Some(operation_id) = &operation.operation_id {
             operation_id.to_lower_camel_case()
@@ -109,7 +121,7 @@ impl ApiClassGenerator {
             let mut method_name = String::new();
 
             // Add HTTP method prefix
-            method_name.push_str(&http_method.to_lowercase());
+            method_name.push_str(&http_method.as_str().to_lowercase());
 
             // Add path parts
             for part in path_parts {
@@ -219,7 +231,7 @@ impl ApiClassGenerator {
     pub fn generate_method_implementation(
         &self,
         _method_name: &str,
-        http_method: &str,
+        http_method: &Method,
         path: &str,
         operation: &Operation,
     ) -> Result<String, GeneratorError> {
@@ -250,8 +262,8 @@ impl ApiClassGenerator {
 
         let mut body = String::new();
 
-        match http_method.to_uppercase().as_str() {
-            "GET" => {
+        match *http_method {
+            Method::GET => {
                 if !query_params.is_empty() {
                     let query_string = query_params
                         .iter()
@@ -270,23 +282,23 @@ impl ApiClassGenerator {
                     ));
                     body.push_str("    const url = `${this.configuration?.basePath || ''}");
                     for param in &path_params {
-                        body.push_str("/${{");
+                        body.push_str("/${");
                         body.push_str(&param.name);
-                        body.push_str("}}");
+                        body.push_str("}");
                     }
                     body.push_str("}${queryParams ? '?' + queryParams : ''}`;\n");
                 } else {
                     body.push_str("    const url = `${this.configuration?.basePath || ''}");
                     for param in &path_params {
-                        body.push_str("/${{");
+                        body.push_str("/${");
                         body.push_str(&param.name);
-                        body.push_str("}}");
+                        body.push_str("}");
                     }
                     body.push_str("}`;\n");
                 }
                 body.push_str("    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());\n");
             }
-            "POST" | "PUT" | "PATCH" => {
+            Method::POST | Method::PUT | Method::PATCH => {
                 body.push_str("    const url = `${this.configuration?.basePath || ''}");
                 body.push_str(&url);
                 body.push_str("`;\n");
@@ -294,10 +306,7 @@ impl ApiClassGenerator {
                     body.push_str("    return this.request({\n");
                     body.push_str("      url,\n");
                     body.push_str("      init: {\n");
-                    body.push_str(&format!(
-                        "        method: '{}',\n",
-                        http_method.to_uppercase()
-                    ));
+                    body.push_str(&format!("        method: '{}',\n", http_method.as_str()));
                     body.push_str("        headers: { 'Content-Type': 'application/json' },\n");
                     body.push_str(&format!(
                         "        body: JSON.stringify({})\n",
@@ -306,13 +315,12 @@ impl ApiClassGenerator {
                     body.push_str("      }\n");
                     body.push_str("    }).then(response => response.json());\n");
                 } else {
-                    let method = http_method.to_uppercase();
                     body.push_str("    return this.request({ url, init: { method: '");
-                    body.push_str(&method);
+                    body.push_str(http_method.as_str());
                     body.push_str("' } }).then(response => response.json());\n");
                 }
             }
-            "DELETE" => {
+            Method::DELETE => {
                 body.push_str("    const url = `${this.configuration?.basePath || ''}");
                 body.push_str(&url);
                 body.push_str("`;\n");
@@ -320,9 +328,10 @@ impl ApiClassGenerator {
             }
             _ => {
                 body.push_str("    // Unsupported HTTP method\n");
-                body.push_str(
-                    "    throw new Error(`HTTP method ${http_method} is not supported`);\n",
-                );
+                body.push_str(&format!(
+                    "    throw new Error(`HTTP method {} is not supported`);\n",
+                    http_method.as_str()
+                ));
             }
         }
 

@@ -58,14 +58,14 @@ impl ToRcDocWithContext for Enum {
         }
 
         // Add documentation if present and enabled
-        if context.include_docs {
-            if let Some(docs) = &self.documentation {
-                let doc_comment = DocComment::new(docs.clone());
-                doc = doc_comment
-                    .to_rcdoc_with_context(context)?
-                    .append(RcDoc::line())
-                    .append(doc);
-            }
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
+            let doc_comment = DocComment::new(docs.clone());
+            doc = doc_comment
+                .to_rcdoc_with_context(context)?
+                .append(RcDoc::line())
+                .append(doc);
         }
 
         Ok(doc)

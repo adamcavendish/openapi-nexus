@@ -5,4 +5,4 @@
 /**
  * Basic number type
  */
-export type NumberType = number;
+export type NumberType = number

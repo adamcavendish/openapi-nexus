@@ -6,4 +6,4 @@ export type OneOfObjects = {
     active: boolean;
     id: number;
     name: string;
-  } | { metadata: { created: string }; user: { id: number; name: string } };
+  } | { metadata: { created: string }; user: { id: number; name: string } }

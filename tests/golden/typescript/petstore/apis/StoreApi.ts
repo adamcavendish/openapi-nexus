@@ -2,10 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api';
-import { Configuration } from '../runtime/config';
-import type { Order } from '../models/Order';
-
+import { BaseAPI } from '../runtime/api'
+import { Configuration } from '../runtime/config'
+import type { Order } from '../models/Order'
 
 /**
  * API client for store operations
@@ -20,33 +19,40 @@ super(configuration);
 /**
  * Returns pet inventories by status
  */
-getInventory(): Promise<string> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async getInventory(): Promise<string> {
+    const url = `${this.configuration?.basePath || ''}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Place an order for a pet
  */
-placeOrder(body: Order): Promise<Order> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: {
-  method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  } }).then(response => response.json());
+async placeOrder(body: Order): Promise<Order> {
+    const url = `${this.configuration?.basePath || ''}/store/order`;
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Find purchase order by ID
  */
-getOrderById(orderId: string): Promise<Order> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async getOrderById(orderId: string): Promise<Order> {
+    const url = `${this.configuration?.basePath || ''}/${orderId}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Delete purchase order by ID
  */
-deleteOrder(orderId: string): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async deleteOrder(orderId: string): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
+    return this.request({ url, init: { method: 'DELETE' } });
+
 }
 }

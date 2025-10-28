@@ -5,4 +5,4 @@
 /**
  * String with maximum length
  */
-export type StringWithMaxLength = string;
+export type StringWithMaxLength = string

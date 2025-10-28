@@ -3,10 +3,6 @@
 // To make changes, modify the source code and regenerate this file.
 
 import { Configuration } from './config';
-import { RequestContext } from '../runtime/api';
-import { Configuration } from '../runtime/config';
-import type { Error } from './error';
-
 
 /**
  * Base API class for all API clients
@@ -25,35 +21,11 @@ this.configuration = configuration;
 /**
  * Make an HTTP request
  */
-request(context: RequestContext): Promise<Response> {
-const { url, init } = context;
-  const baseUrl = this.configuration?.basePath || '';
-  const fullUrl = baseUrl ? `${baseUrl}${url}` : url;
-  
-  
-  // Build headers with authentication
-  const headers = { 'Content-Type': 'application/json', ...this.configuration?.headers };
-  
-  
-  // Add authentication headers
-  if (this.configuration?.apiKey) {
-  headers['X-API-Key'] = this.configuration.apiKey;
+async request(context: RequestContext): Promise<Response> {
+{
+    // TODO: Implement method body
+    throw new Error('Not implemented')
   }
-  if (this.configuration?.accessToken) {
-  headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-  const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-  
-  
-  // Merge request init options
-  const requestInit = { ...init, headers: { ...headers, ...init?.headers } };
-  
-  
-  // Make the fetch request
-  return fetch(fullUrl, requestInit);
 }
 }
 /**
@@ -68,19 +40,18 @@ field: string
  * Create a new RequiredError
  */
 constructor(field: string) {
-super(field);
-  this.field = field;
+super(`Field ${field} is required`); this.field = field;
 }
 }
 /**
  * Request context for API calls
  */
 export interface RequestContext {
-  /**
-   * Request URL
-   */
-  url: string,   /**
-   * Request initialization options
-   */
-  init?: RequestInit,
+/**
+ * Request URL
+ */
+url: string, /**
+ * Request initialization options
+ */
+init?: RequestInit
 }

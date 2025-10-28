@@ -6,4 +6,4 @@ export type OneOfWithNull = string | null | {
     active: boolean;
     id: number;
     name: string;
-  };
+  }

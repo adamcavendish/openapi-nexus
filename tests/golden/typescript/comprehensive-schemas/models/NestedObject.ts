@@ -6,11 +6,11 @@
  * Object with nested object property
  */
 export interface NestedObject {
-  /**
-   * Additional metadata about the object
-   */
-  metadata?: { created: string },   /**
-   * User information object
-   */
-  user?: { id: number; name: string },
+/**
+ * Additional metadata about the object
+ */
+metadata?: { created: string }, /**
+ * User information object
+ */
+user?: { id: number; name: string }
 }

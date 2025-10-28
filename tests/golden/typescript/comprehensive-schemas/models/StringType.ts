@@ -5,4 +5,4 @@
 /**
  * Basic string type
  */
-export type StringType = string;
+export type StringType = string

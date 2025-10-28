@@ -5,4 +5,4 @@
 /**
  * String with password format
  */
-export type PasswordString = string;
+export type PasswordString = string

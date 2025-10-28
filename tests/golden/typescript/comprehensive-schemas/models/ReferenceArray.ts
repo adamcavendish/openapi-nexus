@@ -2,4 +2,4 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-export type ReferenceArray = Array<string>;
+export type ReferenceArray = Array<string>

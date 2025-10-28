@@ -5,4 +5,4 @@
 /**
  * String with URI format
  */
-export type UriString = string;
+export type UriString = string

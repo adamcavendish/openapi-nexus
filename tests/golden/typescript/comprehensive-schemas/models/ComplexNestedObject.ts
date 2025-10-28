@@ -3,21 +3,21 @@
 // To make changes, modify the source code and regenerate this file.
 
 export interface ComplexNestedObject {
-  id: number,
-  user: {
-    id: number;
-    profile: {
-      contact: {
-        addresses: Array<{
-            city: string;
-            street: string;
-            zip: string;
-          }>;
-        email: string;
-        phone: string;
-      };
-      firstName: string;
-      lastName: string;
+id: number,
+user: {
+  id: number;
+  profile: {
+    contact: {
+      addresses: Array<{
+          city: string;
+          street: string;
+          zip: string;
+        }>;
+      email: string;
+      phone: string;
     };
-  },
+    firstName: string;
+    lastName: string;
+  };
+}
 }

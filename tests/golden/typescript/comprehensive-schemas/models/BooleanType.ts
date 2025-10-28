@@ -5,4 +5,4 @@
 /**
  * Boolean type
  */
-export type BooleanType = boolean;
+export type BooleanType = boolean

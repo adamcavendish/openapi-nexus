@@ -5,4 +5,4 @@
 /**
  * String with binary format
  */
-export type BinaryString = string;
+export type BinaryString = string

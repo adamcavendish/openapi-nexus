@@ -6,12 +6,12 @@
  * Tag model
  */
 export interface Tag {
-  /**
-   * Tag ID
-   */
-  id?: number | null,
-  /**
-   * Tag name
-   */
-  name?: string | null,
+/**
+ * Tag ID
+ */
+id?: number | null,
+/**
+ * Tag name
+ */
+name?: string | null
 }

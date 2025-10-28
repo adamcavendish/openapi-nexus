@@ -2,10 +2,10 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api';
-import { Configuration } from '../runtime/config';
-import type { Pet } from '../models/Pet';
-
+import { BaseAPI } from '../runtime/api'
+import { Configuration } from '../runtime/config'
+import type { ApiResponse } from '../models/ApiResponse'
+import type { Pet } from '../models/Pet'
 
 /**
  * API client for pet operations
@@ -20,65 +20,81 @@ super(configuration);
 /**
  * Add a new pet to the store
  */
-addPet(body: Pet): Promise<Pet> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: {
-  method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  } }).then(response => response.json());
+async addPet(body: Pet): Promise<Pet> {
+    const url = `${this.configuration?.basePath || ''}/pet`;
+    return this.request({
+      url,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Update an existing pet
  */
-updatePet(body: Pet): Promise<Pet> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: {
-  method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  } }).then(response => response.json());
+async updatePet(body: Pet): Promise<Pet> {
+    const url = `${this.configuration?.basePath || ''}/pet`;
+    return this.request({
+      url,
+      init: {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    }).then(response => response.json());
+
 }
 /**
  * Find pets by status
  */
-findPetsByStatus(status: string): Promise<Array<string>> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async findPetsByStatus(status: string): Promise<Array<string>> {
+    const queryParams = [`${status}=${status.toString()}`].filter(Boolean).join('&');
+    const url = `${this.configuration?.basePath || ''}}${queryParams ? '?' + queryParams : ''}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Find pets by tags
  */
-findPetsByTags(tags: Array<string>): Promise<Array<string>> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async findPetsByTags(tags: Array<string>): Promise<Array<string>> {
+    const queryParams = [`${tags}=${tags.toString()}`].filter(Boolean).join('&');
+    const url = `${this.configuration?.basePath || ''}}${queryParams ? '?' + queryParams : ''}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Find pet by ID
  */
-getPetById(petId: string): Promise<Pet> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async getPetById(petId: string): Promise<Pet> {
+    const url = `${this.configuration?.basePath || ''}/${petId}}`;
+    return this.request({ url, init: { method: 'GET' } }).then(response => response.json());
+
 }
 /**
  * Update a pet in the store with form data
  */
-updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async updatePetWithForm(petId: string, name?: string, status?: string): Promise<Pet> {
+    const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
+    return this.request({ url, init: { method: 'POST' } }).then(response => response.json());
+
 }
 /**
  * Delete a pet
  */
-deletePet(petId: string): Promise<Response> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'DELETE' } });
+async deletePet(petId: string): Promise<Response> {
+    const url = `${this.configuration?.basePath || ''}/pet/${petId}`;
+    return this.request({ url, init: { method: 'DELETE' } });
+
 }
 /**
  * Upload an image
  */
-uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
-const url = this.configuration?.basePath || '';
-  return this.request({ url: url, init: { method: 'GET' } }).then(response => response.json());
+async uploadFile(petId: string, additionalMetadata?: string): Promise<ApiResponse> {
+    const url = `${this.configuration?.basePath || ''}/pet/${petId}/uploadImage`;
+    return this.request({ url, init: { method: 'POST' } }).then(response => response.json());
+
 }
 }

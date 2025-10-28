@@ -31,7 +31,7 @@ impl DependencyAnalyzer {
             TsNode::Interface(interface) => {
                 // Extract dependencies from interface properties
                 for property in &interface.properties {
-                    self.extract_type_dependencies(&property.type_expr, dependencies);
+                    Self::extract_type_dependencies(&property.type_expr, dependencies);
                 }
 
                 // Extract dependencies from extends clause
@@ -41,12 +41,12 @@ impl DependencyAnalyzer {
             }
             TsNode::TypeAlias(type_alias) => {
                 // Extract dependencies from type alias definition
-                self.extract_type_dependencies(&type_alias.type_expr, dependencies);
+                Self::extract_type_dependencies(&type_alias.type_expr, dependencies);
             }
             TsNode::Class(class) => {
                 // Extract dependencies from class properties
                 for property in &class.properties {
-                    self.extract_type_dependencies(&property.type_expr, dependencies);
+                    Self::extract_type_dependencies(&property.type_expr, dependencies);
                 }
 
                 // Extract dependencies from method signatures
@@ -54,13 +54,13 @@ impl DependencyAnalyzer {
                     // Method parameters
                     for param in &method.parameters {
                         if let Some(type_expr) = &param.type_expr {
-                            self.extract_type_dependencies(type_expr, dependencies);
+                            Self::extract_type_dependencies(type_expr, dependencies);
                         }
                     }
 
                     // Method return type
                     if let Some(return_type) = &method.return_type {
-                        self.extract_type_dependencies(return_type, dependencies);
+                        Self::extract_type_dependencies(return_type, dependencies);
                     }
                 }
 
@@ -83,13 +83,13 @@ impl DependencyAnalyzer {
                 // Extract dependencies from function parameters
                 for param in &function.parameters {
                     if let Some(type_expr) = &param.type_expr {
-                        self.extract_type_dependencies(type_expr, dependencies);
+                        Self::extract_type_dependencies(type_expr, dependencies);
                     }
                 }
 
                 // Extract dependencies from return type
                 if let Some(return_type) = &function.return_type {
-                    self.extract_type_dependencies(return_type, dependencies);
+                    Self::extract_type_dependencies(return_type, dependencies);
                 }
             }
             TsNode::Enum(_) => {
@@ -102,59 +102,70 @@ impl DependencyAnalyzer {
     }
 
     /// Extract dependencies from a type expression recursively
-    fn extract_type_dependencies(
-        &self,
-        type_expr: &TypeExpression,
-        dependencies: &mut DependencySet,
-    ) {
+    fn extract_type_dependencies(type_expr: &TypeExpression, dependencies: &mut DependencySet) {
         match type_expr {
             TypeExpression::Reference(type_name) => {
-                // Only add non-primitive types as dependencies
-                if !is_primitive_type(type_name) {
-                    if is_runtime_type(type_name) {
-                        dependencies.add_runtime_dependency(type_name.clone());
-                    } else {
-                        dependencies.add_model_dependency(type_name.clone());
+                // Handle generic types like Promise<T>, Array<T>, etc.
+                if type_name.contains('<') && type_name.contains('>') {
+                    // Extract inner types from generic type strings
+                    let inner_types = Self::extract_generic_types(type_name);
+                    for inner_type in inner_types {
+                        if !is_primitive_type(&inner_type) {
+                            if is_runtime_type(&inner_type) {
+                                dependencies.add_runtime_dependency(inner_type);
+                            } else {
+                                dependencies.add_model_dependency(inner_type);
+                            }
+                        }
+                    }
+                } else {
+                    // Only add non-primitive types as dependencies
+                    if !is_primitive_type(type_name) {
+                        if is_runtime_type(type_name) {
+                            dependencies.add_runtime_dependency(type_name.clone());
+                        } else {
+                            dependencies.add_model_dependency(type_name.clone());
+                        }
                     }
                 }
             }
             TypeExpression::Array(item_type) => {
-                self.extract_type_dependencies(item_type, dependencies);
+                Self::extract_type_dependencies(item_type, dependencies);
             }
             TypeExpression::Union(types) => {
                 for type_expr in types {
-                    self.extract_type_dependencies(type_expr, dependencies);
+                    Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
             TypeExpression::Intersection(types) => {
                 for type_expr in types {
-                    self.extract_type_dependencies(type_expr, dependencies);
+                    Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
             TypeExpression::Object(properties) => {
                 for type_expr in properties.values() {
-                    self.extract_type_dependencies(type_expr, dependencies);
+                    Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
             TypeExpression::Function(func_sig) => {
                 // Extract dependencies from function signature parameters
                 for param in &func_sig.parameters {
                     if let Some(type_expr) = &param.type_expr {
-                        self.extract_type_dependencies(type_expr, dependencies);
+                        Self::extract_type_dependencies(type_expr, dependencies);
                     }
                 }
 
                 // Extract dependencies from return type
                 if let Some(return_type) = &func_sig.return_type {
-                    self.extract_type_dependencies(return_type, dependencies);
+                    Self::extract_type_dependencies(return_type, dependencies);
                 }
             }
             TypeExpression::IndexSignature(_, value_type) => {
-                self.extract_type_dependencies(value_type, dependencies);
+                Self::extract_type_dependencies(value_type, dependencies);
             }
             TypeExpression::Tuple(types) => {
                 for type_expr in types {
-                    self.extract_type_dependencies(type_expr, dependencies);
+                    Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
             TypeExpression::Generic(_)
@@ -163,6 +174,61 @@ impl DependencyAnalyzer {
                 // These don't have dependencies to extract
             }
         }
+    }
+
+    /// Extract inner types from generic type strings like "Promise<ApiResponse>"
+    fn extract_generic_types(type_name: &str) -> Vec<String> {
+        let mut inner_types = Vec::new();
+        
+        // Find the content between < and >
+        if let Some(start) = type_name.find('<') {
+            if let Some(end) = type_name.rfind('>') {
+                if start < end {
+                    let inner_content = &type_name[start + 1..end];
+                    
+                    // Handle nested generics and unions
+                    let mut depth = 0;
+                    let mut current_type = String::new();
+                    
+                    for ch in inner_content.chars() {
+                        match ch {
+                            '<' => {
+                                depth += 1;
+                                current_type.push(ch);
+                            }
+                            '>' => {
+                                depth -= 1;
+                                current_type.push(ch);
+                            }
+                            '|' if depth == 0 => {
+                                // Union separator at top level
+                                if !current_type.trim().is_empty() {
+                                    inner_types.push(current_type.trim().to_string());
+                                }
+                                current_type.clear();
+                            }
+                            ',' if depth == 0 => {
+                                // Generic parameter separator at top level
+                                if !current_type.trim().is_empty() {
+                                    inner_types.push(current_type.trim().to_string());
+                                }
+                                current_type.clear();
+                            }
+                            _ => {
+                                current_type.push(ch);
+                            }
+                        }
+                    }
+                    
+                    // Add the last type
+                    if !current_type.trim().is_empty() {
+                        inner_types.push(current_type.trim().to_string());
+                    }
+                }
+            }
+        }
+        
+        inner_types
     }
 }
 
