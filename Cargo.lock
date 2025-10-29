@@ -1010,6 +1010,8 @@ dependencies = [
  "openapi-nexus-plugin",
  "openapi-nexus-rust",
  "openapi-nexus-transforms",
+ "pretty",
+ "serde",
  "snafu",
  "tracing",
  "utoipa",

@@ -121,7 +121,7 @@ impl TypeScriptFileGenerator {
             let filename = self.generate_filename(name);
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &EmissionContext::new())
+                .emit_with_context(slice::from_ref(node), &EmissionContext::default())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
@@ -141,7 +141,7 @@ impl TypeScriptFileGenerator {
             // Use the new emit_with_context method for automatic import generation
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &EmissionContext::new())
+                .emit_with_context(slice::from_ref(node), &EmissionContext::default())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),

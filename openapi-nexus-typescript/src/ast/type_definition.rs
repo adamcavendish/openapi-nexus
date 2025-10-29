@@ -155,6 +155,8 @@ impl EnumDefinition {
 }
 
 impl ToRcDocWithContext for TypeDefinition {
+    type Error = EmitError;
+
     fn to_rcdoc_with_context(
         &self,
         context: &EmissionContext,
@@ -168,6 +170,8 @@ impl ToRcDocWithContext for TypeDefinition {
 }
 
 impl ToRcDocWithContext for InterfaceDefinition {
+    type Error = EmitError;
+
     fn to_rcdoc_with_context(
         &self,
         context: &EmissionContext,
@@ -179,10 +183,14 @@ impl ToRcDocWithContext for InterfaceDefinition {
 
         // Add generics
         if !self.generics.is_empty() {
-            let generic_strings: Vec<String> = self
+            let generic_docs: Result<Vec<_>, _> = self
                 .generics
                 .iter()
-                .map(|g| g.to_typescript_string())
+                .map(|g| g.to_rcdoc_with_context(context))
+                .collect();
+            let generic_strings: Vec<String> = generic_docs?
+                .iter()
+                .map(|doc| format!("{}", doc.pretty(80)))
                 .collect();
             doc = doc.append(RcDoc::text(format!("<{}>", generic_strings.join(", "))));
         }
@@ -219,8 +227,7 @@ impl ToRcDocWithContext for InterfaceDefinition {
                 .collect();
             let properties = prop_docs?;
 
-            let force_multiline = context.force_multiline
-                || self.properties.len() > 2
+            let force_multiline = self.properties.len() > 2
                 || self
                     .properties
                     .iter()
@@ -241,10 +248,8 @@ impl ToRcDocWithContext for InterfaceDefinition {
             );
         }
 
-        // Add documentation if present and enabled
-        if context.include_docs
-            && let Some(docs) = &self.documentation
-        {
+        // Add documentation if present
+        if let Some(docs) = &self.documentation {
             let doc_comment = format_doc_comment(docs);
             doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }
@@ -254,6 +259,8 @@ impl ToRcDocWithContext for InterfaceDefinition {
 }
 
 impl ToRcDocWithContext for TypeAliasDefinition {
+    type Error = EmitError;
+
     fn to_rcdoc_with_context(
         &self,
         context: &EmissionContext,
@@ -267,10 +274,14 @@ impl ToRcDocWithContext for TypeAliasDefinition {
 
         // Add generics
         if !self.generics.is_empty() {
-            let generic_strings: Vec<String> = self
+            let generic_docs: Result<Vec<_>, _> = self
                 .generics
                 .iter()
-                .map(|g| g.to_typescript_string())
+                .map(|g| g.to_rcdoc_with_context(context))
+                .collect();
+            let generic_strings: Vec<String> = generic_docs?
+                .iter()
+                .map(|doc| format!("{}", doc.pretty(80)))
                 .collect();
             doc = doc.append(RcDoc::text(format!("<{}>", generic_strings.join(", "))));
         }
@@ -279,10 +290,8 @@ impl ToRcDocWithContext for TypeAliasDefinition {
         let type_doc = type_emitter.emit_type_expression_doc(&self.type_expr)?;
         doc = doc.append(RcDoc::text(" = ")).append(type_doc);
 
-        // Add documentation if present and enabled
-        if context.include_docs
-            && let Some(docs) = &self.documentation
-        {
+        // Add documentation if present
+        if let Some(docs) = &self.documentation {
             let doc_comment = format_doc_comment(docs);
             doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }
@@ -292,6 +301,8 @@ impl ToRcDocWithContext for TypeAliasDefinition {
 }
 
 impl ToRcDocWithContext for EnumDefinition {
+    type Error = EmitError;
+
     fn to_rcdoc_with_context(
         &self,
         context: &EmissionContext,
@@ -323,7 +334,7 @@ impl ToRcDocWithContext for EnumDefinition {
                 })
                 .collect();
 
-            let force_multiline = context.force_multiline || self.variants.len() > 2;
+            let force_multiline = self.variants.len() > 2;
 
             let body_content = if force_multiline {
                 RcDoc::intersperse(variant_docs, RcDoc::text(",").append(RcDoc::line()))
@@ -340,10 +351,8 @@ impl ToRcDocWithContext for EnumDefinition {
             );
         }
 
-        // Add documentation if present and enabled
-        if context.include_docs
-            && let Some(docs) = &self.documentation
-        {
+        // Add documentation if present
+        if let Some(docs) = &self.documentation {
             let doc_comment = format_doc_comment(docs);
             doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }

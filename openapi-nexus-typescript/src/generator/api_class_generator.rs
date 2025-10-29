@@ -2,12 +2,13 @@
 
 use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use http::Method;
-use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
+use utoipa::openapi::RefOr;
 
 use crate::ast::{
     ClassDefinition, ClassMethod, ImportStatement, Parameter, TsNode, TypeExpression,
 };
+use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
 use crate::generator::template_generator::{
@@ -145,29 +146,47 @@ impl ApiClassGenerator {
         let mut header_params = Vec::new();
         let mut body_param = None;
 
+        let ctx = EmissionContext::default();
+
         for param in &parameters {
             if param.name.contains("path") {
                 path_params.push(TemplateParameterData {
                     name: param.name.clone(),
-                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    type_expr: param
+                        .type_expr
+                        .as_ref()
+                        .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
+                        .map(|doc| format!("{}", doc.pretty(80))),
                     optional: param.optional,
                 });
             } else if param.name.contains("query") {
                 query_params.push(TemplateParameterData {
                     name: param.name.clone(),
-                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    type_expr: param
+                        .type_expr
+                        .as_ref()
+                        .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
+                        .map(|doc| format!("{}", doc.pretty(80))),
                     optional: param.optional,
                 });
             } else if param.name.contains("header") {
                 header_params.push(TemplateParameterData {
                     name: param.name.clone(),
-                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    type_expr: param
+                        .type_expr
+                        .as_ref()
+                        .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
+                        .map(|doc| format!("{}", doc.pretty(80))),
                     optional: param.optional,
                 });
             } else if param.name == "body" {
                 body_param = Some(TemplateParameterData {
                     name: param.name.clone(),
-                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    type_expr: param
+                        .type_expr
+                        .as_ref()
+                        .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
+                        .map(|doc| format!("{}", doc.pretty(80))),
                     optional: param.optional,
                 });
             }
@@ -182,7 +201,8 @@ impl ApiClassGenerator {
             header_params,
             body_param,
             return_type: return_type
-                .map(|t| t.to_typescript_string())
+                .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
+                .map(|doc| format!("{}", doc.pretty(80)))
                 .unwrap_or_else(|| "Promise<any>".to_string()),
             has_auth: true, // Assume auth is needed
             has_error_handling: true,

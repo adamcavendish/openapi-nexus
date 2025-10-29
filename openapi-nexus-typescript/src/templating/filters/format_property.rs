@@ -1,17 +1,17 @@
-//! Template filter for formatting TypeExpression as TypeScript string
+//! Template filter for formatting ClassProperty as TypeScript string
 
 use minijinja::value::ViaDeserialize;
 
-use crate::ast::TypeExpression;
+use crate::ast::class_definition::ClassProperty;
 use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 
-/// Template filter for formatting TypeExpression as TypeScript string
-pub fn format_type_expr_filter(type_expr: ViaDeserialize<TypeExpression>) -> String {
+/// Template filter for formatting ClassProperty as TypeScript string
+pub fn format_property_filter(property: ViaDeserialize<ClassProperty>) -> String {
     let ctx = EmissionContext {
         indent_level: 0,
         max_line_width: 80,
     };
-    type_expr
+    property
         .to_rcdoc_with_context(&ctx)
         .map(|doc| format!("{}", doc.pretty(80)))
         .unwrap_or_else(|_| "unknown".to_string())

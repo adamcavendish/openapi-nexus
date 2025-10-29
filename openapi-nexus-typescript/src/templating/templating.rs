@@ -7,9 +7,9 @@ use minijinja::Environment;
 use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
-use super::filters::{
+use crate::templating::filters::{
     format_doc_comment_filter, format_generic_list_filter, format_import_filter,
-    format_type_expr_filter, indent_filter,
+    format_property_filter, format_type_expr_filter, indent_filter,
 };
 use super::functions::{do_not_edit, get_method_body_template_function};
 use crate::ast::{ClassDefinition, TypeScriptFile};
@@ -103,6 +103,7 @@ impl Templating {
         env.add_filter("format_doc_comment", format_doc_comment_filter);
         env.add_filter("format_import", format_import_filter);
         env.add_filter("format_generic_list", format_generic_list_filter);
+        env.add_filter("format_property", format_property_filter);
         env.add_filter("format_type_expr", format_type_expr_filter);
         env.add_filter("indent", indent_filter);
 

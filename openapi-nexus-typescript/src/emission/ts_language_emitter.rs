@@ -49,7 +49,7 @@ impl TsLanguageEmitter {
             return Ok(String::new());
         }
 
-        let context = EmissionContext::new();
+        let context = EmissionContext::default();
         let mut docs = Vec::new();
 
         // Add generated file header
@@ -67,7 +67,7 @@ impl TsLanguageEmitter {
 
     /// Emit TypeScript code from AST nodes (legacy compatibility)
     pub fn emit(&self, nodes: &[TsNode]) -> Result<String, EmitError> {
-        let context = EmissionContext::new();
+        let context = EmissionContext::default();
         self.emit_with_context(nodes, &context)
     }
 
@@ -86,7 +86,6 @@ impl TsLanguageEmitter {
         for node in nodes {
             match node {
                 TsNode::Class(class) => {
-                    // Use template-based emission for classes
                     let class_code = self.templating.emit_class(class)?;
                     docs.push(RcDoc::text(class_code));
                 }
@@ -96,8 +95,9 @@ impl TsLanguageEmitter {
                     docs.push(doc);
                 }
                 TsNode::Import(import) => {
-                    // Simple string-based emission for imports
-                    docs.push(RcDoc::text(import.to_typescript_string()));
+                    // Use RcDoc-based emission for imports
+                    let doc = import.to_rcdoc_with_context(context)?;
+                    docs.push(doc);
                 }
             }
         }

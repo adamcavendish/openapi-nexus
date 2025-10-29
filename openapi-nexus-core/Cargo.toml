@@ -6,6 +6,8 @@ publish = false
 
 [dependencies]
 openapi-nexus-common.workspace = true
+pretty.workspace = true
+serde.workspace = true
 snafu.workspace = true
 tracing.workspace = true
 

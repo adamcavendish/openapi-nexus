@@ -3,9 +3,12 @@
 //! This module contains commonly used types that were previously split across multiple files.
 //! Consolidates Parameter, Property, Generic, EnumVariant, and Visibility into one location.
 
+use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::TypeExpression;
+use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
+use crate::emission::error::EmitError;
 
 /// TypeScript visibility modifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,27 +69,6 @@ impl Parameter {
         self.default_value = Some(default_value);
         self
     }
-
-    /// Format parameter as TypeScript string (for templates)
-    pub fn to_typescript_string(&self) -> String {
-        let mut result = self.name.clone();
-
-        if self.optional {
-            result.push('?');
-        }
-
-        if let Some(type_expr) = &self.type_expr {
-            result.push_str(": ");
-            result.push_str(&type_expr.to_typescript_string());
-        }
-
-        if let Some(default_value) = &self.default_value {
-            result.push_str(" = ");
-            result.push_str(default_value);
-        }
-
-        result
-    }
 }
 
 /// TypeScript property definition
@@ -124,20 +106,6 @@ impl Property {
         self.documentation = Some(documentation);
         self
     }
-
-    /// Format property as TypeScript string (for templates)
-    pub fn to_typescript_string(&self) -> String {
-        let mut result = self.name.clone();
-
-        if self.optional {
-            result.push('?');
-        }
-
-        result.push_str(": ");
-        result.push_str(&self.type_expr.to_typescript_string());
-
-        result
-    }
 }
 
 /// TypeScript generic parameter definition
@@ -168,23 +136,6 @@ impl Generic {
     pub fn with_default(mut self, default: String) -> Self {
         self.default = Some(default);
         self
-    }
-
-    /// Format generic as TypeScript string (for templates)
-    pub fn to_typescript_string(&self) -> String {
-        let mut result = self.name.clone();
-
-        if let Some(constraint) = &self.constraint {
-            result.push_str(" extends ");
-            result.push_str(constraint);
-        }
-
-        if let Some(default) = &self.default {
-            result.push_str(" = ");
-            result.push_str(default);
-        }
-
-        result
     }
 }
 
@@ -220,72 +171,110 @@ impl EnumVariant {
         self.documentation = Some(documentation);
         self
     }
+}
 
-    /// Format enum variant as TypeScript string (for templates)
-    pub fn to_typescript_string(&self) -> String {
-        let mut result = self.name.clone();
+// ToRcDocWithContext implementations
+
+impl ToRcDocWithContext for Parameter {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = RcDoc::text(self.name.clone());
+
+        if self.optional {
+            doc = doc.append(RcDoc::text("?"));
+        }
+
+        if let Some(type_expr) = &self.type_expr {
+            doc = doc
+                .append(RcDoc::text(":"))
+                .append(RcDoc::space())
+                .append(type_expr.to_rcdoc_with_context(context)?);
+        }
+
+        if let Some(default_value) = &self.default_value {
+            doc = doc
+                .append(RcDoc::space())
+                .append(RcDoc::text("="))
+                .append(RcDoc::space())
+                .append(RcDoc::text(default_value.clone()));
+        }
+
+        Ok(doc)
+    }
+}
+
+impl ToRcDocWithContext for Property {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = RcDoc::text(self.name.clone());
+
+        if self.optional {
+            doc = doc.append(RcDoc::text("?"));
+        }
+
+        doc = doc
+            .append(RcDoc::text(":"))
+            .append(RcDoc::space())
+            .append(self.type_expr.to_rcdoc_with_context(context)?);
+
+        Ok(doc)
+    }
+}
+
+impl ToRcDocWithContext for Generic {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        _context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = RcDoc::text(self.name.clone());
+
+        if let Some(constraint) = &self.constraint {
+            doc = doc
+                .append(RcDoc::space())
+                .append(RcDoc::text("extends"))
+                .append(RcDoc::space())
+                .append(RcDoc::text(constraint.clone()));
+        }
+
+        if let Some(default) = &self.default {
+            doc = doc
+                .append(RcDoc::space())
+                .append(RcDoc::text("="))
+                .append(RcDoc::space())
+                .append(RcDoc::text(default.clone()));
+        }
+
+        Ok(doc)
+    }
+}
+
+impl ToRcDocWithContext for EnumVariant {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        _context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut doc = RcDoc::text(self.name.clone());
 
         if let Some(value) = &self.value {
-            result.push_str(" = ");
-            result.push_str(value);
+            doc = doc
+                .append(RcDoc::space())
+                .append(RcDoc::text("="))
+                .append(RcDoc::space())
+                .append(RcDoc::text(value.clone()));
         }
 
-        result
-    }
-}
-
-/// Helper functions for formatting collections
-impl Parameter {
-    /// Format a list of parameters as TypeScript parameter list string
-    pub fn format_parameter_list(parameters: &[Parameter]) -> String {
-        if parameters.is_empty() {
-            "()".to_string()
-        } else {
-            let param_strings: Vec<String> = parameters
-                .iter()
-                .map(|p| p.to_typescript_string())
-                .collect();
-
-            if parameters.len() > 3 {
-                // Multi-line format for long parameter lists
-                format!("(\n  {}\n)", param_strings.join(",\n  "))
-            } else {
-                // Single line format
-                format!("({})", param_strings.join(", "))
-            }
-        }
-    }
-}
-
-impl Generic {
-    /// Format a list of generics as TypeScript generic list string
-    pub fn format_generic_list(generics: &[Generic]) -> String {
-        if generics.is_empty() {
-            String::new()
-        } else {
-            let generic_strings: Vec<String> =
-                generics.iter().map(|g| g.to_typescript_string()).collect();
-            format!("<{}>", generic_strings.join(", "))
-        }
-    }
-}
-
-impl EnumVariant {
-    /// Format a list of enum variants as TypeScript enum body string
-    pub fn format_enum_body(variants: &[EnumVariant]) -> String {
-        if variants.is_empty() {
-            "{}".to_string()
-        } else {
-            let variant_strings: Vec<String> =
-                variants.iter().map(|v| v.to_typescript_string()).collect();
-
-            if variants.len() > 2 {
-                // Multi-line format
-                format!("{{\n  {}\n}}", variant_strings.join(",\n  "))
-            } else {
-                // Single line format
-                format!("{{ {} }}", variant_strings.join(", "))
-            }
-        }
+        Ok(doc)
     }
 }

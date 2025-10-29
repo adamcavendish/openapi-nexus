@@ -10,7 +10,7 @@ export class {{ class.name }}{% if class.generics %}{{ class.generics | format_g
   {% if property.documentation %}
   {{ property.documentation | format_doc_comment | indent(2) }}
   {% endif %}
-  {{ property.to_typescript_string() | indent(2) }};
+  {{ property | format_property | indent(2) }};
 {% endfor %}
 
 {% for method in class.methods %}

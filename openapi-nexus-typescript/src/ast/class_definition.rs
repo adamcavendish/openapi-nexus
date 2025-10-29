@@ -3,9 +3,12 @@
 //! This module provides simplified class data structures optimized for template rendering.
 //! No RcDoc emission - these are pure data structures for Jinja2 templates.
 
+use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::{Generic, Parameter, TypeExpression, Visibility};
+use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
+use crate::emission::error::EmitError;
 
 /// TypeScript class definition for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,45 +206,6 @@ impl ClassProperty {
         self.documentation = Some(documentation);
         self
     }
-
-    /// Format property for template rendering
-    pub fn to_typescript_string(&self) -> String {
-        let mut parts = Vec::new();
-
-        // Visibility
-        match self.visibility {
-            Visibility::Private => parts.push("private".to_string()),
-            Visibility::Protected => parts.push("protected".to_string()),
-            Visibility::Public => {} // Default, no keyword needed
-        }
-
-        // Static
-        if self.is_static {
-            parts.push("static".to_string());
-        }
-
-        // Readonly
-        if self.is_readonly {
-            parts.push("readonly".to_string());
-        }
-
-        // Property name and type
-        let mut name_type = self.name.clone();
-        if self.optional {
-            name_type.push('?');
-        }
-        name_type.push_str(": ");
-        name_type.push_str(&self.type_expr.to_typescript_string());
-
-        parts.push(name_type);
-
-        // Default value
-        if let Some(default_value) = &self.default_value {
-            parts.push(format!("= {}", default_value));
-        }
-
-        parts.join(" ")
-    }
 }
 
 impl ClassMethod {
@@ -308,47 +272,6 @@ impl ClassMethod {
         self.body_template = Some(template);
         self.body_data = data;
         self
-    }
-
-    /// Format method signature for template rendering
-    pub fn to_signature_string(&self) -> String {
-        let mut parts = Vec::new();
-
-        // Visibility
-        match self.visibility {
-            Visibility::Private => parts.push("private".to_string()),
-            Visibility::Protected => parts.push("protected".to_string()),
-            Visibility::Public => {} // Default, no keyword needed
-        }
-
-        // Static
-        if self.is_static {
-            parts.push("static".to_string());
-        }
-
-        // Abstract
-        if self.is_abstract {
-            parts.push("abstract".to_string());
-        }
-
-        // Async
-        if self.is_async {
-            parts.push("async".to_string());
-        }
-
-        // Method name and parameters
-        let mut signature = self.name.clone();
-        signature.push_str(&Parameter::format_parameter_list(&self.parameters));
-
-        // Return type
-        if let Some(return_type) = &self.return_type {
-            signature.push_str(": ");
-            signature.push_str(&return_type.to_typescript_string());
-        }
-
-        parts.push(signature);
-
-        parts.join(" ")
     }
 }
 
@@ -455,5 +378,117 @@ impl ImportSpecifier {
     pub fn with_alias(mut self, alias: String) -> Self {
         self.alias = Some(alias);
         self
+    }
+}
+
+// ToRcDocWithContext implementations
+impl ToRcDocWithContext for ClassProperty {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut parts = Vec::new();
+
+        // Visibility
+        match self.visibility {
+            Visibility::Private => parts.push(RcDoc::text("private")),
+            Visibility::Protected => parts.push(RcDoc::text("protected")),
+            Visibility::Public => {} // Default, no keyword needed
+        }
+
+        // Static
+        if self.is_static {
+            parts.push(RcDoc::text("static"));
+        }
+
+        // Readonly
+        if self.is_readonly {
+            parts.push(RcDoc::text("readonly"));
+        }
+
+        // Property name and type
+        let mut name_doc = RcDoc::text(self.name.clone());
+        if self.optional {
+            name_doc = name_doc.append(RcDoc::text("?"));
+        }
+        name_doc = name_doc
+            .append(RcDoc::text(":"))
+            .append(RcDoc::space())
+            .append(self.type_expr.to_rcdoc_with_context(context)?);
+
+        parts.push(name_doc);
+
+        // Default value
+        if let Some(default_value) = &self.default_value {
+            parts.push(
+                RcDoc::text("=")
+                    .append(RcDoc::space())
+                    .append(RcDoc::text(default_value.clone())),
+            );
+        }
+
+        Ok(RcDoc::intersperse(parts, RcDoc::space()))
+    }
+}
+
+impl ToRcDocWithContext for ClassMethod {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        let mut parts = Vec::new();
+
+        // Visibility
+        match self.visibility {
+            Visibility::Private => parts.push(RcDoc::text("private")),
+            Visibility::Protected => parts.push(RcDoc::text("protected")),
+            Visibility::Public => {} // Default, no keyword needed
+        }
+
+        // Static
+        if self.is_static {
+            parts.push(RcDoc::text("static"));
+        }
+
+        // Abstract
+        if self.is_abstract {
+            parts.push(RcDoc::text("abstract"));
+        }
+
+        // Async
+        if self.is_async {
+            parts.push(RcDoc::text("async"));
+        }
+
+        // Method name and parameters
+        let params_docs: Result<Vec<_>, _> = self
+            .parameters
+            .iter()
+            .map(|p| p.to_rcdoc_with_context(context))
+            .collect();
+        let params_doc = RcDoc::text("(")
+            .append(RcDoc::intersperse(
+                params_docs?,
+                RcDoc::text(",").append(RcDoc::space()),
+            ))
+            .append(RcDoc::text(")"));
+
+        let mut signature_doc = RcDoc::text(self.name.clone()).append(params_doc);
+
+        // Return type
+        if let Some(return_type) = &self.return_type {
+            signature_doc = signature_doc
+                .append(RcDoc::text(":"))
+                .append(RcDoc::space())
+                .append(return_type.to_rcdoc_with_context(context)?);
+        }
+
+        parts.push(signature_doc);
+
+        Ok(RcDoc::intersperse(parts, RcDoc::space()))
     }
 }

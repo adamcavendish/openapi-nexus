@@ -7,8 +7,10 @@ use std::collections::{HashMap, HashSet};
 use std::path;
 
 use heck::ToKebabCase as _;
+use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
+use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::ts_dependency_analyzer::DependencySet;
 
@@ -143,6 +145,17 @@ impl Import {
         parts.push(format!("'{}'", self.module_path));
 
         format!("{};", parts.join(" "))
+    }
+}
+
+impl ToRcDocWithContext for Import {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        _context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        Ok(RcDoc::text(self.to_typescript_string()))
     }
 }
 
