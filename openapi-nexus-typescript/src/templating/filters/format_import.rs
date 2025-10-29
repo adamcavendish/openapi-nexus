@@ -3,56 +3,27 @@
 use minijinja::value::ViaDeserialize;
 
 use crate::ast::class_definition::ImportStatement;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting import statements
-pub fn format_import_filter(import: ViaDeserialize<ImportStatement>) -> String {
-    if import.imports.is_empty() {
-        return format!("import '{}';", import.module_path);
-    }
+pub fn format_import_filter(
+    import: ViaDeserialize<ImportStatement>,
+    indent_level: Option<usize>,
+    max_line_width: usize,
+) -> String {
+    let ctx = EmissionContext {
+        indent_level: indent_level.unwrap_or(0),
+        max_line_width,
+    };
+    import
+        .to_rcdoc_with_context(&ctx)
+        .map(|doc| doc.pretty(max_line_width).to_string())
+        .unwrap_or_else(|_| "import '???';".to_string())
+}
 
-    // Check if this should be a default import
-    // Default import: single specifier with no alias
-    if import.imports.len() == 1 {
-        let spec = &import.imports[0];
-        if spec.alias.is_none() {
-            // This could be a default import
-            return format!("import {} from '{}';", spec.name, import.module_path);
-        }
-    }
-
-    // Named imports
-    let mut import_parts = Vec::new();
-
-    // Type-only imports
-    if import.is_type_only {
-        import_parts.push("type".to_string());
-    }
-
-    // Import specifiers
-    let specifiers: Vec<String> = import
-        .imports
-        .iter()
-        .map(|spec| {
-            let mut s = String::new();
-            if spec.is_type && !import.is_type_only {
-                s.push_str("type ");
-            }
-            s.push_str(&spec.name);
-            if let Some(alias) = &spec.alias {
-                s.push_str(" as ");
-                s.push_str(alias);
-            }
-            s
-        })
-        .collect();
-
-    if !specifiers.is_empty() {
-        import_parts.push(format!("{{ {} }}", specifiers.join(", ")));
-    }
-
-    format!(
-        "import {} from '{}';",
-        import_parts.join(" "),
-        import.module_path
-    )
+/// Create a format_import filter with the given max_line_width
+pub fn create_format_import_filter(
+    max_line_width: usize,
+) -> impl Fn(ViaDeserialize<ImportStatement>, Option<usize>) -> String + Send + Sync + 'static {
+    move |import, indent_level| format_import_filter(import, indent_level, max_line_width)
 }

@@ -8,13 +8,14 @@ use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 /// Template filter for formatting generic lists
 pub fn format_generic_list_filter(
     generics: ViaDeserialize<Vec<Generic>>,
+    indent_level: Option<usize>,
     max_line_width: usize,
 ) -> String {
     if generics.is_empty() {
         String::new()
     } else {
         let ctx = EmissionContext {
-            indent_level: 0,
+            indent_level: indent_level.unwrap_or(0),
             max_line_width,
         };
         let generic_strings: Vec<String> = generics
@@ -41,7 +42,6 @@ pub fn format_generic_list_filter(
 /// Create a format_generic_list filter with the given max_line_width
 pub fn create_format_generic_list_filter(
     max_line_width: usize,
-) -> impl Fn(ViaDeserialize<Vec<Generic>>) -> String + Send + Sync + 'static {
-    move |generics| format_generic_list_filter(generics, max_line_width)
+) -> impl Fn(ViaDeserialize<Vec<Generic>>, Option<usize>) -> String + Send + Sync + 'static {
+    move |generics, indent_level| format_generic_list_filter(generics, indent_level, max_line_width)
 }
-

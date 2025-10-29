@@ -3,13 +3,13 @@
 // To make changes, modify the source code and regenerate this file.
 
 
-import BaseAPI from '../runtime/base_api';
+import { BaseAPI } from '../runtime/base_api';
 
-import Configuration from '../runtime/configuration';
+import { type Configuration } from '../runtime/configuration';
 
-import JSONApiResponse from '../runtime/classes/json_api_response';
+import { JSONApiResponse } from '../runtime/classes/json_api_response';
 
-import ResponseError from '../runtime/classes/response_error';
+import { ResponseError } from '../runtime/classes/response_error';
 
 
 

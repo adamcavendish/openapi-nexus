@@ -8,22 +8,22 @@ use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 /// Template filter for formatting ClassProperty as TypeScript string
 pub fn format_property_filter(
     property: ViaDeserialize<ClassProperty>,
+    indent_level: Option<usize>,
     max_line_width: usize,
 ) -> String {
     let ctx = EmissionContext {
-        indent_level: 0,
+        indent_level: indent_level.unwrap_or(0),
         max_line_width,
     };
     property
         .to_rcdoc_with_context(&ctx)
-        .map(|doc| format!("{}", doc.pretty(max_line_width)))
+        .map(|doc| doc.pretty(max_line_width).to_string())
         .unwrap_or_else(|_| "unknown".to_string())
 }
 
 /// Create a format_property filter with the given max_line_width
 pub fn create_format_property_filter(
     max_line_width: usize,
-) -> impl Fn(ViaDeserialize<ClassProperty>) -> String + Send + Sync + 'static {
-    move |property| format_property_filter(property, max_line_width)
+) -> impl Fn(ViaDeserialize<ClassProperty>, Option<usize>) -> String + Send + Sync + 'static {
+    move |property, indent_level| format_property_filter(property, indent_level, max_line_width)
 }
-

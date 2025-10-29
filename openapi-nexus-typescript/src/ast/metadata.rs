@@ -184,7 +184,7 @@ impl ToRcDocWithContext for DocComment {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let indent_str = "  ".repeat(context.indent_level);
+        let indent_str = " ".repeat(context.indent_level);
 
         let doc = if self.is_multiline {
             let lines: Vec<&str> = self.content.lines().collect();

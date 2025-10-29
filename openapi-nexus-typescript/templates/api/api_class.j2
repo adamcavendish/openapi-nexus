@@ -8,14 +8,14 @@
 export class {{ class.name }}{% if class.generics %}{{ class.generics | format_generic_list }}{% endif %}{% if class.extends %} extends {{ class.extends }}{% endif %}{% if class.implements %} implements {{ class.implements | join(", ") }}{% endif %} {
 {% for property in class.properties %}
   {% if property.documentation %}
-  {{ property.documentation | format_doc_comment | indent(2) }}
+  {{ property.documentation | format_doc_comment(2) }}
   {% endif %}
-  {{ property | format_property | indent(2) }};
+  {{ property | format_property(2) }};
 {% endfor %}
 
 {% for method in class.methods %}
   {% if method.documentation %}
-  {{ method.documentation | format_doc_comment | indent(2) }}
+  {{ method.documentation | format_doc_comment(2) }}
   {% endif %}
   {% if method.is_async %}async {% endif %}{{ method.name }}({% for param in method.parameters %}{{ param.name }}{% if param.type_expr %}: {{ param.type_expr | format_type_expr }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}){% if method.return_type %}: {{ method.return_type | format_type_expr }}{% endif %} {
     {% if method.body_template %}

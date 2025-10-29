@@ -492,3 +492,63 @@ impl ToRcDocWithContext for ClassMethod {
         Ok(RcDoc::intersperse(parts, RcDoc::space()))
     }
 }
+
+impl ToRcDocWithContext for ImportStatement {
+    type Error = EmitError;
+
+    fn to_rcdoc_with_context(
+        &self,
+        _context: &EmissionContext,
+    ) -> Result<RcDoc<'static, ()>, EmitError> {
+        // Side-effect only import
+        if self.imports.is_empty() {
+            return Ok(RcDoc::text(format!("import '{}';", self.module_path)));
+        }
+
+        let mut parts = vec![RcDoc::text("import")];
+
+        // Type-only import
+        if self.is_type_only {
+            parts.push(RcDoc::space());
+            parts.push(RcDoc::text("type"));
+        }
+
+        // Format specifiers
+        let specifier_docs: Vec<RcDoc<()>> = self
+            .imports
+            .iter()
+            .map(|spec| {
+                let mut spec_parts = Vec::new();
+                if spec.is_type && !self.is_type_only {
+                    spec_parts.push(RcDoc::text("type"));
+                    spec_parts.push(RcDoc::space());
+                }
+                spec_parts.push(RcDoc::text(spec.name.clone()));
+                if let Some(alias) = &spec.alias {
+                    spec_parts.push(RcDoc::space());
+                    spec_parts.push(RcDoc::text("as"));
+                    spec_parts.push(RcDoc::space());
+                    spec_parts.push(RcDoc::text(alias.clone()));
+                }
+                RcDoc::concat(spec_parts)
+            })
+            .collect();
+
+        parts.push(RcDoc::space());
+        parts.push(RcDoc::text("{"));
+        parts.push(RcDoc::space());
+        parts.push(RcDoc::intersperse(
+            specifier_docs,
+            RcDoc::text(",").append(RcDoc::space()),
+        ));
+        parts.push(RcDoc::space());
+        parts.push(RcDoc::text("}"));
+        parts.push(RcDoc::space());
+        parts.push(RcDoc::text("from"));
+        parts.push(RcDoc::space());
+        parts.push(RcDoc::text(format!("'{}'", self.module_path)));
+        parts.push(RcDoc::text(";"));
+
+        Ok(RcDoc::concat(parts))
+    }
+}

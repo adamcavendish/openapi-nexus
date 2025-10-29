@@ -11,8 +11,9 @@ use super::functions::{do_not_edit, get_method_body_template_function};
 use crate::ast::{ClassDefinition, TypeScriptFile};
 use crate::emission::error::EmitError;
 use crate::templating::filters::{
-    create_format_generic_list_filter, create_format_property_filter,
-    create_format_type_expr_filter, format_doc_comment_filter, format_import_filter, indent_filter,
+    create_format_doc_comment_filter, create_format_generic_list_filter,
+    create_format_import_filter, create_format_property_filter, create_format_type_expr_filter,
+    indent_filter,
 };
 
 /// Template-based TypeScript code emitter
@@ -101,15 +102,18 @@ impl Templating {
         minijinja_embed::load_templates!(&mut env);
 
         // Add custom filters that don't need configuration
-        env.add_filter("format_doc_comment", format_doc_comment_filter);
-        env.add_filter("format_import", format_import_filter);
         env.add_filter("indent", indent_filter);
 
         // Add filters that need max_line_width using factory functions
         env.add_filter(
+            "format_doc_comment",
+            create_format_doc_comment_filter(max_line_width),
+        );
+        env.add_filter(
             "format_generic_list",
             create_format_generic_list_filter(max_line_width),
         );
+        env.add_filter("format_import", create_format_import_filter(max_line_width));
         env.add_filter(
             "format_property",
             create_format_property_filter(max_line_width),
