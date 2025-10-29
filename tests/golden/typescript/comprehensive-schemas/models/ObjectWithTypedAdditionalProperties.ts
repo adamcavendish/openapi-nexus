@@ -2,13 +2,8 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Object with typed additional properties
- */
+/** Object with typed additional properties */
 export interface ObjectWithTypedAdditionalProperties {
 name: string,
-/**
- * Additional properties
- */
 [key: string]: string | number
 }

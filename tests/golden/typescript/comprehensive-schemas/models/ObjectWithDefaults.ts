@@ -2,20 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Object with default values
- */
+/** Object with default values */
 export interface ObjectWithDefaults {
-/**
- * Whether the person is currently active
- */
 active?: boolean,
-/**
- * Age in years
- */
 age?: number,
-/**
- * Full name of the person
- */
 name?: string
 }

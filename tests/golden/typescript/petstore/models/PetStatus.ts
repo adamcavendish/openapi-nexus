@@ -2,11 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Pet status enum
- */
+/** Pet status enum */
 export enum PetStatus {
-Available = "available",
-Pending = "pending",
-Sold = "sold"
+Available = available,
+Pending = pending,
+Sold = sold
 }

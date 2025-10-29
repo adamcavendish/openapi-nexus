@@ -2,29 +2,12 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Order model
- */
+/** Order model */
 export interface Order {
-/**
- * Complete flag
- */
 complete?: boolean | null,
-/**
- * Order ID
- */
 id?: number | null,
-/**
- * Pet ID
- */
 pet_id?: number | null,
-/**
- * Quantity
- */
 quantity?: number | null,
-/**
- * Ship date
- */
 ship_date?: string | null,
 status?: null | "approved" | "delivered" | "placed"
 }

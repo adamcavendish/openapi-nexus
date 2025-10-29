@@ -1,0 +1,32 @@
+{% for import in imports %}
+{{ import | format_import }}
+{% endfor %}
+
+{% if class.documentation %}
+{{ class.documentation | format_doc_comment }}
+{% endif %}
+export class {{ class.name }}{% if class.generics %}{{ class.generics | format_generic_list }}{% endif %}{% if class.extends %} extends {{ class.extends }}{% endif %}{% if class.implements %} implements {{ class.implements | join(", ") }}{% endif %} {
+{% for property in class.properties %}
+  {% if property.documentation %}
+  {{ property.documentation | format_doc_comment | indent(2) }}
+  {% endif %}
+  {{ property.to_typescript_string() | indent(2) }};
+{% endfor %}
+
+{% for method in class.methods %}
+  {% if method.documentation %}
+  {{ method.documentation | format_doc_comment | indent(2) }}
+  {% endif %}
+  {% if method.is_async %}async {% endif %}{{ method.name }}({% for param in method.parameters %}{{ param.name }}{% if param.type_expr %}: {{ param.type_expr | format_type_expr }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}){% if method.return_type %}: {{ method.return_type | format_type_expr }}{% endif %} {
+    {% if method.body_template %}
+    {% include "api/method_bodies/" + method.body_template + ".j2" with context %}
+    {% else %}
+    // TODO: Implement method body
+    throw new Error('Not implemented');
+    {% endif %}
+  }
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+}

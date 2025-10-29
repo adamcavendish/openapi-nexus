@@ -1,11 +1,10 @@
 //! Code emission and formatting for TypeScript
 
-pub mod body_emitter;
-pub mod dependency_analyzer;
-pub mod emitter;
+pub mod ts_dependency_analyzer;
+pub mod ts_language_emitter;
 pub mod error;
-pub mod file_category;
-pub mod type_expression_emitter;
+pub mod ts_file_category;
+pub mod ts_type_emitter;
 
-pub use emitter::TypeScriptEmitter;
-pub use file_category::TypeScriptFileCategory;
+pub use ts_language_emitter::TsLanguageEmitter;
+pub use ts_file_category::TsFileCategory;

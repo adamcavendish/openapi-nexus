@@ -2,7 +2,5 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Basic integer type
- */
+/** Basic integer type */
 export type IntegerType = number

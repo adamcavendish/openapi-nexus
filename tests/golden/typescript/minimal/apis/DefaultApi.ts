@@ -2,66 +2,86 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api'
-import { Configuration } from '../runtime/config'
-import type { JSONApiResponse<any> } from './json-api-response-any'
 
-/**
- * API client for default operations
- */
+import BaseAPI from '../runtime/base_api';
+
+import Configuration from '../runtime/configuration';
+
+import JSONApiResponse from '../runtime/classes/json_api_response';
+
+import ResponseError from '../runtime/classes/response_error';
+
+
+
+/** API client for default operations */
+
 export class DefaultApi extends BaseAPI {
-/**
- * Initialize the API client
- */
-constructor(configuration?: Configuration) {
-  super(configuration);
-}
-async getTest(): Promise<JSONApiResponse<any>> {
-    // Build URL with path parameters
-    const url = `${this.configuration?.basePath || ''}/test`;
+
+
+
   
-    // Build query parameters
-    const queryParams = new URLSearchParams();
+    /** Initialize the API client */
   
+  constructor(configuration: Configuration) {
+    
+    this.configuration = configuration;
+    
+  }
+
+
+
+
   
-    // Build headers
-    const headers: Record<string, string> = {
-      ...this.configuration?.headers,
-    };
-  
-    // Add header parameters
-  
-  
-    // Add authentication
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
+  async getTest(): Promise<JSONApiResponse<any>> {
+    
+      // Build URL with path parameters
+  const url = `${this.configuration?.basePath || ''}`;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+
+
+  // Build headers
+  const headers: Record<string, string> = {
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Make request and return response with error handling
+  return this.request({
+    url: finalUrl,
+    init: {
+      method: 'GET',
+      headers,
+    },
+  }).then(response => {
+    if (response.ok) {
+      return response.json().then(data => new JSONApiResponse(data, response));
+    } else {
+      throw new ResponseError(response, 'Request failed');
     }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-    }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
-    }
-  
-    // Build final URL
-    const finalUrl = queryParams.toString()
-      ? `${url}?${queryParams.toString()}`
-      : url;
-  
-    // Make request and return response with error handling
-    return this.request({
-      url: finalUrl,
-      init: {
-        method: 'GET',
-        headers,
-      },
-    }).then(response => {
-      if (response.ok) {
-        return response.json().then(data => new JSONApiResponse(data, response));
-      } else {
-        throw new ResponseError(response, 'Request failed');
-      }
-    });
-}
+  });
+    
+  }
+
+
 }

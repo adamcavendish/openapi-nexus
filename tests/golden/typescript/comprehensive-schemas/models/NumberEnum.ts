@@ -2,11 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Enum of number values
- */
+/** Enum of number values */
 export enum NumberEnum {
-_1 = "1",
-_2 = "2",
-_3 = "3"
+_1 = 1,
+_2 = 2,
+_3 = 3
 }

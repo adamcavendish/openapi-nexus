@@ -32,7 +32,7 @@ pub enum Template {
     /// GET method body
     ApiMethodGet(ApiMethodData),
     /// POST/PUT/PATCH method body
-    ApiMethodPostPutPatch(ApiMethodData),
+    ApiMethodPostPut(ApiMethodData),
     /// DELETE method body
     ApiMethodDelete(ApiMethodData),
     /// Default method body
@@ -42,30 +42,30 @@ pub enum Template {
 /// Template file path mapping
 const TEMPLATE_PATHS: &[(&str, &str)] = &[
     ("readme", "README.md.j2"),
-    ("base_api_request", "method_bodies/base_api_request.j2"),
+    ("base_api_request", "api/method_bodies/base_api_request.j2"),
     (
         "constructor_base_api",
-        "method_bodies/constructor_base_api.j2",
+        "api/method_bodies/constructor_base_api.j2",
     ),
     (
         "constructor_required_error",
-        "method_bodies/constructor_required_error.j2",
+        "api/method_bodies/constructor_required_error.j2",
     ),
     (
         "constructor_with_extends",
-        "method_bodies/constructor_with_extends.j2",
+        "api/method_bodies/constructor_with_extends.j2",
     ),
     (
         "constructor_default",
-        "method_bodies/constructor_default.j2",
+        "api/method_bodies/constructor_default.j2",
     ),
-    ("api_method_get", "method_bodies/api_method_get.j2"),
+    ("api_method_get", "api/method_bodies/api_method_get.j2"),
     (
-        "api_method_post_put_patch",
-        "method_bodies/api_method_post_put.j2",
+        "api_method_post_put",
+        "api/method_bodies/api_method_post_put.j2",
     ),
-    ("api_method_delete", "method_bodies/api_method_delete.j2"),
-    ("default_method", "method_bodies/default.j2"),
+    ("api_method_delete", "api/method_bodies/api_method_delete.j2"),
+    ("default_method", "api/method_bodies/default.j2"),
 ];
 
 /// Template-based code generator for TypeScript
@@ -111,7 +111,7 @@ impl TemplateGenerator {
         match template {
             Template::Readme(data) => tmpl.render(data),
             Template::ApiMethodGet(data) => tmpl.render(data),
-            Template::ApiMethodPostPutPatch(data) => tmpl.render(data),
+            Template::ApiMethodPostPut(data) => tmpl.render(data),
             Template::ApiMethodDelete(data) => tmpl.render(data),
             _ => tmpl.render(serde_json::Value::Null),
         }
@@ -192,7 +192,7 @@ impl fmt::Display for Template {
             Template::ConstructorWithExtends => write!(f, "constructor_with_extends"),
             Template::ConstructorDefault => write!(f, "constructor_default"),
             Template::ApiMethodGet(_) => write!(f, "api_method_get"),
-            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put_patch"),
+            Template::ApiMethodPostPut(_) => write!(f, "api_method_post_put"),
             Template::ApiMethodDelete(_) => write!(f, "api_method_delete"),
             Template::DefaultMethod => write!(f, "default_method"),
         }
@@ -244,8 +244,15 @@ impl Default for TemplateGenerator {
 mod tests {
     use super::*;
 
+    fn init_test_logging() {
+        let _ = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::WARN)
+            .try_init();
+    }
+
     #[test]
     fn test_new_empty() {
+        init_test_logging();
         let _t = TemplateGenerator::new_empty();
         // Test that the generator can be created successfully with no templates
         assert!(true);
@@ -253,6 +260,7 @@ mod tests {
 
     #[test]
     fn test_template_display() {
+        init_test_logging();
         let readme_data = ReadmeData {
             package_name: "test-package".to_string(),
             title: "Test Package".to_string(),
@@ -298,7 +306,7 @@ mod tests {
             "api_method_get"
         );
         assert_eq!(
-            Template::ApiMethodPostPutPatch(ApiMethodData {
+            Template::ApiMethodPostPut(ApiMethodData {
                 method_name: "test".to_string(),
                 http_method: "POST".to_string(),
                 path: "/test".to_string(),
@@ -311,7 +319,7 @@ mod tests {
                 has_error_handling: false,
             })
             .to_string(),
-            "api_method_post_put_patch"
+            "api_method_post_put"
         );
         assert_eq!(
             Template::ApiMethodDelete(ApiMethodData {
@@ -334,6 +342,7 @@ mod tests {
 
     #[test]
     fn test_template_generator_creation() {
+        init_test_logging();
         let _generator = TemplateGenerator::new();
         // Test that the generator can be created successfully
         assert!(true);

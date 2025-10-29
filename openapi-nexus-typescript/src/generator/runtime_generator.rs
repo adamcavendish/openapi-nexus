@@ -4,12 +4,12 @@ use crate::ast::{TsNode, TypeExpression};
 use crate::core::GeneratorError;
 use crate::emission::TypeScriptFileCategory;
 use crate::generator::file_generator::GeneratedFile;
-use crate::generator::runtime_component_builder::RuntimeComponentBuilder;
+// use crate::generator::runtime_component_builder::RuntimeComponentBuilder;  // Disabled
 use crate::generator::template_generator::TemplateGenerator;
 
 /// Optimized runtime module generator using hybrid template + AST approach
 pub struct RuntimeGenerator {
-    component_builder: RuntimeComponentBuilder,
+    // component_builder: RuntimeComponentBuilder,  // Disabled
 }
 
 impl Default for RuntimeGenerator {

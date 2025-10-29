@@ -4,7 +4,7 @@ use heck::ToKebabCase as _;
 use utoipa::openapi::OpenApi;
 
 use crate::config::{PackageConfig, TypeScriptModule};
-use crate::emission::TypeScriptFileCategory;
+use crate::emission::TsFileCategory;
 use crate::generator::file_generator::GeneratedFile;
 
 /// Generator for npm package files
@@ -59,7 +59,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "package.json".to_string(),
             content,
-            file_category: TypeScriptFileCategory::PackageJson,
+            file_category: TsFileCategory::PackageJson,
         }
     }
 
@@ -94,7 +94,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "tsconfig.json".to_string(),
             content,
-            file_category: TypeScriptFileCategory::TsConfig,
+            file_category: TsFileCategory::TsConfig,
         }
     }
 
@@ -114,7 +114,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "tsconfig.esm.json".to_string(),
             content,
-            file_category: TypeScriptFileCategory::TsConfigEsm,
+            file_category: TsFileCategory::TsConfigEsm,
         }
     }
 
@@ -167,7 +167,7 @@ impl PackageFilesGenerator {
         GeneratedFile {
             filename: "README.md".to_string(),
             content,
-            file_category: TypeScriptFileCategory::Readme,
+            file_category: TsFileCategory::Readme,
         }
     }
 }

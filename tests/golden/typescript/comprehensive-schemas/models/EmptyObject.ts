@@ -2,7 +2,5 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Object without properties
- */
+/** Object without properties */
 export type EmptyObject = any

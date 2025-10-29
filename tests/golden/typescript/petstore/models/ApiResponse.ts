@@ -2,20 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * API response model
- */
+/** API response model */
 export interface ApiResponse {
-/**
- * Response code
- */
 code?: number | null,
-/**
- * Response message
- */
 message?: string | null,
-/**
- * Response type
- */
 type?: string | null
 }

@@ -2,12 +2,7 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Object allowing any additional properties
- */
+/** Object allowing any additional properties */
 export interface ObjectWithAdditionalPropertiesTrue {
-name: string, /**
- * Additional properties
- */
-[key: string]: any
+name: string, [key: string]: any
 }

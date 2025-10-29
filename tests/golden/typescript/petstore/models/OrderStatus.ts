@@ -2,11 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Order status enum
- */
+/** Order status enum */
 export enum OrderStatus {
-Placed = "placed",
-Approved = "approved",
-Delivered = "delivered"
+Placed = placed,
+Approved = approved,
+Delivered = delivered
 }

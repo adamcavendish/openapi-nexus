@@ -2,11 +2,9 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Enum of string values
- */
+/** Enum of string values */
 export enum StringEnum {
-Active = "active",
-Inactive = "inactive",
-Pending = "pending"
+Active = active,
+Inactive = inactive,
+Pending = pending
 }

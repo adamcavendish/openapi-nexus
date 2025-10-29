@@ -2,232 +2,266 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-import { BaseAPI } from '../runtime/api'
-import { Configuration } from '../runtime/config'
-import type { Order } from '../models/Order'
-import type { JSONApiResponse<any> } from './json-api-response-any'
-import type { JSONApiResponse<Order> } from './json-api-response-order'
-import type { JSONApiResponse<string> } from './json-api-response-string'
 
-/**
- * API client for store operations
- */
+import BaseAPI from '../runtime/base_api';
+
+import Configuration from '../runtime/configuration';
+
+import JSONApiResponse from '../runtime/classes/json_api_response';
+
+import ResponseError from '../runtime/classes/response_error';
+
+
+
+/** API client for store operations */
+
 export class StoreApi extends BaseAPI {
-/**
- * Initialize the API client
- */
-constructor(configuration?: Configuration) {
-  super(configuration);
-}
-/**
- * Returns pet inventories by status
- */
-async getInventory(): Promise<JSONApiResponse<string>> {
-    // Build URL with path parameters
-    const url = `${this.configuration?.basePath || ''}/store/inventory`;
+
+
+
   
-    // Build query parameters
-    const queryParams = new URLSearchParams();
+    /** Initialize the API client */
   
+  constructor(configuration: Configuration) {
+    
+    this.configuration = configuration;
+    
+  }
+
+
+
+
   
-    // Build headers
-    const headers: Record<string, string> = {
-      ...this.configuration?.headers,
-    };
+    /** Returns pet inventories by status */
   
-    // Add header parameters
-  
-  
-    // Add authentication
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
+  async getInventory(): Promise<JSONApiResponse<string>> {
+    
+      // Build URL with path parameters
+  const url = `${this.configuration?.basePath || ''}`;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+
+
+  // Build headers
+  const headers: Record<string, string> = {
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Make request and return response with error handling
+  return this.request({
+    url: finalUrl,
+    init: {
+      method: 'GET',
+      headers,
+    },
+  }).then(response => {
+    if (response.ok) {
+      return response.json().then(data => new JSONApiResponse(data, response));
+    } else {
+      throw new ResponseError(response, 'Request failed');
     }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  });
+    
+  }
+
+
+
+
+  
+    /** Place an order for a pet */
+  
+  async placeOrder(body: Order): Promise<JSONApiResponse<Order>> {
+    
+      // Build URL with path parameters
+  const url = `${this.configuration?.basePath || ''}`;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+
+
+  // Build headers
+  const headers: Record<string, string> = {
+    
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Prepare request body
+
+  const body = undefined;
+
+
+  // Make request and return response with error handling
+  return this.request({
+    url: finalUrl,
+    init: {
+      method: '',
+      headers,
+      body,
+    },
+  }).then(response => {
+    if (response.ok) {
+      return response.json().then(data => new JSONApiResponse(data, response));
+    } else {
+      throw new ResponseError(response, 'Request failed');
     }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
+  });
+    
+  }
+
+
+
+
+  
+    /** Find purchase order by ID */
+  
+  async getOrderById(orderId: string): Promise<JSONApiResponse<Order>> {
+    
+      // Build URL with path parameters
+  const url = `${this.configuration?.basePath || ''}`;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+
+
+  // Build headers
+  const headers: Record<string, string> = {
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Make request and return response with error handling
+  return this.request({
+    url: finalUrl,
+    init: {
+      method: 'GET',
+      headers,
+    },
+  }).then(response => {
+    if (response.ok) {
+      return response.json().then(data => new JSONApiResponse(data, response));
+    } else {
+      throw new ResponseError(response, 'Request failed');
     }
+  });
+    
+  }
+
+
+
+
   
-    // Build final URL
-    const finalUrl = queryParams.toString()
-      ? `${url}?${queryParams.toString()}`
-      : url;
+    /** Delete purchase order by ID */
   
-    // Make request and return response with error handling
-    return this.request({
-      url: finalUrl,
-      init: {
-        method: 'GET',
-        headers,
-      },
-    }).then(response => {
-      if (response.ok) {
-        return response.json().then(data => new JSONApiResponse(data, response));
-      } else {
-        throw new ResponseError(response, 'Request failed');
-      }
-    });
-}
-/**
- * Place an order for a pet
- */
-async placeOrder(body: Order): Promise<JSONApiResponse<Order>> {
-    // Build URL with path parameters
-    const url = `${this.configuration?.basePath || ''}/store/order`;
-  
-    // Build query parameters
-    const queryParams = new URLSearchParams();
-  
-  
-    // Build headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...this.configuration?.headers,
-    };
-  
-    // Add header parameters
-  
-  
-    // Add authentication
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
+  async deleteOrder(orderId: string): Promise<JSONApiResponse<any>> {
+    
+      // Build URL with path parameters
+  const url = `${this.configuration?.basePath || ''}`;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams();
+
+
+  // Build headers
+  const headers: Record<string, string> = {
+    ...this.configuration?.headers,
+  };
+
+  // Add header parameters
+
+
+  // Add authentication
+  if (this.configuration?.apiKey) {
+    headers['X-API-Key'] = this.configuration.apiKey;
+  }
+  if (this.configuration?.accessToken) {
+    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
+  }
+  if (this.configuration?.username && this.configuration?.password) {
+    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  // Build final URL
+  const finalUrl = queryParams.toString() 
+    ? `${url}?${queryParams.toString()}`
+    : url;
+
+  // Make request and return response with error handling
+  return this.request({
+    url: finalUrl,
+    init: {
+      method: 'DELETE',
+      headers,
+    },
+  }).then(response => {
+    if (response.ok) {
+      return new VoidApiResponse(response);
+    } else {
+      throw new ResponseError(response, 'Request failed');
     }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-    }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
-    }
-  
-    // Build final URL
-    const finalUrl = queryParams.toString()
-      ? `${url}?${queryParams.toString()}`
-      : url;
-  
-    // Prepare request body
-  
-    const body = body ? JSON.stringify(body) : undefined;
-  
-  
-    // Make request and return response with error handling
-    return this.request({
-      url: finalUrl,
-      init: {
-        method: 'POST',
-        headers,
-        body,
-      },
-    }).then(response => {
-      if (response.ok) {
-        return response.json().then(data => new JSONApiResponse(data, response));
-      } else {
-        throw new ResponseError(response, 'Request failed');
-      }
-    });
-}
-/**
- * Find purchase order by ID
- */
-async getOrderById(orderId: string): Promise<JSONApiResponse<Order>> {
-    // Build URL with path parameters
-    const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
-  
-    // Build query parameters
-    const queryParams = new URLSearchParams();
-  
-  
-    // Build headers
-    const headers: Record<string, string> = {
-      ...this.configuration?.headers,
-    };
-  
-    // Add header parameters
-  
-  
-    // Add authentication
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
-    }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-    }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
-    }
-  
-    // Build final URL
-    const finalUrl = queryParams.toString()
-      ? `${url}?${queryParams.toString()}`
-      : url;
-  
-    // Make request and return response with error handling
-    return this.request({
-      url: finalUrl,
-      init: {
-        method: 'GET',
-        headers,
-      },
-    }).then(response => {
-      if (response.ok) {
-        return response.json().then(data => new JSONApiResponse(data, response));
-      } else {
-        throw new ResponseError(response, 'Request failed');
-      }
-    });
-}
-/**
- * Delete purchase order by ID
- */
-async deleteOrder(orderId: string): Promise<JSONApiResponse<any>> {
-    // Build URL with path parameters
-    const url = `${this.configuration?.basePath || ''}/store/order/${orderId}`;
-  
-    // Build query parameters
-    const queryParams = new URLSearchParams();
-  
-  
-    // Build headers
-    const headers: Record<string, string> = {
-      ...this.configuration?.headers,
-    };
-  
-    // Add header parameters
-  
-  
-    // Add authentication
-    if (this.configuration?.apiKey) {
-      headers['X-API-Key'] = this.configuration.apiKey;
-    }
-    if (this.configuration?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-    }
-    if (this.configuration?.username && this.configuration?.password) {
-      const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-      headers['Authorization'] = `Basic ${credentials}`;
-    }
-  
-    // Build final URL
-    const finalUrl = queryParams.toString()
-      ? `${url}?${queryParams.toString()}`
-      : url;
-  
-    // Make request and return response with error handling
-    return this.request({
-      url: finalUrl,
-      init: {
-        method: 'DELETE',
-        headers,
-      },
-    }).then(response => {
-      if (response.ok) {
-        return new VoidApiResponse(response);
-      } else {
-        throw new ResponseError(response, 'Request failed');
-      }
-    });
-}
+  });
+    
+  }
+
+
 }

@@ -2,15 +2,7 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Object with nested object property
- */
+/** Object with nested object property */
 export interface NestedObject {
-/**
- * Additional metadata about the object
- */
-metadata?: { created: string }, /**
- * User information object
- */
-user?: { id: number; name: string }
+metadata?: { created: string }, user?: { id: number; name: string }
 }

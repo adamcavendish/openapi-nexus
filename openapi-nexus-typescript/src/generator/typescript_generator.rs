@@ -7,7 +7,7 @@ use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
 use super::api_class_generator::ApiClassGenerator;
-use super::runtime_generator::RuntimeGenerator;
+// use super::runtime_generator::RuntimeGenerator;  // Disabled
 use super::schema_generator::SchemaGenerator;
 use crate::config::{FileConfig, GeneratorConfig};
 use crate::core::GeneratorError;
@@ -21,7 +21,7 @@ use openapi_nexus_core::traits::file_writer::{FileCategory, FileInfo, FileWriter
 pub struct TypeScriptGenerator {
     schema_generator: SchemaGenerator,
     api_class_generator: ApiClassGenerator,
-    runtime_generator: RuntimeGenerator,
+    // runtime_generator: RuntimeGenerator,  // Disabled
     file_generator: TypeScriptFileGenerator,
 }
 
@@ -31,7 +31,7 @@ impl TypeScriptGenerator {
         Self {
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
-            runtime_generator: RuntimeGenerator::new(),
+            // runtime_generator: RuntimeGenerator::new(),  // Disabled
             file_generator: TypeScriptFileGenerator::new(FileConfig::default()),
         }
     }
@@ -41,7 +41,7 @@ impl TypeScriptGenerator {
         Self {
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
-            runtime_generator: RuntimeGenerator::new(),
+            // runtime_generator: RuntimeGenerator::new(),  // Disabled
             file_generator: TypeScriptFileGenerator::with_package_config(
                 config.file_config.clone(),
                 config.package_config.clone(),
@@ -106,7 +106,8 @@ impl TypeScriptGenerator {
         }
 
         // Generate runtime files
-        let runtime_files = self.runtime_generator.generate_runtime_files()?;
+        // let runtime_files = self.runtime_generator.generate_runtime_files()?;  // Disabled
+        let runtime_files: Vec<crate::generator::file_generator::GeneratedFile> = Vec::new();  // Placeholder
         for file in runtime_files {
             // Convert GeneratedFile to FileInfo
             let file_info = FileInfo::new(

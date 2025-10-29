@@ -5,7 +5,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{FunctionSignature, PrimitiveType};
+use crate::ast::PrimitiveType;
 
 /// TypeScript type expression
 #[derive(Debug, Clone, Ord, PartialOrd, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,7 +17,10 @@ pub enum TypeExpression {
     Object(BTreeMap<String, TypeExpression>),
     Reference(String),
     Generic(String),
-    Function(Box<FunctionSignature>),
+    Function {
+        parameters: Vec<String>,
+        return_type: Option<Box<TypeExpression>>,
+    },
     Literal(String),
     IndexSignature(String, Box<TypeExpression>),
     Tuple(Vec<TypeExpression>),
@@ -47,29 +50,13 @@ impl fmt::Display for TypeExpression {
                 let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
                 write!(f, "{}", type_strings.join(" & "))
             }
-            TypeExpression::Function(func) => {
-                let params: Vec<String> = func
-                    .parameters
-                    .iter()
-                    .map(|param| {
-                        let param_type = if let Some(type_expr) = &param.type_expr {
-                            type_expr.to_string()
-                        } else {
-                            "any".to_string()
-                        };
-                        if param.optional {
-                            format!("{}?: {}", param.name, param_type)
-                        } else {
-                            format!("{}: {}", param.name, param_type)
-                        }
-                    })
-                    .collect();
-                let return_type = if let Some(ret_type) = &func.return_type {
+            TypeExpression::Function { parameters, return_type } => {
+                let return_type_str = if let Some(ret_type) = return_type {
                     ret_type.to_string()
                 } else {
                     "void".to_string()
                 };
-                write!(f, "({}) => {}", params.join(", "), return_type)
+                write!(f, "({}) => {}", parameters.join(", "), return_type_str)
             }
             TypeExpression::Object(properties) => {
                 let prop_strings: Vec<String> = properties
@@ -88,5 +75,12 @@ impl fmt::Display for TypeExpression {
                 write!(f, "[{}: {}]", key, value_type)
             }
         }
+    }
+}
+
+impl TypeExpression {
+    /// Convert to TypeScript string representation
+    pub fn to_typescript_string(&self) -> String {
+        self.to_string()
     }
 }

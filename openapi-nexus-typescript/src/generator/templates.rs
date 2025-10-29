@@ -27,23 +27,30 @@ impl Templates {
 mod tests {
     use super::*;
 
+    fn init_test_logging() {
+        let _ = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::WARN)
+            .try_init();
+    }
+
     #[test]
     fn test_templates_embedded() {
+        init_test_logging();
         let template_names = Templates::template_names();
         assert!(!template_names.is_empty(), "No templates found");
 
         // Check that we have the expected templates
         let expected_templates = [
             "README.md.j2",
-            "method_bodies/base_api_request.j2",
-            "method_bodies/constructor_base_api.j2",
-            "method_bodies/constructor_required_error.j2",
-            "method_bodies/constructor_with_extends.j2",
-            "method_bodies/constructor_default.j2",
-            "method_bodies/api_method_get.j2",
-            "method_bodies/api_method_post_put.j2",
-            "method_bodies/api_method_delete.j2",
-            "method_bodies/default.j2",
+            "api/method_bodies/base_api_request.j2",
+            "api/method_bodies/constructor_base_api.j2",
+            "api/method_bodies/constructor_required_error.j2",
+            "api/method_bodies/constructor_with_extends.j2",
+            "api/method_bodies/constructor_default.j2",
+            "api/method_bodies/api_method_get.j2",
+            "api/method_bodies/api_method_post_put.j2",
+            "api/method_bodies/api_method_delete.j2",
+            "api/method_bodies/default.j2",
         ];
 
         for expected in &expected_templates {
@@ -57,6 +64,7 @@ mod tests {
 
     #[test]
     fn test_get_template_content() {
+        init_test_logging();
         let content = Templates::get_template_str("README.md.j2");
         assert!(content.is_some(), "README.md.j2 template not found");
 

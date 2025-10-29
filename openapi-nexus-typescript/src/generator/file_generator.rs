@@ -7,9 +7,10 @@ use heck::{ToKebabCase as _, ToLowerCamelCase as _, ToPascalCase as _, ToSnakeCa
 use utoipa::openapi::OpenApi;
 
 use crate::ast::TsNode;
+use crate::ast_trait::EmissionContext;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
-use crate::emission::emitter::TypeScriptEmitter;
-use crate::emission::file_category::TypeScriptFileCategory;
+use crate::emission::ts_language_emitter::TsLanguageEmitter;
+use crate::emission::ts_file_category::TsFileCategory;
 use crate::generator::package_files_generator::PackageFilesGenerator;
 
 /// Error type for file generation
@@ -40,7 +41,7 @@ impl std::error::Error for FileGeneratorError {}
 
 /// File generator for TypeScript code
 pub struct TypeScriptFileGenerator {
-    emitter: TypeScriptEmitter,
+    emitter: TsLanguageEmitter,
     config: FileConfig,
     package_config: PackageConfig,
 }
@@ -49,7 +50,7 @@ impl TypeScriptFileGenerator {
     /// Create a new file generator
     pub fn new(config: FileConfig) -> Self {
         Self {
-            emitter: TypeScriptEmitter::new(),
+            emitter: TsLanguageEmitter::new(),
             config,
             package_config: PackageConfig::default(),
         }
@@ -58,7 +59,7 @@ impl TypeScriptFileGenerator {
     /// Create a new file generator with package configuration
     pub fn with_package_config(config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
-            emitter: TypeScriptEmitter::new(),
+            emitter: TsLanguageEmitter::new(),
             config,
             package_config,
         }
@@ -113,14 +114,14 @@ impl TypeScriptFileGenerator {
         }
 
         // Create schema-to-file mapping for import resolution
-        let schema_to_file_map = self.create_schema_to_file_map(&api_classes, &other_schemas);
+        let _schema_to_file_map = self.create_schema_to_file_map(&api_classes, &other_schemas);
 
         // Generate models files (no directory prefix - handled by core)
         for (name, node) in &other_schemas {
             let filename = self.generate_filename(name);
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &filename, &schema_to_file_map)
+                .emit_with_context(slice::from_ref(node), &EmissionContext::new())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
@@ -129,7 +130,7 @@ impl TypeScriptFileGenerator {
             files.push(GeneratedFile {
                 filename,
                 content,
-                file_category: TypeScriptFileCategory::Models,
+                file_category: TsFileCategory::Models,
             });
         }
 
@@ -140,7 +141,7 @@ impl TypeScriptFileGenerator {
             // Use the new emit_with_context method for automatic import generation
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &filename, &schema_to_file_map)
+                .emit_with_context(slice::from_ref(node), &EmissionContext::new())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
@@ -149,7 +150,7 @@ impl TypeScriptFileGenerator {
             files.push(GeneratedFile {
                 filename,
                 content,
-                file_category: TypeScriptFileCategory::Api,
+                file_category: TsFileCategory::Api,
             });
         }
 
@@ -201,7 +202,7 @@ impl TypeScriptFileGenerator {
         Ok(GeneratedFile {
             filename: "index.ts".to_string(),
             content,
-            file_category: TypeScriptFileCategory::Index,
+            file_category: TsFileCategory::Index,
         })
     }
 
@@ -246,5 +247,5 @@ impl TypeScriptFileGenerator {
 pub struct GeneratedFile {
     pub filename: String,
     pub content: String,
-    pub file_category: TypeScriptFileCategory,
+    pub file_category: TsFileCategory,
 }

@@ -2,7 +2,5 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Number with maximum value
- */
+/** Number with maximum value */
 export type NumberWithMaximum = number

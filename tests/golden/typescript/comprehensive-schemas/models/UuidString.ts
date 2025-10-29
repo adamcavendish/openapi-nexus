@@ -2,7 +2,5 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * String with UUID format
- */
+/** String with UUID format */
 export type UuidString = string

@@ -12,6 +12,7 @@ use std::process;
 
 use similar::TextDiff;
 use tracing::{error, info};
+use tracing_test::traced_test;
 use utoipa::openapi::OpenApi;
 
 use openapi_nexus_core::traits::file_writer::FileWriter;
@@ -39,14 +40,16 @@ fn get_golden_dir() -> &'static Path {
 }
 
 /// Generate TypeScript files from an OpenAPI specification
-fn generate_typescript_files(spec_content: &str) -> Result<HashMap<String, String>, Box<dyn std::error::Error + Send + Sync>> {
+fn generate_typescript_files(
+    spec_content: &str,
+) -> Result<HashMap<String, String>, Box<dyn std::error::Error + Send + Sync>> {
     let openapi: OpenApi = serde_norway::from_str(spec_content)?;
     let generator = TypeScriptGenerator::new();
     let generated_files = match generator.generate_files(&openapi) {
         Ok(files) => {
             info!("Successfully generated {} files", files.len());
             files
-        },
+        }
         Err(e) => {
             error!("Error generating files: {}", e);
             return Err(Box::new(e));
@@ -72,7 +75,10 @@ fn generate_typescript_files(spec_content: &str) -> Result<HashMap<String, Strin
         error!("Temp directory: {}", temp_dir.display());
         error!("Generated files count: {}", generated_files.len());
         for (i, file) in generated_files.iter().enumerate() {
-            error!("  File {}: {} (category: {:?})", i, file.filename, file.category);
+            error!(
+                "  File {}: {} (category: {:?})",
+                i, file.filename, file.category
+            );
         }
         return Err(e);
     }
@@ -110,12 +116,18 @@ fn read_directory_recursive(
 }
 
 /// Update or compare golden files for a given spec
-fn test_golden_files(spec_name: &str, fixture_path: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+fn test_golden_files(
+    spec_name: &str,
+    fixture_path: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let spec_content = read_fixture(fixture_path);
     let generated = match generate_typescript_files(&spec_content) {
         Ok(files) => files,
         Err(e) => {
-            error!("Failed to generate TypeScript files for {}: {}", spec_name, e);
+            error!(
+                "Failed to generate TypeScript files for {}: {}",
+                spec_name, e
+            );
             return Err(e);
         }
     };
@@ -126,13 +138,19 @@ fn test_golden_files(spec_name: &str, fixture_path: &str) -> Result<(), Box<dyn 
     } else {
         compare_with_golden_files(spec_name, &generated)?;
     }
-    
+
     Ok(())
 }
 
 /// Update golden files with generated content
-fn update_golden_files(spec_name: &str, generated: &HashMap<String, String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    info!("UPDATE_GOLDEN mode: updating golden files for {}", spec_name);
+fn update_golden_files(
+    spec_name: &str,
+    generated: &HashMap<String, String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    info!(
+        "UPDATE_GOLDEN mode: updating golden files for {}",
+        spec_name
+    );
     let golden_dir = get_golden_dir().join(spec_name);
 
     // Clean up existing files before updating
@@ -159,7 +177,10 @@ fn update_golden_files(spec_name: &str, generated: &HashMap<String, String>) -> 
 }
 
 /// Compare generated files with golden files and report differences
-fn compare_with_golden_files(spec_name: &str, generated: &HashMap<String, String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+fn compare_with_golden_files(
+    spec_name: &str,
+    generated: &HashMap<String, String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let golden_dir = get_golden_dir().join(spec_name);
 
     // Recursively compare directories
@@ -200,15 +221,19 @@ fn compare_directories_recursive(
 
                 if generated_content != &golden_content {
                     show_diff(spec_name, &filename, &golden_content, generated_content);
-                    return Err(format!("Golden file mismatch for {}: {}", spec_name, filename).into());
+                    return Err(
+                        format!("Golden file mismatch for {}: {}", spec_name, filename).into(),
+                    );
                 }
             } else {
                 error!("Generated file not found for golden file: {}", filename);
-                return Err(format!("Generated file not found for golden file: {}", filename).into());
+                return Err(
+                    format!("Generated file not found for golden file: {}", filename).into(),
+                );
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -230,14 +255,13 @@ fn show_diff(spec_name: &str, filename: &str, golden: &str, generated: &str) {
 }
 
 #[test]
+#[traced_test]
 fn test_petstore_golden() {
-    if let Err(e) = test_golden_files("petstore", "valid/petstore.yaml") {
-        error!("Petstore golden test failed: {}", e);
-        process::exit(1);
-    }
+    test_golden_files("petstore", "valid/petstore.yaml").unwrap();
 }
 
 #[test]
+#[traced_test]
 fn test_minimal_golden() {
     if let Err(e) = test_golden_files("minimal", "valid/minimal.yaml") {
         error!("Minimal golden test failed: {}", e);
@@ -246,6 +270,7 @@ fn test_minimal_golden() {
 }
 
 #[test]
+#[traced_test]
 fn test_comprehensive_schemas_golden() {
     if let Err(e) = test_golden_files("comprehensive-schemas", "valid/comprehensive-schemas.yaml") {
         error!("Comprehensive schemas golden test failed: {}", e);

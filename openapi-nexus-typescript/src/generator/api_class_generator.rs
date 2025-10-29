@@ -5,9 +5,8 @@ use http::Method;
 use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::code_block::SnippetLines;
 use crate::ast::{
-    Class, CodeBlock, Parameter, Statement, TsMethod, TsNode, TypeExpression, Visibility,
+    ClassDefinition, ClassMethod, ImportStatement, Parameter, TsNode, TypeExpression,
 };
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
@@ -44,23 +43,13 @@ impl ApiClassGenerator {
 
         let mut methods = vec![
             // Constructor method
-            TsMethod {
-                name: "constructor".to_string(),
-                parameters: vec![Parameter {
-                    name: "configuration".to_string(),
-                    type_expr: Some(TypeExpression::Reference("Configuration".to_string())),
-                    optional: true,
-                    default_value: None,
-                }],
-                return_type: None,
-                is_async: false,
-                is_static: false,
-                visibility: Visibility::Public,
-                documentation: Some("Initialize the API client".to_string()),
-                body: Some(CodeBlock::from_statements(vec![Statement::Simple(
-                    "super(configuration);".to_string(),
-                )])),
-            },
+            ClassMethod::new("constructor".to_string())
+                .with_parameters(vec![Parameter::optional(
+                    "configuration".to_string(),
+                    Some(TypeExpression::Reference("Configuration".to_string())),
+                )])
+                .with_docs("Initialize the API client".to_string())
+                .with_body_template("constructor_base_api".to_string(), None),
         ];
 
         // Generate methods for each operation
@@ -77,16 +66,23 @@ impl ApiClassGenerator {
             methods.push(method);
         }
 
-        let api_class = Class {
-            name: class_name.clone(),
-            properties: vec![],
-            methods,
-            extends: Some("BaseAPI".to_string()),
-            implements: vec![],
-            generics: vec![],
-            is_export: true,
-            documentation: Some(format!("API client for {} operations", tag)),
-        };
+        // Create imports
+        let imports = vec![
+            ImportStatement::new("../runtime/base_api".to_string())
+                .with_import("BaseAPI".to_string(), None),
+            ImportStatement::new("../runtime/configuration".to_string())
+                .with_type_import("Configuration".to_string(), None),
+            ImportStatement::new("../runtime/classes/json_api_response".to_string())
+                .with_import("JSONApiResponse".to_string(), None),
+            ImportStatement::new("../runtime/classes/response_error".to_string())
+                .with_import("ResponseError".to_string(), None),
+        ];
+
+        let api_class = ClassDefinition::new(class_name.clone())
+            .with_methods(methods)
+            .with_extends("BaseAPI".to_string())
+            .with_docs(format!("API client for {} operations", tag))
+            .with_imports(imports);
 
         Ok(TsNode::Class(api_class))
     }
@@ -97,26 +93,96 @@ impl ApiClassGenerator {
         path: &str,
         http_method: &Method,
         operation: &Operation,
-    ) -> Result<TsMethod, GeneratorError> {
+    ) -> Result<ClassMethod, GeneratorError> {
         let method_name = self.generate_method_name(path, operation, http_method);
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_return_type(operation)?;
-        let body =
-            self.generate_method_implementation(&method_name, http_method, path, operation)?;
+        
+        // Determine template based on HTTP method
+        let template_name = match http_method {
+            &Method::GET => "api_method_get",
+            &Method::POST | &Method::PUT | &Method::PATCH => "api_method_post_put",
+            &Method::DELETE => "api_method_delete",
+            _ => "default_method",
+        };
 
-        Ok(TsMethod {
-            name: method_name,
-            parameters,
-            return_type,
-            is_async: true,
-            is_static: false,
-            visibility: Visibility::Public,
-            documentation: operation
-                .summary
-                .clone()
-                .or_else(|| operation.description.clone()),
-            body: Some(body),
-        })
+        // Create template data
+        let template_data = self.create_method_template_data(path, http_method, operation)?;
+
+        let mut method = ClassMethod::new(method_name)
+            .with_parameters(parameters)
+            .with_async()
+            .with_body_template(template_name.to_string(), Some(template_data));
+
+        if let Some(return_type) = return_type {
+            method = method.with_return_type(return_type);
+        }
+
+        if let Some(docs) = operation.summary.clone().or_else(|| operation.description.clone()) {
+            method = method.with_docs(docs);
+        }
+
+        Ok(method)
+    }
+
+    /// Create template data for method body generation
+    fn create_method_template_data(
+        &self,
+        path: &str,
+        http_method: &Method,
+        operation: &Operation,
+    ) -> Result<serde_json::Value, GeneratorError> {
+        let parameters = self.generate_method_parameters(path, operation)?;
+        let return_type = self.generate_return_type(operation)?;
+
+        // Extract different parameter types
+        let mut path_params = Vec::new();
+        let mut query_params = Vec::new();
+        let mut header_params = Vec::new();
+        let mut body_param = None;
+
+        for param in &parameters {
+            if param.name.contains("path") {
+                path_params.push(TemplateParameterData {
+                    name: param.name.clone(),
+                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    optional: param.optional,
+                });
+            } else if param.name.contains("query") {
+                query_params.push(TemplateParameterData {
+                    name: param.name.clone(),
+                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    optional: param.optional,
+                });
+            } else if param.name.contains("header") {
+                header_params.push(TemplateParameterData {
+                    name: param.name.clone(),
+                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    optional: param.optional,
+                });
+            } else if param.name == "body" {
+                body_param = Some(TemplateParameterData {
+                    name: param.name.clone(),
+                    type_expr: param.type_expr.as_ref().map(|t| t.to_typescript_string()),
+                    optional: param.optional,
+                });
+            }
+        }
+
+        let method_data = ApiMethodData {
+            method_name: self.generate_method_name(path, operation, http_method),
+            http_method: http_method.to_string(),
+            path: path.to_string(),
+            path_params,
+            query_params,
+            header_params,
+            body_param,
+            return_type: return_type.map(|t| t.to_typescript_string()).unwrap_or_else(|| "Promise<any>".to_string()),
+            has_auth: true, // Assume auth is needed
+            has_error_handling: true,
+        };
+
+        Ok(serde_json::to_value(method_data).unwrap_or_default())
     }
 
     /// Generate method name from operation
@@ -250,7 +316,7 @@ impl ApiClassGenerator {
         http_method: &Method,
         path: &str,
         operation: &Operation,
-    ) -> Result<CodeBlock, GeneratorError> {
+    ) -> Result<String, GeneratorError> {
         // Use ParameterExtractor to get all parameters properly categorized
         let extracted_params = self
             .parameter_extractor
@@ -311,7 +377,7 @@ impl ApiClassGenerator {
         let template = match *http_method {
             Method::GET => Template::ApiMethodGet(api_method_data),
             Method::POST | Method::PUT | Method::PATCH => {
-                Template::ApiMethodPostPutPatch(api_method_data)
+                Template::ApiMethodPostPut(api_method_data)
             }
             Method::DELETE => Template::ApiMethodDelete(api_method_data),
             _ => Template::DefaultMethod,
@@ -324,7 +390,7 @@ impl ApiClassGenerator {
                 message: format!("Template generation failed: {}", e),
             })?;
 
-        Ok(CodeBlock::from_snippets(SnippetLines::MethodBody(lines)))
+        Ok(lines.join("\n"))
     }
 }
 

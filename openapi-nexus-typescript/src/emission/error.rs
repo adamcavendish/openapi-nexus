@@ -8,4 +8,8 @@ use snafu::Snafu;
 pub enum EmitError {
     #[snafu(display("Emit error: {}", message))]
     Generic { message: String },
+    #[snafu(display("Template error: {}", message))]
+    TemplateError { message: String },
+    #[snafu(display("Import resolution error: {}", message))]
+    ImportResolution { message: String },
 }

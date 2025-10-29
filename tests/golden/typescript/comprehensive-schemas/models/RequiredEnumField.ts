@@ -2,9 +2,7 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-/**
- * Required enum field in object
- */
+/** Required enum field in object */
 export interface RequiredEnumField {
 status: "active" | "inactive"
 }
