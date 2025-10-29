@@ -38,9 +38,8 @@ async fn main() {
     // Initialize tracing
     tracing_subscriber::registry()
         .with(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "openapi_nexus_petstore_example=debug,tower_http=debug".into()
-            }),
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "openapi_nexus_petstore_example=debug,tower_http=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

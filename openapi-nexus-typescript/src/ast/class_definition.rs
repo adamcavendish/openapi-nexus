@@ -402,7 +402,8 @@ impl ImportStatement {
         }
 
         // Import specifiers
-        let specifiers: Vec<String> = self.imports
+        let specifiers: Vec<String> = self
+            .imports
             .iter()
             .map(|spec| {
                 let mut s = String::new();

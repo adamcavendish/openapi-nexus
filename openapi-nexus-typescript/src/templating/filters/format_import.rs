@@ -29,7 +29,8 @@ pub fn format_import_filter(import: ViaDeserialize<ImportStatement>) -> String {
     }
 
     // Import specifiers
-    let specifiers: Vec<String> = import.imports
+    let specifiers: Vec<String> = import
+        .imports
         .iter()
         .map(|spec| {
             let mut s = String::new();
@@ -49,5 +50,9 @@ pub fn format_import_filter(import: ViaDeserialize<ImportStatement>) -> String {
         import_parts.push(format!("{{ {} }}", specifiers.join(", ")));
     }
 
-    format!("import {} from '{}';", import_parts.join(" "), import.module_path)
+    format!(
+        "import {} from '{}';",
+        import_parts.join(" "),
+        import.module_path
+    )
 }

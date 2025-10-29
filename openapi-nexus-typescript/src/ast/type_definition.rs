@@ -179,7 +179,8 @@ impl ToRcDocWithContext for InterfaceDefinition {
 
         // Add generics
         if !self.generics.is_empty() {
-            let generic_strings: Vec<String> = self.generics
+            let generic_strings: Vec<String> = self
+                .generics
                 .iter()
                 .map(|g| g.to_typescript_string())
                 .collect();
@@ -205,14 +206,14 @@ impl ToRcDocWithContext for InterfaceDefinition {
                 .map(|p| {
                     let type_emitter = TsTypeEmitter;
                     let mut property_line = RcDoc::text(p.name.clone());
-                    
+
                     if p.optional {
                         property_line = property_line.append(RcDoc::text("?"));
                     }
-                    
+
                     let type_doc = type_emitter.emit_type_expression_doc(&p.type_expr)?;
                     property_line = property_line.append(RcDoc::text(": ")).append(type_doc);
-                    
+
                     Ok(property_line)
                 })
                 .collect();
@@ -241,11 +242,11 @@ impl ToRcDocWithContext for InterfaceDefinition {
         }
 
         // Add documentation if present and enabled
-        if context.include_docs && let Some(docs) = &self.documentation {
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
             let doc_comment = format_doc_comment(docs);
-            doc = RcDoc::text(doc_comment)
-                .append(RcDoc::line())
-                .append(doc);
+            doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }
 
         Ok(doc)
@@ -266,7 +267,8 @@ impl ToRcDocWithContext for TypeAliasDefinition {
 
         // Add generics
         if !self.generics.is_empty() {
-            let generic_strings: Vec<String> = self.generics
+            let generic_strings: Vec<String> = self
+                .generics
                 .iter()
                 .map(|g| g.to_typescript_string())
                 .collect();
@@ -278,11 +280,11 @@ impl ToRcDocWithContext for TypeAliasDefinition {
         doc = doc.append(RcDoc::text(" = ")).append(type_doc);
 
         // Add documentation if present and enabled
-        if context.include_docs && let Some(docs) = &self.documentation {
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
             let doc_comment = format_doc_comment(docs);
-            doc = RcDoc::text(doc_comment)
-                .append(RcDoc::line())
-                .append(doc);
+            doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }
 
         Ok(doc)
@@ -339,11 +341,11 @@ impl ToRcDocWithContext for EnumDefinition {
         }
 
         // Add documentation if present and enabled
-        if context.include_docs && let Some(docs) = &self.documentation {
+        if context.include_docs
+            && let Some(docs) = &self.documentation
+        {
             let doc_comment = format_doc_comment(docs);
-            doc = RcDoc::text(doc_comment)
-                .append(RcDoc::line())
-                .append(doc);
+            doc = RcDoc::text(doc_comment).append(RcDoc::line()).append(doc);
         }
 
         Ok(doc)

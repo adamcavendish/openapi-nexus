@@ -9,8 +9,8 @@ use utoipa::openapi::OpenApi;
 use crate::ast::TsNode;
 use crate::ast_trait::EmissionContext;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
-use crate::emission::ts_language_emitter::TsLanguageEmitter;
 use crate::emission::ts_file_category::TsFileCategory;
+use crate::emission::ts_language_emitter::TsLanguageEmitter;
 use crate::generator::package_files_generator::PackageFilesGenerator;
 
 /// Error type for file generation

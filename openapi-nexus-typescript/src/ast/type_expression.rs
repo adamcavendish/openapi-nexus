@@ -50,7 +50,10 @@ impl fmt::Display for TypeExpression {
                 let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
                 write!(f, "{}", type_strings.join(" & "))
             }
-            TypeExpression::Function { parameters, return_type } => {
+            TypeExpression::Function {
+                parameters,
+                return_type,
+            } => {
                 let return_type_str = if let Some(ret_type) = return_type {
                     ret_type.to_string()
                 } else {

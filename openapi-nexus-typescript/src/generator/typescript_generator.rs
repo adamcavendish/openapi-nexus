@@ -1,13 +1,13 @@
 //! Main TypeScript code generator
 
-use std::fs;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
 use super::api_class_generator::ApiClassGenerator;
-// use super::runtime_generator::RuntimeGenerator;  // Disabled
+use super::runtime_generator::RuntimeGenerator;
 use super::schema_generator::SchemaGenerator;
 use crate::config::{FileConfig, GeneratorConfig};
 use crate::core::GeneratorError;
@@ -21,7 +21,7 @@ use openapi_nexus_core::traits::file_writer::{FileCategory, FileInfo, FileWriter
 pub struct TypeScriptGenerator {
     schema_generator: SchemaGenerator,
     api_class_generator: ApiClassGenerator,
-    // runtime_generator: RuntimeGenerator,  // Disabled
+    runtime_generator: RuntimeGenerator,
     file_generator: TypeScriptFileGenerator,
 }
 
@@ -31,7 +31,7 @@ impl TypeScriptGenerator {
         Self {
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
-            // runtime_generator: RuntimeGenerator::new(),  // Disabled
+            runtime_generator: RuntimeGenerator::new(),
             file_generator: TypeScriptFileGenerator::new(FileConfig::default()),
         }
     }
@@ -41,7 +41,7 @@ impl TypeScriptGenerator {
         Self {
             schema_generator: SchemaGenerator::new(),
             api_class_generator: ApiClassGenerator::new(),
-            // runtime_generator: RuntimeGenerator::new(),  // Disabled
+            runtime_generator: RuntimeGenerator::new(),
             file_generator: TypeScriptFileGenerator::with_package_config(
                 config.file_config.clone(),
                 config.package_config.clone(),
@@ -106,8 +106,7 @@ impl TypeScriptGenerator {
         }
 
         // Generate runtime files
-        // let runtime_files = self.runtime_generator.generate_runtime_files()?;  // Disabled
-        let runtime_files: Vec<crate::generator::file_generator::GeneratedFile> = Vec::new();  // Placeholder
+        let runtime_files = self.runtime_generator.generate_runtime_files(openapi)?; // Re-enabled with OpenAPI context
         for file in runtime_files {
             // Convert GeneratedFile to FileInfo
             let file_info = FileInfo::new(
@@ -241,12 +240,12 @@ impl FileWriter for TypeScriptGenerator {
             // Write files in this category
             for file in category_files {
                 let file_path = category_dir.join(&file.filename);
-                
+
                 // Create parent directories if they don't exist (for subdirectories)
                 if let Some(parent) = file_path.parent() {
                     fs::create_dir_all(parent)?;
                 }
-                
+
                 fs::write(&file_path, &file.content)?;
             }
         }

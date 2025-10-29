@@ -70,21 +70,21 @@ impl Parameter {
     /// Format parameter as TypeScript string (for templates)
     pub fn to_typescript_string(&self) -> String {
         let mut result = self.name.clone();
-        
+
         if self.optional {
             result.push('?');
         }
-        
+
         if let Some(type_expr) = &self.type_expr {
             result.push_str(": ");
             result.push_str(&type_expr.to_typescript_string());
         }
-        
+
         if let Some(default_value) = &self.default_value {
             result.push_str(" = ");
             result.push_str(default_value);
         }
-        
+
         result
     }
 }
@@ -128,14 +128,14 @@ impl Property {
     /// Format property as TypeScript string (for templates)
     pub fn to_typescript_string(&self) -> String {
         let mut result = self.name.clone();
-        
+
         if self.optional {
             result.push('?');
         }
-        
+
         result.push_str(": ");
         result.push_str(&self.type_expr.to_typescript_string());
-        
+
         result
     }
 }
@@ -173,17 +173,17 @@ impl Generic {
     /// Format generic as TypeScript string (for templates)
     pub fn to_typescript_string(&self) -> String {
         let mut result = self.name.clone();
-        
+
         if let Some(constraint) = &self.constraint {
             result.push_str(" extends ");
             result.push_str(constraint);
         }
-        
+
         if let Some(default) = &self.default {
             result.push_str(" = ");
             result.push_str(default);
         }
-        
+
         result
     }
 }
@@ -224,12 +224,12 @@ impl EnumVariant {
     /// Format enum variant as TypeScript string (for templates)
     pub fn to_typescript_string(&self) -> String {
         let mut result = self.name.clone();
-        
+
         if let Some(value) = &self.value {
             result.push_str(" = ");
             result.push_str(value);
         }
-        
+
         result
     }
 }
@@ -245,7 +245,7 @@ impl Parameter {
                 .iter()
                 .map(|p| p.to_typescript_string())
                 .collect();
-            
+
             if parameters.len() > 3 {
                 // Multi-line format for long parameter lists
                 format!("(\n  {}\n)", param_strings.join(",\n  "))
@@ -263,10 +263,8 @@ impl Generic {
         if generics.is_empty() {
             String::new()
         } else {
-            let generic_strings: Vec<String> = generics
-                .iter()
-                .map(|g| g.to_typescript_string())
-                .collect();
+            let generic_strings: Vec<String> =
+                generics.iter().map(|g| g.to_typescript_string()).collect();
             format!("<{}>", generic_strings.join(", "))
         }
     }
@@ -278,11 +276,9 @@ impl EnumVariant {
         if variants.is_empty() {
             "{}".to_string()
         } else {
-            let variant_strings: Vec<String> = variants
-                .iter()
-                .map(|v| v.to_typescript_string())
-                .collect();
-            
+            let variant_strings: Vec<String> =
+                variants.iter().map(|v| v.to_typescript_string()).collect();
+
             if variants.len() > 2 {
                 // Multi-line format
                 format!("{{\n  {}\n}}", variant_strings.join(",\n  "))

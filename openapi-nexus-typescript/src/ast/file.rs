@@ -249,7 +249,10 @@ impl TypeScriptProject {
 
     /// Get API class files
     pub fn get_api_files(&self) -> Vec<&TypeScriptFile> {
-        self.files.iter().filter(|file| file.is_api_class()).collect()
+        self.files
+            .iter()
+            .filter(|file| file.is_api_class())
+            .collect()
     }
 
     /// Get type definition files

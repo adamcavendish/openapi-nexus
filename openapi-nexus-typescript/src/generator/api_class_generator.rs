@@ -97,7 +97,7 @@ impl ApiClassGenerator {
         let method_name = self.generate_method_name(path, operation, http_method);
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_return_type(operation)?;
-        
+
         // Determine template based on HTTP method
         let template_name = match http_method {
             &Method::GET => "api_method_get",
@@ -118,7 +118,11 @@ impl ApiClassGenerator {
             method = method.with_return_type(return_type);
         }
 
-        if let Some(docs) = operation.summary.clone().or_else(|| operation.description.clone()) {
+        if let Some(docs) = operation
+            .summary
+            .clone()
+            .or_else(|| operation.description.clone())
+        {
             method = method.with_docs(docs);
         }
 
@@ -177,7 +181,9 @@ impl ApiClassGenerator {
             query_params,
             header_params,
             body_param,
-            return_type: return_type.map(|t| t.to_typescript_string()).unwrap_or_else(|| "Promise<any>".to_string()),
+            return_type: return_type
+                .map(|t| t.to_typescript_string())
+                .unwrap_or_else(|| "Promise<any>".to_string()),
             has_auth: true, // Assume auth is needed
             has_error_handling: true,
         };

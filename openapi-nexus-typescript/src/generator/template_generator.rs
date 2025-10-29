@@ -64,7 +64,10 @@ const TEMPLATE_PATHS: &[(&str, &str)] = &[
         "api_method_post_put",
         "api/method_bodies/api_method_post_put.j2",
     ),
-    ("api_method_delete", "api/method_bodies/api_method_delete.j2"),
+    (
+        "api_method_delete",
+        "api/method_bodies/api_method_delete.j2",
+    ),
     ("default_method", "api/method_bodies/default.j2"),
 ];
 
@@ -148,9 +151,10 @@ impl TemplateGenerator {
     }
 
     /// Get runtime static files organized by category
-    pub fn get_runtime_files_by_category() -> std::collections::HashMap<String, Vec<(String, String)>> {
+    pub fn get_runtime_files_by_category()
+    -> std::collections::HashMap<String, Vec<(String, String)>> {
         let mut categories = std::collections::HashMap::new();
-        
+
         for (filename, content) in Self::get_runtime_static_files() {
             let category = if filename.starts_with("interfaces/") {
                 "interfaces"
@@ -165,12 +169,13 @@ impl TemplateGenerator {
             } else {
                 "core"
             };
-            
-            categories.entry(category.to_string())
+
+            categories
+                .entry(category.to_string())
                 .or_insert_with(Vec::new)
                 .push((filename, content));
         }
-        
+
         categories
     }
 

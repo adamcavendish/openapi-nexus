@@ -9,8 +9,8 @@ use std::path;
 use heck::ToKebabCase as _;
 use serde::{Deserialize, Serialize};
 
-use crate::emission::ts_dependency_analyzer::DependencySet;
 use crate::emission::error::EmitError;
+use crate::emission::ts_dependency_analyzer::DependencySet;
 
 /// TypeScript import statement
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -82,10 +82,7 @@ impl Import {
     }
 
     /// Add type imports
-    pub fn with_type_imports(
-        mut self,
-        names: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
+    pub fn with_type_imports(mut self, names: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.specifiers = names
             .into_iter()
             .map(|name| ImportSpecifier::new_type(name.into()))
@@ -119,7 +116,8 @@ impl Import {
         }
 
         // Format specifiers
-        let specifier_strings: Vec<String> = self.specifiers
+        let specifier_strings: Vec<String> = self
+            .specifiers
             .iter()
             .map(|spec| {
                 let mut s = String::new();
@@ -251,7 +249,7 @@ impl ImportCollection {
     /// Format all imports as TypeScript strings
     pub fn to_typescript_strings(&self) -> Vec<String> {
         self.imports
-                .iter()
+            .iter()
             .map(|import| import.to_typescript_string())
             .collect()
     }
@@ -378,9 +376,7 @@ impl ImportResolver {
             })?;
 
         // Calculate relative path
-        let relative_path = target_path
-            .strip_prefix(current_dir)
-            .unwrap_or(target_path);
+        let relative_path = target_path.strip_prefix(current_dir).unwrap_or(target_path);
 
         // Convert to import path (remove .ts extension, use forward slashes)
         let import_path = relative_path
@@ -393,7 +389,7 @@ impl ImportResolver {
             Ok(format!("./{}", import_path))
         } else {
             Ok(import_path)
-}
+        }
     }
 }
 

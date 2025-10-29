@@ -4,9 +4,11 @@
 //! template-driven code generation.
 
 use minijinja::Environment;
+use utoipa::openapi::OpenApi;
 
+use super::data::RuntimeData;
 use super::filters::{
-    format_doc_comment_filter, format_generic_list_filter, format_import_filter, 
+    format_doc_comment_filter, format_generic_list_filter, format_import_filter,
     format_type_expr_filter, indent_filter,
 };
 use super::functions::{do_not_edit, get_method_body_template_function};
@@ -63,6 +65,30 @@ impl Templating {
             .render(template_data)
             .map_err(|e| EmitError::TemplateError {
                 message: format!("Failed to render template: {}", e),
+            })
+    }
+
+    /// Emit runtime TypeScript code from OpenAPI specification
+    pub fn emit_runtime_file(&self, openapi: &OpenApi) -> Result<String, EmitError> {
+        let runtime_data = RuntimeData::from_openapi(openapi);
+        self.emit_runtime_with_data(&runtime_data)
+    }
+
+    /// Emit runtime TypeScript code from runtime data
+    pub fn emit_runtime_with_data(&self, runtime_data: &RuntimeData) -> Result<String, EmitError> {
+        // Get the runtime template
+        let template =
+            self.env
+                .get_template("runtime/runtime.j2")
+                .map_err(|e| EmitError::TemplateError {
+                    message: format!("Failed to get runtime/runtime.j2 template: {}", e),
+                })?;
+
+        // Render the template
+        template
+            .render(runtime_data)
+            .map_err(|e| EmitError::TemplateError {
+                message: format!("Failed to render runtime template: {}", e),
             })
     }
 

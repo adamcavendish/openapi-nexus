@@ -11,7 +11,6 @@ use std::path::Path;
 use std::process;
 
 use similar::TextDiff;
-use tracing::{error, info};
 use tracing_test::traced_test;
 use utoipa::openapi::OpenApi;
 
@@ -47,11 +46,11 @@ fn generate_typescript_files(
     let generator = TypeScriptGenerator::new();
     let generated_files = match generator.generate_files(&openapi) {
         Ok(files) => {
-            info!("Successfully generated {} files", files.len());
+            println!("Successfully generated {} files", files.len());
             files
         }
         Err(e) => {
-            error!("Error generating files: {}", e);
+            println!("Error generating files: {}", e);
             return Err(Box::new(e));
         }
     };
@@ -71,11 +70,11 @@ fn generate_typescript_files(
 
     // Use the FileWriter trait to write files with proper directory organization
     if let Err(e) = generator.write_files(&temp_dir, &generated_files) {
-        error!("Error writing files: {}", e);
-        error!("Temp directory: {}", temp_dir.display());
-        error!("Generated files count: {}", generated_files.len());
+        println!("Error writing files: {}", e);
+        println!("Temp directory: {}", temp_dir.display());
+        println!("Generated files count: {}", generated_files.len());
         for (i, file) in generated_files.iter().enumerate() {
-            error!(
+            println!(
                 "  File {}: {} (category: {:?})",
                 i, file.filename, file.category
             );
@@ -124,7 +123,7 @@ fn test_golden_files(
     let generated = match generate_typescript_files(&spec_content) {
         Ok(files) => files,
         Err(e) => {
-            error!(
+            println!(
                 "Failed to generate TypeScript files for {}: {}",
                 spec_name, e
             );
@@ -147,7 +146,7 @@ fn update_golden_files(
     spec_name: &str,
     generated: &HashMap<String, String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    info!(
+    println!(
         "UPDATE_GOLDEN mode: updating golden files for {}",
         spec_name
     );
@@ -155,7 +154,7 @@ fn update_golden_files(
 
     // Clean up existing files before updating
     if golden_dir.exists() {
-        info!("Cleaning up existing files in: {}", golden_dir.display());
+        println!("Cleaning up existing files in: {}", golden_dir.display());
         fs::remove_dir_all(&golden_dir)?;
     }
 
@@ -170,9 +169,9 @@ fn update_golden_files(
         }
 
         fs::write(&file_path, content)?;
-        info!("Updated: {}", file_path.display());
+        println!("Updated: {}", file_path.display());
     }
-    info!("Updated golden files for {}", spec_name);
+    println!("Updated golden files for {}", spec_name);
     Ok(())
 }
 
@@ -186,7 +185,7 @@ fn compare_with_golden_files(
     // Recursively compare directories
     compare_directories_recursive(&golden_dir, &golden_dir, generated, spec_name)?;
 
-    info!("Golden file test passed for {}", spec_name);
+    println!("Golden file test passed for {}", spec_name);
     Ok(())
 }
 
@@ -198,7 +197,7 @@ fn compare_directories_recursive(
     spec_name: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if !current_dir.exists() {
-        error!("Golden directory not found: {}", current_dir.display());
+        println!("Golden directory not found: {}", current_dir.display());
         return Err(format!("Golden directory not found: {}", current_dir.display()).into());
     }
 
@@ -226,7 +225,7 @@ fn compare_directories_recursive(
                     );
                 }
             } else {
-                error!("Generated file not found for golden file: {}", filename);
+                println!("Generated file not found for golden file: {}", filename);
                 return Err(
                     format!("Generated file not found for golden file: {}", filename).into(),
                 );
@@ -239,19 +238,19 @@ fn compare_directories_recursive(
 
 /// Show a diff when golden files don't match
 fn show_diff(spec_name: &str, filename: &str, golden: &str, generated: &str) {
-    error!("Content mismatch in: {}/{}", spec_name, filename);
-    error!("{}", "=".repeat(80));
+    println!("Content mismatch in: {}/{}", spec_name, filename);
+    println!("{}", "=".repeat(80));
 
     let diff = TextDiff::from_lines(golden, generated);
-    error!(
+    println!(
         "{}",
         diff.unified_diff()
             .context_radius(3)
             .header("golden", "generated")
     );
 
-    error!("To update golden files, run:");
-    error!("   UPDATE_GOLDEN=1 cargo test --test golden_tests");
+    println!("To update golden files, run:");
+    println!("   UPDATE_GOLDEN=1 cargo test --test golden_tests");
 }
 
 #[test]
@@ -264,7 +263,7 @@ fn test_petstore_golden() {
 #[traced_test]
 fn test_minimal_golden() {
     if let Err(e) = test_golden_files("minimal", "valid/minimal.yaml") {
-        error!("Minimal golden test failed: {}", e);
+        println!("Minimal golden test failed: {}", e);
         process::exit(1);
     }
 }
@@ -273,7 +272,57 @@ fn test_minimal_golden() {
 #[traced_test]
 fn test_comprehensive_schemas_golden() {
     if let Err(e) = test_golden_files("comprehensive-schemas", "valid/comprehensive-schemas.yaml") {
-        error!("Comprehensive schemas golden test failed: {}", e);
+        println!("Comprehensive schemas golden test failed: {}", e);
         process::exit(1);
     }
+}
+
+#[test]
+#[traced_test]
+fn test_server_object_golden() {
+    if let Err(e) = test_golden_files("server-object", "valid/server-object.yaml") {
+        println!("Server object golden test failed: {}", e);
+        process::exit(1);
+    }
+}
+
+#[test]
+#[traced_test]
+fn test_runtime_generation() {
+    let spec_content = read_fixture("valid/minimal.yaml");
+    let openapi: OpenApi = serde_norway::from_str(&spec_content).unwrap();
+    
+    let generator = TypeScriptGenerator::new();
+    let generated_files = generator.generate_files(&openapi).unwrap();
+    
+    // Find the runtime file
+    let runtime_file = generated_files.iter()
+        .find(|file| file.filename == "runtime.ts")
+        .expect("Runtime file should be generated");
+    
+    // Verify the runtime file contains expected content
+    assert!(runtime_file.content.contains("export const BASE_PATH"));
+    assert!(runtime_file.content.contains("export class Configuration"));
+    assert!(runtime_file.content.contains("export class BaseAPI"));
+    assert!(runtime_file.content.contains("export class ResponseError"));
+    assert!(runtime_file.content.contains("export class FetchError"));
+    assert!(runtime_file.content.contains("export class RequiredError"));
+    assert!(runtime_file.content.contains("export const COLLECTION_FORMATS"));
+    assert!(runtime_file.content.contains("export type FetchAPI"));
+    assert!(runtime_file.content.contains("export interface ConfigurationParameters"));
+    assert!(runtime_file.content.contains("export interface Middleware"));
+    assert!(runtime_file.content.contains("export function querystring"));
+    assert!(runtime_file.content.contains("export class JSONApiResponse"));
+    assert!(runtime_file.content.contains("export class VoidApiResponse"));
+    assert!(runtime_file.content.contains("export class BlobApiResponse"));
+    assert!(runtime_file.content.contains("export class TextApiResponse"));
+    
+    // Verify it has the do_not_edit header
+    assert!(runtime_file.content.contains("DO NOT EDIT - This file is automatically generated"));
+    
+    // Verify it uses the correct base path from the OpenAPI spec (default since no servers specified)
+    assert!(runtime_file.content.contains("http://localhost"));
+    
+    println!("Runtime file content length: {}", runtime_file.content.len());
+    println!("Runtime file generated successfully!");
 }

@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: Test API with Server Objects
+  description: This is a test API specification that includes various server configurations
+  version: 1.0.0
+  contact:
+    email: test@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+  - url: https://dev-api.example.com/v1
+    description: Development server
+paths:
+  /users:
+    get:
+      summary: Get all users
+      description: Retrieve a list of all users
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "User not found"
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the user
+        name:
+          type: string
+          description: User's full name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        createdAt:
+          type: string
+          format: date-time
+          description: When the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the user was last updated

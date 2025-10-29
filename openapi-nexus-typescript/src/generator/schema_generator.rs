@@ -12,7 +12,7 @@ use utoipa::openapi::schema::{
 use utoipa::openapi::{RefOr, Schema};
 
 use crate::ast::{
-    EnumDefinition, EnumVariant, InterfaceDefinition, PrimitiveType, Property, TsNode, 
+    EnumDefinition, EnumVariant, InterfaceDefinition, PrimitiveType, Property, TsNode,
     TypeAliasDefinition, TypeDefinition, TypeExpression,
 };
 use crate::core::GeneratorError;
@@ -73,7 +73,9 @@ impl SchemaGenerator {
                 if let Some(enum_values) = &obj_schema.enum_values
                     && !enum_values.is_empty()
                 {
-                    return Ok(TsNode::TypeDefinition(TypeDefinition::Enum(self.schema_to_enum(name, schema)?)));
+                    return Ok(TsNode::TypeDefinition(TypeDefinition::Enum(
+                        self.schema_to_enum(name, schema)?,
+                    )));
                 }
 
                 // Check if this is an object with properties
@@ -92,41 +94,49 @@ impl SchemaGenerator {
 
                 // Otherwise, create a type alias
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                    name: name.to_string(),
-                    type_expr,
-                    generics: vec![],
-                    documentation: obj_schema.description.clone(),
-                })))
+                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                    TypeAliasDefinition {
+                        name: name.to_string(),
+                        type_expr,
+                        generics: vec![],
+                        documentation: obj_schema.description.clone(),
+                    },
+                )))
             }
             Schema::Array(_) => {
                 // Array schemas become type aliases
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                    name: name.to_string(),
-                    type_expr,
-                    generics: vec![],
-                    documentation: None,
-                })))
+                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                    TypeAliasDefinition {
+                        name: name.to_string(),
+                        type_expr,
+                        generics: vec![],
+                        documentation: None,
+                    },
+                )))
             }
             Schema::OneOf(_) | Schema::AllOf(_) | Schema::AnyOf(_) => {
                 // Composition schemas become type aliases with union/intersection types
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                    name: name.to_string(),
-                    type_expr,
-                    generics: vec![],
-                    documentation: None,
-                })))
+                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                    TypeAliasDefinition {
+                        name: name.to_string(),
+                        type_expr,
+                        generics: vec![],
+                        documentation: None,
+                    },
+                )))
             }
             _ => {
                 // Fallback for unknown schema types
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                    name: name.to_string(),
-                    type_expr: TypeExpression::Primitive(PrimitiveType::Any),
-                    generics: vec![],
-                    documentation: None,
-                })))
+                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                    TypeAliasDefinition {
+                        name: name.to_string(),
+                        type_expr: TypeExpression::Primitive(PrimitiveType::Any),
+                        generics: vec![],
+                        documentation: None,
+                    },
+                )))
             }
         }
     }
@@ -237,7 +247,11 @@ impl SchemaGenerator {
     }
 
     /// Convert a schema to a TypeScript enum
-    fn schema_to_enum(&self, name: &str, schema: &Schema) -> Result<EnumDefinition, GeneratorError> {
+    fn schema_to_enum(
+        &self,
+        name: &str,
+        schema: &Schema,
+    ) -> Result<EnumDefinition, GeneratorError> {
         match schema {
             Schema::Object(obj_schema) => {
                 let mut variants = Vec::new();
@@ -605,12 +619,14 @@ impl SchemaGenerator {
         // Check for circular dependency
         if context.is_visited(&schema_name) {
             // Circular reference detected - create a type alias to break the cycle
-            return Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                name: name.to_string(),
-                type_expr: TypeExpression::Reference(schema_name.clone()),
-                generics: vec![],
-                documentation: Some(format!("Circular reference to {}", schema_name)),
-            })));
+            return Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                TypeAliasDefinition {
+                    name: name.to_string(),
+                    type_expr: TypeExpression::Reference(schema_name.clone()),
+                    generics: vec![],
+                    documentation: Some(format!("Circular reference to {}", schema_name)),
+                },
+            )));
         }
 
         // Look up the actual schema
@@ -631,12 +647,14 @@ impl SchemaGenerator {
         } else {
             // Unresolved reference - generate warning and fallback
             tracing::warn!("Unresolved schema reference: {}", schema_name);
-            Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(TypeAliasDefinition {
-                name: name.to_string(),
-                type_expr: TypeExpression::Reference(schema_name.clone()),
-                generics: vec![],
-                documentation: Some(format!("Unresolved reference to {}", schema_name)),
-            })))
+            Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
+                TypeAliasDefinition {
+                    name: name.to_string(),
+                    type_expr: TypeExpression::Reference(schema_name.clone()),
+                    generics: vec![],
+                    documentation: Some(format!("Unresolved reference to {}", schema_name)),
+                },
+            )))
         }
     }
 
