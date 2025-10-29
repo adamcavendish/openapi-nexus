@@ -7,8 +7,8 @@ use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::TypeExpression;
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript visibility modifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

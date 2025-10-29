@@ -3,23 +3,26 @@
 use minijinja::value::ViaDeserialize;
 
 use crate::ast::common::Generic;
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting generic lists
-pub fn format_generic_list_filter(generics: ViaDeserialize<Vec<Generic>>) -> String {
+pub fn format_generic_list_filter(
+    generics: ViaDeserialize<Vec<Generic>>,
+    max_line_width: usize,
+) -> String {
     if generics.is_empty() {
         String::new()
     } else {
         let ctx = EmissionContext {
             indent_level: 0,
-            max_line_width: 80,
+            max_line_width,
         };
         let generic_strings: Vec<String> = generics
             .iter()
             .filter_map(|g| {
                 g.to_rcdoc_with_context(&ctx)
                     .ok()
-                    .map(|doc| format!("{}", doc.pretty(80)))
+                    .map(|doc| format!("{}", doc.pretty(max_line_width)))
             })
             .collect();
 
@@ -34,3 +37,11 @@ pub fn format_generic_list_filter(generics: ViaDeserialize<Vec<Generic>>) -> Str
         }
     }
 }
+
+/// Create a format_generic_list filter with the given max_line_width
+pub fn create_format_generic_list_filter(
+    max_line_width: usize,
+) -> impl Fn(ViaDeserialize<Vec<Generic>>) -> String + Send + Sync + 'static {
+    move |generics| format_generic_list_filter(generics, max_line_width)
+}
+

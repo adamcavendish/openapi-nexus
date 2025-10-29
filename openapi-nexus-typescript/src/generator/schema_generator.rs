@@ -23,17 +23,13 @@ use crate::generator::schema_context::SchemaContext;
 /// This generator consolidates both schema-to-node conversion and type mapping functionality,
 /// providing comprehensive OpenAPI 3.1.2 support including nullable types, format handling,
 /// discriminators, additionalProperties, and multi-type support.
+#[derive(Debug, Clone)]
 pub struct SchemaGenerator;
 
 impl SchemaGenerator {
-    /// Create a new schema generator
-    pub fn new() -> Self {
-        Self
-    }
-
     /// Convert a schema reference to a TypeScript AST node
     ///
-    /// This is the main public API method used by TypeScriptGenerator.
+    /// This is the main public API method used by TsLangGenerator.
     /// It determines whether to generate an Interface, Enum, or TypeAlias based on the schema.
     pub fn schema_to_ts_node(
         &self,
@@ -709,6 +705,6 @@ impl SchemaGenerator {
 
 impl Default for SchemaGenerator {
     fn default() -> Self {
-        Self::new()
+        SchemaGenerator
     }
 }

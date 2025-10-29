@@ -15,7 +15,7 @@ impl RuntimeData {
     /// Create runtime data from OpenAPI specification
     pub fn from_openapi(openapi: &OpenApi) -> Self {
         let base_path = Self::extract_base_path(openapi);
-        
+
         Self {
             base_path,
             package_name: "generated-api".to_string(), // Default, can be overridden by config

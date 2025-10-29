@@ -5,6 +5,7 @@ use utoipa::openapi::{RefOr, Schema};
 use crate::ast::TypeExpression;
 
 /// Unified schema mapper for converting OpenAPI schemas to TypeScript types
+#[derive(Debug, Clone)]
 pub struct SchemaMapper;
 
 impl SchemaMapper {

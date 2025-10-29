@@ -2,34 +2,37 @@
 
 use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use http::Method;
-use utoipa::openapi::path::Operation;
 use utoipa::openapi::RefOr;
+use utoipa::openapi::path::Operation;
 
 use crate::ast::{
     ClassDefinition, ClassMethod, ImportStatement, Parameter, TsNode, TypeExpression,
 };
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
 use crate::generator::template_generator::{
     ApiMethodData, ParameterData as TemplateParameterData, Template, TemplateGenerator,
 };
 use crate::utils::schema_mapper::SchemaMapper;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Individual API class generator
+#[derive(Debug, Clone)]
 pub struct ApiClassGenerator {
     parameter_extractor: ParameterExtractor,
     schema_mapper: SchemaMapper,
     template_generator: TemplateGenerator,
+    max_line_width: usize,
 }
 
 impl ApiClassGenerator {
     /// Create a new API class generator
-    pub fn new() -> Self {
+    pub fn new(max_line_width: usize) -> Self {
         Self {
             parameter_extractor: ParameterExtractor::new(),
             schema_mapper: SchemaMapper::new(),
             template_generator: TemplateGenerator::new(),
+            max_line_width,
         }
     }
 
@@ -146,7 +149,10 @@ impl ApiClassGenerator {
         let mut header_params = Vec::new();
         let mut body_param = None;
 
-        let ctx = EmissionContext::default();
+        let ctx = EmissionContext {
+            indent_level: 0,
+            max_line_width: self.max_line_width,
+        };
 
         for param in &parameters {
             if param.name.contains("path") {
@@ -156,7 +162,7 @@ impl ApiClassGenerator {
                         .type_expr
                         .as_ref()
                         .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                        .map(|doc| format!("{}", doc.pretty(80))),
+                        .map(|doc| format!("{}", doc.pretty(self.max_line_width))),
                     optional: param.optional,
                 });
             } else if param.name.contains("query") {
@@ -166,7 +172,7 @@ impl ApiClassGenerator {
                         .type_expr
                         .as_ref()
                         .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                        .map(|doc| format!("{}", doc.pretty(80))),
+                        .map(|doc| format!("{}", doc.pretty(self.max_line_width))),
                     optional: param.optional,
                 });
             } else if param.name.contains("header") {
@@ -176,7 +182,7 @@ impl ApiClassGenerator {
                         .type_expr
                         .as_ref()
                         .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                        .map(|doc| format!("{}", doc.pretty(80))),
+                        .map(|doc| format!("{}", doc.pretty(self.max_line_width))),
                     optional: param.optional,
                 });
             } else if param.name == "body" {
@@ -186,7 +192,7 @@ impl ApiClassGenerator {
                         .type_expr
                         .as_ref()
                         .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                        .map(|doc| format!("{}", doc.pretty(80))),
+                        .map(|doc| format!("{}", doc.pretty(self.max_line_width))),
                     optional: param.optional,
                 });
             }
@@ -202,7 +208,7 @@ impl ApiClassGenerator {
             body_param,
             return_type: return_type
                 .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                .map(|doc| format!("{}", doc.pretty(80)))
+                .map(|doc| format!("{}", doc.pretty(self.max_line_width)))
                 .unwrap_or_else(|| "Promise<any>".to_string()),
             has_auth: true, // Assume auth is needed
             has_error_handling: true,
@@ -417,11 +423,5 @@ impl ApiClassGenerator {
             })?;
 
         Ok(lines.join("\n"))
-    }
-}
-
-impl Default for ApiClassGenerator {
-    fn default() -> Self {
-        Self::new()
     }
 }

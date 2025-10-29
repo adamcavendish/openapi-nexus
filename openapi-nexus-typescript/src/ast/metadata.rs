@@ -5,8 +5,8 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript documentation comment
 #[derive(Debug, Clone, Serialize, Deserialize)]

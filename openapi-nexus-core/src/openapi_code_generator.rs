@@ -40,14 +40,14 @@ impl OpenApiCodeGenerator {
     /// Register a language generator
     pub fn register_language_generator<G>(
         &mut self,
-        language: String,
+        language: impl Into<String>,
         generator: G,
     ) -> Result<(), error::Error>
     where
         G: LanguageGenerator + Send + Sync + 'static,
     {
         self.generator_registry
-            .register_generator(language, generator)
+            .register_generator(language.into(), generator)
             .map_err(|msg| error::Error::Generate {
                 source: Box::new(std::io::Error::other(msg)),
             })

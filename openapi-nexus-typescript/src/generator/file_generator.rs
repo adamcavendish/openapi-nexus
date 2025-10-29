@@ -7,11 +7,11 @@ use heck::{ToKebabCase as _, ToLowerCamelCase as _, ToPascalCase as _, ToSnakeCa
 use utoipa::openapi::OpenApi;
 
 use crate::ast::TsNode;
-use crate::ast_trait::EmissionContext;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
 use crate::emission::ts_file_category::TsFileCategory;
 use crate::emission::ts_language_emitter::TsLanguageEmitter;
 use crate::generator::package_files_generator::PackageFilesGenerator;
+use openapi_nexus_core::traits::EmissionContext;
 
 /// Error type for file generation
 #[derive(Debug)]
@@ -40,28 +40,37 @@ impl std::fmt::Display for FileGeneratorError {
 impl std::error::Error for FileGeneratorError {}
 
 /// File generator for TypeScript code
+#[derive(Debug, Clone)]
 pub struct TypeScriptFileGenerator {
     emitter: TsLanguageEmitter,
-    config: FileConfig,
+    file_config: FileConfig,
     package_config: PackageConfig,
 }
 
 impl TypeScriptFileGenerator {
     /// Create a new file generator
-    pub fn new(config: FileConfig) -> Self {
+    pub fn new(file_config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
-            emitter: TsLanguageEmitter::new(),
-            config,
-            package_config: PackageConfig::default(),
+            emitter: TsLanguageEmitter::new(file_config.max_line_width),
+            file_config,
+            package_config,
         }
     }
 
     /// Create a new file generator with package configuration
     pub fn with_package_config(config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
-            emitter: TsLanguageEmitter::new(),
-            config,
+            emitter: TsLanguageEmitter::new(config.max_line_width),
+            file_config: config,
             package_config,
+        }
+    }
+
+    /// Create an emission context with the configured max line width
+    fn create_emission_context(&self) -> EmissionContext {
+        EmissionContext {
+            indent_level: 0,
+            max_line_width: self.file_config.max_line_width,
         }
     }
 
@@ -121,7 +130,7 @@ impl TypeScriptFileGenerator {
             let filename = self.generate_filename(name);
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &EmissionContext::default())
+                .emit_with_context(slice::from_ref(node), &self.create_emission_context())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
@@ -141,7 +150,7 @@ impl TypeScriptFileGenerator {
             // Use the new emit_with_context method for automatic import generation
             let content = self
                 .emitter
-                .emit_with_context(slice::from_ref(node), &EmissionContext::default())
+                .emit_with_context(slice::from_ref(node), &self.create_emission_context())
                 .map_err(|e| FileGeneratorError::EmitError {
                     filename: filename.clone(),
                     source: format!("{}", e),
@@ -208,7 +217,7 @@ impl TypeScriptFileGenerator {
 
     /// Generate filename based on naming convention
     fn generate_filename(&self, name: &str) -> String {
-        let base_name = match self.config.naming_convention {
+        let base_name = match self.file_config.naming_convention {
             NamingConvention::CamelCase => name.to_lower_camel_case(),
             NamingConvention::KebabCase => name.to_kebab_case(),
             NamingConvention::SnakeCase => name.to_snake_case(),

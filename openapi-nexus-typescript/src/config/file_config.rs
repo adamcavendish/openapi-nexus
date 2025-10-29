@@ -9,6 +9,8 @@ pub struct FileConfig {
     pub output_dir: PathBuf,
     /// File naming convention
     pub naming_convention: NamingConvention,
+    /// Maximum line width for pretty printing
+    pub max_line_width: usize,
 }
 
 /// File naming conventions
@@ -29,6 +31,7 @@ impl Default for FileConfig {
         Self {
             output_dir: PathBuf::from("generated"),
             naming_convention: NamingConvention::PascalCase,
+            max_line_width: 80,
         }
     }
 }

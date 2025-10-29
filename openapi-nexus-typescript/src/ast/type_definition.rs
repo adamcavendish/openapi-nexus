@@ -7,9 +7,9 @@ use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::{EnumVariant, Generic, Property, TypeExpression};
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::ts_type_emitter::TsTypeEmitter;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Unified TypeScript type definition
 #[derive(Debug, Clone, Serialize, Deserialize)]

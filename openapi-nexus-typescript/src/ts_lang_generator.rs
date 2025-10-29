@@ -6,43 +6,36 @@ use std::fs;
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
-use super::api_class_generator::ApiClassGenerator;
-use super::runtime_generator::RuntimeGenerator;
-use super::schema_generator::SchemaGenerator;
-use crate::config::{FileConfig, GeneratorConfig};
+use crate::config::GeneratorConfig;
 use crate::core::GeneratorError;
+use crate::generator::api_class_generator::ApiClassGenerator;
 use crate::generator::file_generator::TypeScriptFileGenerator;
+use crate::generator::runtime_generator::RuntimeGenerator;
 use crate::generator::schema_context::SchemaContext;
+use crate::generator::schema_generator::SchemaGenerator;
 use openapi_nexus_core::generator_registry::LanguageGenerator;
 use openapi_nexus_core::traits::code_generator::LanguageCodeGenerator;
 use openapi_nexus_core::traits::file_writer::{FileCategory, FileInfo, FileWriter};
 
 /// Main TypeScript code generator
-pub struct TypeScriptGenerator {
+#[derive(Debug, Clone)]
+pub struct TsLangGenerator {
     schema_generator: SchemaGenerator,
     api_class_generator: ApiClassGenerator,
     runtime_generator: RuntimeGenerator,
     file_generator: TypeScriptFileGenerator,
 }
 
-impl TypeScriptGenerator {
-    /// Create a new TypeScript generator with default configuration
-    pub fn new() -> Self {
-        Self {
-            schema_generator: SchemaGenerator::new(),
-            api_class_generator: ApiClassGenerator::new(),
-            runtime_generator: RuntimeGenerator::new(),
-            file_generator: TypeScriptFileGenerator::new(FileConfig::default()),
-        }
-    }
+impl TsLangGenerator {
+    /// Create a new TypeScript generator
+    pub fn new(config: GeneratorConfig) -> Self {
+        let max_line_width = config.file_config.max_line_width;
 
-    /// Create a new TypeScript generator with custom configuration
-    pub fn with_config(config: GeneratorConfig) -> Self {
         Self {
-            schema_generator: SchemaGenerator::new(),
-            api_class_generator: ApiClassGenerator::new(),
-            runtime_generator: RuntimeGenerator::new(),
-            file_generator: TypeScriptFileGenerator::with_package_config(
+            schema_generator: SchemaGenerator,
+            api_class_generator: ApiClassGenerator::new(max_line_width),
+            runtime_generator: RuntimeGenerator::new(max_line_width),
+            file_generator: TypeScriptFileGenerator::new(
                 config.file_config.clone(),
                 config.package_config.clone(),
             ),
@@ -181,15 +174,9 @@ impl TypeScriptGenerator {
     }
 }
 
-impl Default for TypeScriptGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+impl LanguageGenerator for TsLangGenerator {}
 
-impl LanguageGenerator for TypeScriptGenerator {}
-
-impl LanguageCodeGenerator for TypeScriptGenerator {
+impl LanguageCodeGenerator for TsLangGenerator {
     fn generate(
         &self,
         openapi: &OpenApi,
@@ -199,7 +186,7 @@ impl LanguageCodeGenerator for TypeScriptGenerator {
     }
 }
 
-impl FileWriter for TypeScriptGenerator {
+impl FileWriter for TsLangGenerator {
     fn write_files(
         &self,
         output_dir: &std::path::Path,

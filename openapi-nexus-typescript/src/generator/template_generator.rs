@@ -72,6 +72,7 @@ const TEMPLATE_PATHS: &[(&str, &str)] = &[
 ];
 
 /// Template-based code generator for TypeScript
+#[derive(Debug, Clone)]
 pub struct TemplateGenerator {
     env: Environment<'static>,
 }

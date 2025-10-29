@@ -10,9 +10,9 @@ use heck::ToKebabCase as _;
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
 use crate::emission::ts_dependency_analyzer::DependencySet;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript import statement
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

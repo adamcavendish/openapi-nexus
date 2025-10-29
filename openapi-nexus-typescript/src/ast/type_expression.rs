@@ -7,8 +7,8 @@ use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::PrimitiveType;
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript type expression
 #[derive(Debug, Clone, Ord, PartialOrd, Hash, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,8 +84,7 @@ impl fmt::Display for TypeExpression {
     }
 }
 
-impl TypeExpression {
-}
+impl TypeExpression {}
 
 impl ToRcDocWithContext for TypeExpression {
     type Error = EmitError;
@@ -121,14 +120,24 @@ impl ToRcDocWithContext for TypeExpression {
                     .iter()
                     .map(|t| t.to_rcdoc_with_context(_context))
                     .collect();
-                RcDoc::intersperse(docs?, RcDoc::space().append(RcDoc::text("|")).append(RcDoc::space()))
+                RcDoc::intersperse(
+                    docs?,
+                    RcDoc::space()
+                        .append(RcDoc::text("|"))
+                        .append(RcDoc::space()),
+                )
             }
             TypeExpression::Intersection(types) => {
                 let docs: Result<Vec<_>, _> = types
                     .iter()
                     .map(|t| t.to_rcdoc_with_context(_context))
                     .collect();
-                RcDoc::intersperse(docs?, RcDoc::space().append(RcDoc::text("&")).append(RcDoc::space()))
+                RcDoc::intersperse(
+                    docs?,
+                    RcDoc::space()
+                        .append(RcDoc::text("&"))
+                        .append(RcDoc::space()),
+                )
             }
             TypeExpression::Function {
                 parameters,

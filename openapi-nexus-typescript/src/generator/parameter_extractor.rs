@@ -36,6 +36,7 @@ pub struct ParameterInfo {
 }
 
 /// Parameter extractor for OpenAPI operations
+#[derive(Debug, Clone)]
 pub struct ParameterExtractor {
     schema_mapper: SchemaMapper,
 }

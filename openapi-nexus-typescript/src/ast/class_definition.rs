@@ -7,8 +7,8 @@ use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::{Generic, Parameter, TypeExpression, Visibility};
-use crate::ast_trait::{EmissionContext, ToRcDocWithContext};
 use crate::emission::error::EmitError;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript class definition for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]

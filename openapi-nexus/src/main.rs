@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use tracing::{Level, info};
 
 use openapi_nexus_core::OpenApiCodeGenerator;
-use openapi_nexus_typescript::generator::TypeScriptGenerator;
+use openapi_nexus_typescript::TsLangGenerator;
 
 #[derive(Parser)]
 #[command(name = "openapi-nexus")]
@@ -73,12 +73,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut generator = OpenApiCodeGenerator::new();
 
-            // Register TypeScript generator
-            generator.register_language_generator(
-                "typescript".to_string(),
-                TypeScriptGenerator::new(),
-            )?;
-            generator.register_language_generator("ts".to_string(), TypeScriptGenerator::new())?;
+            // Register TypeScript generator with default configuration
+            let ts_config = openapi_nexus_typescript::config::GeneratorConfig::default();
+            let ts_generator = TsLangGenerator::new(ts_config.clone());
+            generator.register_language_generator("typescript", ts_generator.clone())?;
+            generator.register_language_generator("ts", ts_generator)?;
 
             generator.generate_from_file(&input, &output, &languages)?;
 

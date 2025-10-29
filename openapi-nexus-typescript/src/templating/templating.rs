@@ -7,23 +7,24 @@ use minijinja::Environment;
 use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
-use crate::templating::filters::{
-    format_doc_comment_filter, format_generic_list_filter, format_import_filter,
-    format_property_filter, format_type_expr_filter, indent_filter,
-};
 use super::functions::{do_not_edit, get_method_body_template_function};
 use crate::ast::{ClassDefinition, TypeScriptFile};
 use crate::emission::error::EmitError;
+use crate::templating::filters::{
+    create_format_generic_list_filter, create_format_property_filter,
+    create_format_type_expr_filter, format_doc_comment_filter, format_import_filter, indent_filter,
+};
 
 /// Template-based TypeScript code emitter
+#[derive(Debug, Clone)]
 pub struct Templating {
     env: Environment<'static>,
 }
 
 impl Templating {
     /// Create a new template-based emitter with initialized templates
-    pub fn new() -> Self {
-        let env = Self::create_template_environment();
+    pub fn new(max_line_width: usize) -> Self {
+        let env = Self::create_template_environment(max_line_width);
         Self { env }
     }
 
@@ -93,19 +94,30 @@ impl Templating {
     }
 
     /// Create template environment with custom filters and functions
-    fn create_template_environment() -> Environment<'static> {
+    fn create_template_environment(max_line_width: usize) -> Environment<'static> {
         let mut env = Environment::new();
 
         // Load all embedded templates
         minijinja_embed::load_templates!(&mut env);
 
-        // Add custom filters
+        // Add custom filters that don't need configuration
         env.add_filter("format_doc_comment", format_doc_comment_filter);
         env.add_filter("format_import", format_import_filter);
-        env.add_filter("format_generic_list", format_generic_list_filter);
-        env.add_filter("format_property", format_property_filter);
-        env.add_filter("format_type_expr", format_type_expr_filter);
         env.add_filter("indent", indent_filter);
+
+        // Add filters that need max_line_width using factory functions
+        env.add_filter(
+            "format_generic_list",
+            create_format_generic_list_filter(max_line_width),
+        );
+        env.add_filter(
+            "format_property",
+            create_format_property_filter(max_line_width),
+        );
+        env.add_filter(
+            "format_type_expr",
+            create_format_type_expr_filter(max_line_width),
+        );
 
         // Add custom functions
         env.add_function("do_not_edit", do_not_edit);
@@ -120,11 +132,5 @@ impl Templating {
     /// Get a reference to the template environment
     pub fn environment(&self) -> &Environment<'static> {
         &self.env
-    }
-}
-
-impl Default for Templating {
-    fn default() -> Self {
-        Self::new()
     }
 }
