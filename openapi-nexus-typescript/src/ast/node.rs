@@ -2,15 +2,15 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{ClassDefinition, Import, TypeDefinition};
+use crate::ast::{TsClassDefinition, TsImport, TsTypeDefinition};
 
 /// Top-level TypeScript AST node (simplified)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TsNode {
     /// Import statement
-    Import(Import),
+    Import(TsImport),
     /// Class definition (for template rendering)
-    Class(ClassDefinition),
+    Class(TsClassDefinition),
     /// Type definition (interface, type alias, or enum)
-    TypeDefinition(TypeDefinition),
+    TypeDefinition(TsTypeDefinition),
 }

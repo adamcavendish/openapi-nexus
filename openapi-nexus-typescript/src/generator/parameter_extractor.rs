@@ -3,7 +3,7 @@
 use heck::ToPascalCase as _;
 use utoipa::openapi::path::Operation;
 
-use crate::ast::TypeExpression;
+use crate::ast::TsTypeExpression;
 use crate::core::GeneratorError;
 use crate::utils::schema_mapper::SchemaMapper;
 
@@ -26,7 +26,7 @@ pub struct ParameterInfo {
     /// Parameter name
     pub name: String,
     /// Parameter type
-    pub type_expr: TypeExpression,
+    pub type_expr: TsTypeExpression,
     /// Whether the parameter is required
     pub required: bool,
     /// Parameter description
@@ -77,7 +77,7 @@ impl ParameterExtractor {
                     type_expr: if let Some(schema) = &param.schema {
                         self.map_parameter_schema_to_type(schema)
                     } else {
-                        TypeExpression::Primitive(crate::ast::PrimitiveType::String)
+                        TsTypeExpression::Primitive(crate::ast::TsPrimitiveType::String)
                     },
                     required: matches!(param.required, utoipa::openapi::Required::True),
                     description: param.description.clone(),
@@ -112,13 +112,13 @@ impl ParameterExtractor {
             && let Some(json_content) = request_body.content.get("application/json")
             && let Some(schema_ref) = &json_content.schema
         {
-            body_param = Some(ParameterInfo {
-                name: "body".to_string(),
-                type_expr: self.map_schema_ref_to_type(schema_ref),
-                required: matches!(request_body.required, Some(utoipa::openapi::Required::True)),
-                description: request_body.description.clone(),
-                default_value: None,
-            });
+                body_param = Some(ParameterInfo {
+                    name: "body".to_string(),
+                    type_expr: self.map_schema_ref_to_type(schema_ref),
+                    required: matches!(request_body.required, Some(utoipa::openapi::Required::True)),
+                    description: request_body.description.clone(),
+                    default_value: None,
+                });
         }
 
         Ok(ExtractedParameters {
@@ -156,7 +156,7 @@ impl ParameterExtractor {
     fn map_parameter_schema_to_type(
         &self,
         schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         self.schema_mapper.map_ref_or_schema_to_type(schema_ref)
     }
 
@@ -164,7 +164,7 @@ impl ParameterExtractor {
     fn map_schema_ref_to_type(
         &self,
         schema_ref: &utoipa::openapi::RefOr<utoipa::openapi::Schema>,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         self.schema_mapper.map_ref_or_schema_to_type(schema_ref)
     }
 

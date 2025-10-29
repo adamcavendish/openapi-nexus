@@ -15,16 +15,16 @@ pub mod type_expression;
 
 // Re-export all types for convenience
 pub use class_definition::{
-    ClassDefinition, ClassMethod, ClassProperty, ImportSpecifier as ClassImportSpecifier,
-    ImportStatement,
+    TsClassDefinition, TsClassMethod, TsClassProperty, TsClassImportSpecifier,
+    TsImportStatement,
 };
-pub use common::{EnumVariant, Generic, Parameter, Property, Visibility};
-pub use file::{FileCategory, FileContent, TypeScriptFile, TypeScriptProject};
-pub use import::{Import, ImportCollection, ImportResolver, ImportSpecifier};
-pub use metadata::{Comment, DocComment, GeneratedFileHeader};
+pub use common::{TsEnumVariant, TsGeneric, TsParameter, TsProperty, TsVisibility};
+pub use file::{TsFileCategory, TsFileContent, TsFile};
+pub use import::{TsImport, TsImportSpecifier};
+pub use metadata::TsDocComment;
 pub use node::TsNode;
-pub use primitive_type::PrimitiveType;
+pub use primitive_type::TsPrimitiveType;
 pub use type_definition::{
-    EnumDefinition, InterfaceDefinition, TypeAliasDefinition, TypeDefinition,
+    TsEnumDefinition, TsInterfaceDefinition, TsTypeAliasDefinition, TsTypeDefinition,
 };
-pub use type_expression::TypeExpression;
+pub use type_expression::TsTypeExpression;

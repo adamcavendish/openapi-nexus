@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::ast::{TsNode, TypeDefinition, TypeExpression};
+use crate::ast::{TsNode, TsTypeDefinition, TsTypeExpression};
 use crate::utils::typescript_types::{is_primitive_type, is_runtime_type};
 
 /// Analyzes TypeScript AST nodes to extract type dependencies
@@ -30,7 +30,7 @@ impl TsDependencyAnalyzer {
         match node {
             TsNode::TypeDefinition(type_def) => {
                 match type_def {
-                    TypeDefinition::Interface(interface) => {
+                    TsTypeDefinition::Interface(interface) => {
                         // Extract dependencies from interface properties
                         for property in &interface.properties {
                             Self::extract_type_dependencies(&property.type_expr, dependencies);
@@ -41,11 +41,11 @@ impl TsDependencyAnalyzer {
                             dependencies.add_model_dependency(extend.clone());
                         }
                     }
-                    TypeDefinition::TypeAlias(type_alias) => {
+                    TsTypeDefinition::TypeAlias(type_alias) => {
                         // Extract dependencies from type alias definition
                         Self::extract_type_dependencies(&type_alias.type_expr, dependencies);
                     }
-                    TypeDefinition::Enum(_) => {
+                    TsTypeDefinition::Enum(_) => {
                         // Enums don't typically have dependencies
                     }
                 }
@@ -61,9 +61,9 @@ impl TsDependencyAnalyzer {
     }
 
     /// Extract dependencies from a type expression recursively
-    fn extract_type_dependencies(type_expr: &TypeExpression, dependencies: &mut DependencySet) {
+    fn extract_type_dependencies(type_expr: &TsTypeExpression, dependencies: &mut DependencySet) {
         match type_expr {
-            TypeExpression::Reference(type_name) => {
+            TsTypeExpression::Reference(type_name) => {
                 // Handle generic types like Promise<T>, Array<T>, etc.
                 if type_name.contains('<') && type_name.contains('>') {
                     // Extract inner types from generic type strings
@@ -88,25 +88,25 @@ impl TsDependencyAnalyzer {
                     }
                 }
             }
-            TypeExpression::Array(item_type) => {
+            TsTypeExpression::Array(item_type) => {
                 Self::extract_type_dependencies(item_type, dependencies);
             }
-            TypeExpression::Union(types) => {
+            TsTypeExpression::Union(types) => {
                 for type_expr in types {
                     Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
-            TypeExpression::Intersection(types) => {
+            TsTypeExpression::Intersection(types) => {
                 for type_expr in types {
                     Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
-            TypeExpression::Object(properties) => {
+            TsTypeExpression::Object(properties) => {
                 for type_expr in properties.values() {
                     Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
-            TypeExpression::Function {
+            TsTypeExpression::Function {
                 parameters: _,
                 return_type,
             } => {
@@ -118,17 +118,17 @@ impl TsDependencyAnalyzer {
                     Self::extract_type_dependencies(return_type, dependencies);
                 }
             }
-            TypeExpression::IndexSignature(_, value_type) => {
+            TsTypeExpression::IndexSignature(_, value_type) => {
                 Self::extract_type_dependencies(value_type, dependencies);
             }
-            TypeExpression::Tuple(types) => {
+            TsTypeExpression::Tuple(types) => {
                 for type_expr in types {
                     Self::extract_type_dependencies(type_expr, dependencies);
                 }
             }
-            TypeExpression::Generic(_)
-            | TypeExpression::Literal(_)
-            | TypeExpression::Primitive(_) => {
+            TsTypeExpression::Generic(_)
+            | TsTypeExpression::Literal(_)
+            | TsTypeExpression::Primitive(_) => {
                 // These don't have dependencies to extract
             }
         }

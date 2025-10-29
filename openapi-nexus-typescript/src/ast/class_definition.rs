@@ -6,30 +6,30 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{Generic, Parameter, TypeExpression, Visibility};
+use crate::ast::{TsGeneric, TsParameter, TsTypeExpression, TsVisibility};
 use crate::emission::error::EmitError;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript class definition for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClassDefinition {
+pub struct TsClassDefinition {
     pub name: String,
-    pub properties: Vec<ClassProperty>,
-    pub methods: Vec<ClassMethod>,
+    pub properties: Vec<TsClassProperty>,
+    pub methods: Vec<TsClassMethod>,
     pub extends: Option<String>,
     pub implements: Vec<String>,
-    pub generics: Vec<Generic>,
+    pub generics: Vec<TsGeneric>,
     pub is_export: bool,
     pub documentation: Option<String>,
-    pub imports: Vec<ImportStatement>,
+    pub imports: Vec<TsImportStatement>,
 }
 
 /// TypeScript class property for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClassProperty {
+pub struct TsClassProperty {
     pub name: String,
-    pub type_expr: TypeExpression,
-    pub visibility: Visibility,
+    pub type_expr: TsTypeExpression,
+    pub visibility: TsVisibility,
     pub is_static: bool,
     pub is_readonly: bool,
     pub optional: bool,
@@ -39,11 +39,11 @@ pub struct ClassProperty {
 
 /// TypeScript class method for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClassMethod {
+pub struct TsClassMethod {
     pub name: String,
-    pub parameters: Vec<Parameter>,
-    pub return_type: Option<TypeExpression>,
-    pub visibility: Visibility,
+    pub parameters: Vec<TsParameter>,
+    pub return_type: Option<TsTypeExpression>,
+    pub visibility: TsVisibility,
     pub is_static: bool,
     pub is_async: bool,
     pub is_abstract: bool,
@@ -54,21 +54,21 @@ pub struct ClassMethod {
 
 /// Import statement for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImportStatement {
+pub struct TsImportStatement {
     pub module_path: String,
-    pub imports: Vec<ImportSpecifier>,
+    pub imports: Vec<TsClassImportSpecifier>,
     pub is_type_only: bool,
 }
 
 /// Import specifier for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImportSpecifier {
+pub struct TsClassImportSpecifier {
     pub name: String,
     pub alias: Option<String>,
     pub is_type: bool,
 }
 
-impl ClassDefinition {
+impl TsClassDefinition {
     /// Create a new class definition
     pub fn new(name: String) -> Self {
         Self {
@@ -85,25 +85,25 @@ impl ClassDefinition {
     }
 
     /// Add a property
-    pub fn with_property(mut self, property: ClassProperty) -> Self {
+    pub fn with_property(mut self, property: TsClassProperty) -> Self {
         self.properties.push(property);
         self
     }
 
     /// Add multiple properties
-    pub fn with_properties(mut self, properties: Vec<ClassProperty>) -> Self {
+    pub fn with_properties(mut self, properties: Vec<TsClassProperty>) -> Self {
         self.properties.extend(properties);
         self
     }
 
     /// Add a method
-    pub fn with_method(mut self, method: ClassMethod) -> Self {
+    pub fn with_method(mut self, method: TsClassMethod) -> Self {
         self.methods.push(method);
         self
     }
 
     /// Add multiple methods
-    pub fn with_methods(mut self, methods: Vec<ClassMethod>) -> Self {
+    pub fn with_methods(mut self, methods: Vec<TsClassMethod>) -> Self {
         self.methods.extend(methods);
         self
     }
@@ -121,7 +121,7 @@ impl ClassDefinition {
     }
 
     /// Add generics
-    pub fn with_generics(mut self, generics: Vec<Generic>) -> Self {
+    pub fn with_generics(mut self, generics: Vec<TsGeneric>) -> Self {
         self.generics = generics;
         self
     }
@@ -139,13 +139,13 @@ impl ClassDefinition {
     }
 
     /// Add import
-    pub fn with_import(mut self, import: ImportStatement) -> Self {
+    pub fn with_import(mut self, import: TsImportStatement) -> Self {
         self.imports.push(import);
         self
     }
 
     /// Add multiple imports
-    pub fn with_imports(mut self, imports: Vec<ImportStatement>) -> Self {
+    pub fn with_imports(mut self, imports: Vec<TsImportStatement>) -> Self {
         self.imports.extend(imports);
         self
     }
@@ -156,13 +156,13 @@ impl ClassDefinition {
     }
 }
 
-impl ClassProperty {
+impl TsClassProperty {
     /// Create a new class property
-    pub fn new(name: String, type_expr: TypeExpression) -> Self {
+    pub fn new(name: String, type_expr: TsTypeExpression) -> Self {
         Self {
             name,
             type_expr,
-            visibility: Visibility::Public,
+            visibility: TsVisibility::Public,
             is_static: false,
             is_readonly: false,
             optional: false,
@@ -172,7 +172,7 @@ impl ClassProperty {
     }
 
     /// Set visibility
-    pub fn with_visibility(mut self, visibility: Visibility) -> Self {
+    pub fn with_visibility(mut self, visibility: TsVisibility) -> Self {
         self.visibility = visibility;
         self
     }
@@ -208,14 +208,14 @@ impl ClassProperty {
     }
 }
 
-impl ClassMethod {
+impl TsClassMethod {
     /// Create a new class method
     pub fn new(name: String) -> Self {
         Self {
             name,
             parameters: Vec::new(),
             return_type: None,
-            visibility: Visibility::Public,
+            visibility: TsVisibility::Public,
             is_static: false,
             is_async: false,
             is_abstract: false,
@@ -226,19 +226,19 @@ impl ClassMethod {
     }
 
     /// Add parameters
-    pub fn with_parameters(mut self, parameters: Vec<Parameter>) -> Self {
+    pub fn with_parameters(mut self, parameters: Vec<TsParameter>) -> Self {
         self.parameters = parameters;
         self
     }
 
     /// Set return type
-    pub fn with_return_type(mut self, return_type: TypeExpression) -> Self {
+    pub fn with_return_type(mut self, return_type: TsTypeExpression) -> Self {
         self.return_type = Some(return_type);
         self
     }
 
     /// Set visibility
-    pub fn with_visibility(mut self, visibility: Visibility) -> Self {
+    pub fn with_visibility(mut self, visibility: TsVisibility) -> Self {
         self.visibility = visibility;
         self
     }
@@ -275,7 +275,7 @@ impl ClassMethod {
     }
 }
 
-impl ImportStatement {
+impl TsImportStatement {
     /// Create a new import statement
     pub fn new(module_path: String) -> Self {
         Self {
@@ -287,7 +287,7 @@ impl ImportStatement {
 
     /// Add import specifier
     pub fn with_import(mut self, name: String, alias: Option<String>) -> Self {
-        self.imports.push(ImportSpecifier {
+        self.imports.push(TsClassImportSpecifier {
             name,
             alias,
             is_type: false,
@@ -297,7 +297,7 @@ impl ImportStatement {
 
     /// Add type import specifier
     pub fn with_type_import(mut self, name: String, alias: Option<String>) -> Self {
-        self.imports.push(ImportSpecifier {
+        self.imports.push(TsClassImportSpecifier {
             name,
             alias,
             is_type: true,
@@ -355,7 +355,7 @@ impl ImportStatement {
     }
 }
 
-impl ImportSpecifier {
+impl TsClassImportSpecifier {
     /// Create a new import specifier
     pub fn new(name: String) -> Self {
         Self {
@@ -382,7 +382,7 @@ impl ImportSpecifier {
 }
 
 // ToRcDocWithContext implementations
-impl ToRcDocWithContext for ClassProperty {
+impl ToRcDocWithContext for TsClassProperty {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -393,9 +393,9 @@ impl ToRcDocWithContext for ClassProperty {
 
         // Visibility
         match self.visibility {
-            Visibility::Private => parts.push(RcDoc::text("private")),
-            Visibility::Protected => parts.push(RcDoc::text("protected")),
-            Visibility::Public => {} // Default, no keyword needed
+            TsVisibility::Private => parts.push(RcDoc::text("private")),
+            TsVisibility::Protected => parts.push(RcDoc::text("protected")),
+            TsVisibility::Public => {} // Default, no keyword needed
         }
 
         // Static
@@ -433,7 +433,7 @@ impl ToRcDocWithContext for ClassProperty {
     }
 }
 
-impl ToRcDocWithContext for ClassMethod {
+impl ToRcDocWithContext for TsClassMethod {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -444,9 +444,9 @@ impl ToRcDocWithContext for ClassMethod {
 
         // Visibility
         match self.visibility {
-            Visibility::Private => parts.push(RcDoc::text("private")),
-            Visibility::Protected => parts.push(RcDoc::text("protected")),
-            Visibility::Public => {} // Default, no keyword needed
+            TsVisibility::Private => parts.push(RcDoc::text("private")),
+            TsVisibility::Protected => parts.push(RcDoc::text("protected")),
+            TsVisibility::Public => {} // Default, no keyword needed
         }
 
         // Static
@@ -493,7 +493,7 @@ impl ToRcDocWithContext for ClassMethod {
     }
 }
 
-impl ToRcDocWithContext for ImportStatement {
+impl ToRcDocWithContext for TsImportStatement {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(

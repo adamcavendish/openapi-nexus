@@ -4,30 +4,30 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{ClassDefinition, Import, TypeDefinition};
+use crate::ast::{TsClassDefinition, TsImport, TsTypeDefinition};
 
 /// TypeScript file representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TypeScriptFile {
+pub struct TsFile {
     pub file_path: String,
-    pub imports: Vec<Import>,
-    pub content: FileContent,
+    pub imports: Vec<TsImport>,
+    pub content: TsFileContent,
     pub header: Option<String>,
 }
 
 /// Content types that can be in a TypeScript file
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FileContent {
+pub enum TsFileContent {
     /// Single API class file
-    ApiClass(ClassDefinition),
+    ApiClass(TsClassDefinition),
     /// Single type definition file
-    TypeDefinition(TypeDefinition),
+    TypeDefinition(TsTypeDefinition),
     /// Multiple type definitions in one file
-    TypeDefinitions(Vec<TypeDefinition>),
+    TypeDefinitions(Vec<TsTypeDefinition>),
     /// Mixed content (classes and types)
     Mixed {
-        classes: Vec<ClassDefinition>,
-        types: Vec<TypeDefinition>,
+    classes: Vec<TsClassDefinition>,
+    types: Vec<TsTypeDefinition>,
     },
     /// Raw TypeScript content (for runtime files, etc.)
     Raw(String),
@@ -35,7 +35,7 @@ pub enum FileContent {
 
 /// File category for organization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum FileCategory {
+pub enum TsFileCategory {
     /// API client classes
     Api,
     /// Type definitions and interfaces
@@ -48,9 +48,9 @@ pub enum FileCategory {
     Utils,
 }
 
-impl TypeScriptFile {
+impl TsFile {
     /// Create a new TypeScript file
-    pub fn new(file_path: String, content: FileContent) -> Self {
+    pub fn new(file_path: String, content: TsFileContent) -> Self {
         Self {
             file_path,
             imports: Vec::new(),
@@ -60,42 +60,42 @@ impl TypeScriptFile {
     }
 
     /// Create an API class file
-    pub fn api_class(file_path: String, class: ClassDefinition) -> Self {
-        Self::new(file_path, FileContent::ApiClass(class))
+    pub fn api_class(file_path: String, class: TsClassDefinition) -> Self {
+        Self::new(file_path, TsFileContent::ApiClass(class))
     }
 
     /// Create a type definition file
-    pub fn type_definition(file_path: String, type_def: TypeDefinition) -> Self {
-        Self::new(file_path, FileContent::TypeDefinition(type_def))
+    pub fn type_definition(file_path: String, type_def: TsTypeDefinition) -> Self {
+        Self::new(file_path, TsFileContent::TypeDefinition(type_def))
     }
 
     /// Create a file with multiple type definitions
-    pub fn type_definitions(file_path: String, type_defs: Vec<TypeDefinition>) -> Self {
-        Self::new(file_path, FileContent::TypeDefinitions(type_defs))
+    pub fn type_definitions(file_path: String, type_defs: Vec<TsTypeDefinition>) -> Self {
+        Self::new(file_path, TsFileContent::TypeDefinitions(type_defs))
     }
 
     /// Create a mixed content file
     pub fn mixed(
         file_path: String,
-        classes: Vec<ClassDefinition>,
-        types: Vec<TypeDefinition>,
+        classes: Vec<TsClassDefinition>,
+        types: Vec<TsTypeDefinition>,
     ) -> Self {
-        Self::new(file_path, FileContent::Mixed { classes, types })
+        Self::new(file_path, TsFileContent::Mixed { classes, types })
     }
 
     /// Create a raw content file
     pub fn raw(file_path: String, content: String) -> Self {
-        Self::new(file_path, FileContent::Raw(content))
+        Self::new(file_path, TsFileContent::Raw(content))
     }
 
     /// Add imports
-    pub fn with_imports(mut self, imports: Vec<Import>) -> Self {
+    pub fn with_imports(mut self, imports: Vec<TsImport>) -> Self {
         self.imports = imports;
         self
     }
 
     /// Add a single import
-    pub fn with_import(mut self, import: Import) -> Self {
+    pub fn with_import(mut self, import: TsImport) -> Self {
         self.imports.push(import);
         self
     }
@@ -107,42 +107,42 @@ impl TypeScriptFile {
     }
 
     /// Get file category based on path
-    pub fn get_category(&self) -> FileCategory {
+    pub fn get_category(&self) -> TsFileCategory {
         if self.file_path.contains("/apis/") {
-            FileCategory::Api
+            TsFileCategory::Api
         } else if self.file_path.contains("/models/") {
-            FileCategory::Models
+            TsFileCategory::Models
         } else if self.file_path.contains("/runtime/") {
-            FileCategory::Runtime
+            TsFileCategory::Runtime
         } else if self.file_path.contains("/config") {
-            FileCategory::Config
+            TsFileCategory::Config
         } else {
-            FileCategory::Utils
+            TsFileCategory::Utils
         }
     }
 
     /// Check if this is an API class file
     pub fn is_api_class(&self) -> bool {
-        matches!(self.content, FileContent::ApiClass(_))
+        matches!(self.content, TsFileContent::ApiClass(_))
     }
 
     /// Check if this is a type definition file
     pub fn is_type_definition(&self) -> bool {
         matches!(
             self.content,
-            FileContent::TypeDefinition(_) | FileContent::TypeDefinitions(_)
+            TsFileContent::TypeDefinition(_) | TsFileContent::TypeDefinitions(_)
         )
     }
 
     /// Check if this file needs template rendering
     pub fn needs_template_rendering(&self) -> bool {
-        matches!(self.content, FileContent::ApiClass(_))
+        matches!(self.content, TsFileContent::ApiClass(_))
     }
 
     /// Get template data for rendering (if applicable)
     pub fn get_template_data(&self) -> Option<serde_json::Value> {
         match &self.content {
-            FileContent::ApiClass(class) => Some(serde_json::json!({
+            TsFileContent::ApiClass(class) => Some(serde_json::json!({
                 "class": class,
                 "imports": self.imports
             })),
@@ -151,20 +151,20 @@ impl TypeScriptFile {
     }
 
     /// Get the main class definition (if this is an API class file)
-    pub fn get_class(&self) -> Option<&ClassDefinition> {
+    pub fn get_class(&self) -> Option<&TsClassDefinition> {
         match &self.content {
-            FileContent::ApiClass(class) => Some(class),
-            FileContent::Mixed { classes, .. } if classes.len() == 1 => classes.first(),
+            TsFileContent::ApiClass(class) => Some(class),
+            TsFileContent::Mixed { classes, .. } if classes.len() == 1 => classes.first(),
             _ => None,
         }
     }
 
     /// Get all type definitions in this file
-    pub fn get_type_definitions(&self) -> Vec<&TypeDefinition> {
+    pub fn get_type_definitions(&self) -> Vec<&TsTypeDefinition> {
         match &self.content {
-            FileContent::TypeDefinition(type_def) => vec![type_def],
-            FileContent::TypeDefinitions(type_defs) => type_defs.iter().collect(),
-            FileContent::Mixed { types, .. } => types.iter().collect(),
+            TsFileContent::TypeDefinition(type_def) => vec![type_def],
+            TsFileContent::TypeDefinitions(type_defs) => type_defs.iter().collect(),
+            TsFileContent::Mixed { types, .. } => types.iter().collect(),
             _ => Vec::new(),
         }
     }
@@ -201,83 +201,4 @@ impl TypeScriptFile {
     }
 }
 
-/// Collection of TypeScript files for a project
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TypeScriptProject {
-    pub files: Vec<TypeScriptFile>,
-    pub package_name: String,
-    pub version: String,
-    pub description: Option<String>,
-}
-
-impl TypeScriptProject {
-    /// Create a new TypeScript project
-    pub fn new(package_name: String, version: String) -> Self {
-        Self {
-            files: Vec::new(),
-            package_name,
-            version,
-            description: None,
-        }
-    }
-
-    /// Add a file to the project
-    pub fn add_file(mut self, file: TypeScriptFile) -> Self {
-        self.files.push(file);
-        self
-    }
-
-    /// Add multiple files to the project
-    pub fn add_files(mut self, files: Vec<TypeScriptFile>) -> Self {
-        self.files.extend(files);
-        self
-    }
-
-    /// Set description
-    pub fn with_description(mut self, description: String) -> Self {
-        self.description = Some(description);
-        self
-    }
-
-    /// Get files by category
-    pub fn get_files_by_category(&self, category: FileCategory) -> Vec<&TypeScriptFile> {
-        self.files
-            .iter()
-            .filter(|file| file.get_category() == category)
-            .collect()
-    }
-
-    /// Get API class files
-    pub fn get_api_files(&self) -> Vec<&TypeScriptFile> {
-        self.files
-            .iter()
-            .filter(|file| file.is_api_class())
-            .collect()
-    }
-
-    /// Get type definition files
-    pub fn get_model_files(&self) -> Vec<&TypeScriptFile> {
-        self.files
-            .iter()
-            .filter(|file| file.is_type_definition())
-            .collect()
-    }
-
-    /// Get files that need template rendering
-    pub fn get_template_files(&self) -> Vec<&TypeScriptFile> {
-        self.files
-            .iter()
-            .filter(|file| file.needs_template_rendering())
-            .collect()
-    }
-
-    /// Get total number of files
-    pub fn file_count(&self) -> usize {
-        self.files.len()
-    }
-
-    /// Check if project is empty
-    pub fn is_empty(&self) -> bool {
-        self.files.is_empty()
-    }
-}
+// Note: The project-level `TypeScriptProject` struct was removed as it's unused.

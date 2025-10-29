@@ -2,7 +2,7 @@
 
 use pretty::RcDoc;
 
-use crate::ast::{ClassDefinition, TsNode, TypeDefinition, TypeScriptFile};
+use crate::ast::{TsClassDefinition, TsNode, TsTypeDefinition, TsFile};
 use crate::emission::error::EmitError;
 use crate::templating::Templating;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
@@ -26,7 +26,7 @@ impl TsLanguageEmitter {
     }
 
     /// Emit TypeScript code from a file (routes to appropriate emitter)
-    pub fn emit_file(&self, file: &TypeScriptFile) -> Result<String, EmitError> {
+    pub fn emit_file(&self, file: &TsFile) -> Result<String, EmitError> {
         if file.needs_template_rendering() {
             // Use template-based emission for API classes
             self.templating.emit_file(file)
@@ -37,14 +37,14 @@ impl TsLanguageEmitter {
     }
 
     /// Emit TypeScript code from a class definition (template-based)
-    pub fn emit_class(&self, class: &ClassDefinition) -> Result<String, EmitError> {
+    pub fn emit_class(&self, class: &TsClassDefinition) -> Result<String, EmitError> {
         self.templating.emit_class(class)
     }
 
     /// Emit TypeScript code from type definitions (RcDoc-based)
     pub fn emit_type_definitions(
         &self,
-        type_defs: &[&TypeDefinition],
+        type_defs: &[&TsTypeDefinition],
     ) -> Result<String, EmitError> {
         if type_defs.is_empty() {
             return Ok(String::new());

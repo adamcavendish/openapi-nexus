@@ -6,19 +6,19 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::TypeExpression;
+use crate::ast::TsTypeExpression;
 use crate::emission::error::EmitError;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript visibility modifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Visibility {
+pub enum TsVisibility {
     Public,
     Private,
     Protected,
 }
 
-impl Default for Visibility {
+impl Default for TsVisibility {
     fn default() -> Self {
         Self::Public
     }
@@ -26,14 +26,14 @@ impl Default for Visibility {
 
 /// TypeScript parameter definition
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Parameter {
+pub struct TsParameter {
     pub name: String,
-    pub type_expr: Option<TypeExpression>,
+    pub type_expr: Option<TsTypeExpression>,
     pub optional: bool,
     pub default_value: Option<String>,
 }
 
-impl Parameter {
+impl TsParameter {
     /// Create a new parameter
     pub fn new(name: String) -> Self {
         Self {
@@ -45,7 +45,7 @@ impl Parameter {
     }
 
     /// Create a parameter with type
-    pub fn with_type(name: String, type_expr: TypeExpression) -> Self {
+    pub fn with_type(name: String, type_expr: TsTypeExpression) -> Self {
         Self {
             name,
             type_expr: Some(type_expr),
@@ -55,7 +55,7 @@ impl Parameter {
     }
 
     /// Create an optional parameter
-    pub fn optional(name: String, type_expr: Option<TypeExpression>) -> Self {
+    pub fn optional(name: String, type_expr: Option<TsTypeExpression>) -> Self {
         Self {
             name,
             type_expr,
@@ -73,16 +73,16 @@ impl Parameter {
 
 /// TypeScript property definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Property {
+pub struct TsProperty {
     pub name: String,
-    pub type_expr: TypeExpression,
+    pub type_expr: TsTypeExpression,
     pub optional: bool,
     pub documentation: Option<String>,
 }
 
-impl Property {
+impl TsProperty {
     /// Create a new property
-    pub fn new(name: String, type_expr: TypeExpression) -> Self {
+    pub fn new(name: String, type_expr: TsTypeExpression) -> Self {
         Self {
             name,
             type_expr,
@@ -92,7 +92,7 @@ impl Property {
     }
 
     /// Create an optional property
-    pub fn optional(name: String, type_expr: TypeExpression) -> Self {
+    pub fn optional(name: String, type_expr: TsTypeExpression) -> Self {
         Self {
             name,
             type_expr,
@@ -110,13 +110,13 @@ impl Property {
 
 /// TypeScript generic parameter definition
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Generic {
+pub struct TsGeneric {
     pub name: String,
     pub constraint: Option<String>,
     pub default: Option<String>,
 }
 
-impl Generic {
+impl TsGeneric {
     /// Create a new generic parameter
     pub fn new(name: String) -> Self {
         Self {
@@ -141,13 +141,13 @@ impl Generic {
 
 /// TypeScript enum variant definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnumVariant {
+pub struct TsEnumVariant {
     pub name: String,
     pub value: Option<String>,
     pub documentation: Option<String>,
 }
 
-impl EnumVariant {
+impl TsEnumVariant {
     /// Create a new enum variant
     pub fn new(name: String) -> Self {
         Self {
@@ -175,7 +175,7 @@ impl EnumVariant {
 
 // ToRcDocWithContext implementations
 
-impl ToRcDocWithContext for Parameter {
+impl ToRcDocWithContext for TsParameter {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -207,7 +207,7 @@ impl ToRcDocWithContext for Parameter {
     }
 }
 
-impl ToRcDocWithContext for Property {
+impl ToRcDocWithContext for TsProperty {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -229,7 +229,7 @@ impl ToRcDocWithContext for Property {
     }
 }
 
-impl ToRcDocWithContext for Generic {
+impl ToRcDocWithContext for TsGeneric {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -258,7 +258,7 @@ impl ToRcDocWithContext for Generic {
     }
 }
 
-impl ToRcDocWithContext for EnumVariant {
+impl ToRcDocWithContext for TsEnumVariant {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(

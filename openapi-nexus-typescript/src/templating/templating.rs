@@ -8,7 +8,7 @@ use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
 use super::functions::{do_not_edit, get_method_body_template_function};
-use crate::ast::{ClassDefinition, TypeScriptFile};
+use crate::ast::{TsClassDefinition, TsFile};
 use crate::emission::error::EmitError;
 use crate::templating::filters::{
     create_format_doc_comment_filter, create_format_generic_list_filter,
@@ -30,7 +30,7 @@ impl Templating {
     }
 
     /// Emit TypeScript code from a file using templates
-    pub fn emit_file(&self, file: &TypeScriptFile) -> Result<String, EmitError> {
+    pub fn emit_file(&self, file: &TsFile) -> Result<String, EmitError> {
         match file.get_template_data() {
             Some(template_data) => self.emit_with_template_data(&template_data),
             None => Err(EmitError::TemplateError {
@@ -40,7 +40,7 @@ impl Templating {
     }
 
     /// Emit TypeScript code from a class definition
-    pub fn emit_class(&self, class: &ClassDefinition) -> Result<String, EmitError> {
+    pub fn emit_class(&self, class: &TsClassDefinition) -> Result<String, EmitError> {
         let template_data = serde_json::json!({
             "class": class,
             "imports": class.imports

@@ -6,7 +6,7 @@ use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
 
 use crate::ast::{
-    ClassDefinition, ClassMethod, ImportStatement, Parameter, TsNode, TypeExpression,
+    TsClassDefinition, TsClassMethod, TsImportStatement, TsParameter, TsNode, TsTypeExpression,
 };
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
@@ -47,10 +47,10 @@ impl ApiClassGenerator {
 
         let mut methods = vec![
             // Constructor method
-            ClassMethod::new("constructor".to_string())
-                .with_parameters(vec![Parameter::optional(
+            TsClassMethod::new("constructor".to_string())
+                .with_parameters(vec![TsParameter::optional(
                     "configuration".to_string(),
-                    Some(TypeExpression::Reference("Configuration".to_string())),
+                    Some(TsTypeExpression::Reference("Configuration".to_string())),
                 )])
                 .with_docs("Initialize the API client".to_string())
                 .with_body_template("constructor_base_api".to_string(), None),
@@ -72,17 +72,17 @@ impl ApiClassGenerator {
 
         // Create imports
         let imports = vec![
-            ImportStatement::new("../runtime/base_api".to_string())
+            TsImportStatement::new("../runtime/base_api".to_string())
                 .with_import("BaseAPI".to_string(), None),
-            ImportStatement::new("../runtime/configuration".to_string())
+            TsImportStatement::new("../runtime/configuration".to_string())
                 .with_type_import("Configuration".to_string(), None),
-            ImportStatement::new("../runtime/classes/json_api_response".to_string())
+            TsImportStatement::new("../runtime/classes/json_api_response".to_string())
                 .with_import("JSONApiResponse".to_string(), None),
-            ImportStatement::new("../runtime/classes/response_error".to_string())
+            TsImportStatement::new("../runtime/classes/response_error".to_string())
                 .with_import("ResponseError".to_string(), None),
         ];
 
-        let api_class = ClassDefinition::new(class_name.clone())
+        let api_class = TsClassDefinition::new(class_name.clone())
             .with_methods(methods)
             .with_extends("BaseAPI".to_string())
             .with_docs(format!("API client for {} operations", tag))
@@ -97,7 +97,7 @@ impl ApiClassGenerator {
         path: &str,
         http_method: &Method,
         operation: &Operation,
-    ) -> Result<ClassMethod, GeneratorError> {
+    ) -> Result<TsClassMethod, GeneratorError> {
         let method_name = self.generate_method_name(path, operation, http_method);
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_return_type(operation)?;
@@ -113,7 +113,7 @@ impl ApiClassGenerator {
         // Create template data
         let template_data = self.create_method_template_data(path, http_method, operation)?;
 
-        let mut method = ClassMethod::new(method_name)
+        let mut method = TsClassMethod::new(method_name)
             .with_parameters(parameters)
             .with_async()
             .with_body_template(template_name.to_string(), Some(template_data));
@@ -251,7 +251,7 @@ impl ApiClassGenerator {
         &self,
         path: &str,
         operation: &Operation,
-    ) -> Result<Vec<Parameter>, GeneratorError> {
+    ) -> Result<Vec<TsParameter>, GeneratorError> {
         let mut parameters = Vec::new();
 
         // Extract parameters using the parameter extractor
@@ -261,7 +261,7 @@ impl ApiClassGenerator {
 
         // Add path parameters
         for param_info in extracted.path_params {
-            parameters.push(Parameter {
+            parameters.push(TsParameter {
                 name: param_info.name,
                 type_expr: Some(param_info.type_expr),
                 optional: !param_info.required,
@@ -271,7 +271,7 @@ impl ApiClassGenerator {
 
         // Add query parameters
         for param_info in extracted.query_params {
-            parameters.push(Parameter {
+            parameters.push(TsParameter {
                 name: param_info.name,
                 type_expr: Some(param_info.type_expr),
                 optional: !param_info.required,
@@ -281,7 +281,7 @@ impl ApiClassGenerator {
 
         // Add header parameters
         for param_info in extracted.header_params {
-            parameters.push(Parameter {
+            parameters.push(TsParameter {
                 name: param_info.name,
                 type_expr: Some(param_info.type_expr),
                 optional: !param_info.required,
@@ -291,7 +291,7 @@ impl ApiClassGenerator {
 
         // Add request body parameter
         if let Some(body_param) = extracted.body_param {
-            parameters.push(Parameter {
+            parameters.push(TsParameter {
                 name: body_param.name,
                 type_expr: Some(body_param.type_expr),
                 optional: !body_param.required,
@@ -306,7 +306,7 @@ impl ApiClassGenerator {
     fn generate_return_type(
         &self,
         operation: &Operation,
-    ) -> Result<Option<TypeExpression>, GeneratorError> {
+    ) -> Result<Option<TsTypeExpression>, GeneratorError> {
         // Look for successful response (200, 201, etc.)
         for (status_code, response_ref) in operation.responses.responses.iter() {
             if status_code.starts_with("2") {
@@ -318,13 +318,13 @@ impl ApiClassGenerator {
                         {
                             let return_type =
                                 self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
-                            return Ok(Some(TypeExpression::Reference(format!(
+                            return Ok(Some(TsTypeExpression::Reference(format!(
                                 "Promise<JSONApiResponse<{}>>",
                                 return_type
                             ))));
                         }
                         // If no JSON content, return VoidApiResponse for DELETE, JSONApiResponse for others
-                        return Ok(Some(TypeExpression::Reference(
+                        return Ok(Some(TsTypeExpression::Reference(
                             "Promise<JSONApiResponse<any>>".to_string(),
                         )));
                     }
@@ -336,7 +336,7 @@ impl ApiClassGenerator {
         }
 
         // Default return type - wrapped response
-        Ok(Some(TypeExpression::Reference(
+        Ok(Some(TsTypeExpression::Reference(
             "Promise<JSONApiResponse<any>>".to_string(),
         )))
     }

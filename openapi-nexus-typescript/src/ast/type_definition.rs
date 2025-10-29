@@ -6,48 +6,48 @@
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::{EnumVariant, Generic, Property, TypeExpression};
+use crate::ast::{TsEnumVariant, TsGeneric, TsProperty, TsTypeExpression};
 use crate::emission::error::EmitError;
 use crate::emission::ts_type_emitter::TsTypeEmitter;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Unified TypeScript type definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TypeDefinition {
-    Interface(InterfaceDefinition),
-    TypeAlias(TypeAliasDefinition),
-    Enum(EnumDefinition),
+pub enum TsTypeDefinition {
+    Interface(TsInterfaceDefinition),
+    TypeAlias(TsTypeAliasDefinition),
+    Enum(TsEnumDefinition),
 }
 
 /// TypeScript interface definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InterfaceDefinition {
+pub struct TsInterfaceDefinition {
     pub name: String,
-    pub properties: Vec<Property>,
+    pub properties: Vec<TsProperty>,
     pub extends: Vec<String>,
-    pub generics: Vec<Generic>,
+    pub generics: Vec<TsGeneric>,
     pub documentation: Option<String>,
 }
 
 /// TypeScript type alias definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TypeAliasDefinition {
+pub struct TsTypeAliasDefinition {
     pub name: String,
-    pub type_expr: TypeExpression,
-    pub generics: Vec<Generic>,
+    pub type_expr: TsTypeExpression,
+    pub generics: Vec<TsGeneric>,
     pub documentation: Option<String>,
 }
 
 /// TypeScript enum definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnumDefinition {
+pub struct TsEnumDefinition {
     pub name: String,
-    pub variants: Vec<EnumVariant>,
+    pub variants: Vec<TsEnumVariant>,
     pub is_const: bool,
     pub documentation: Option<String>,
 }
 
-impl InterfaceDefinition {
+impl TsInterfaceDefinition {
     /// Create a new interface
     pub fn new(name: String) -> Self {
         Self {
@@ -60,13 +60,13 @@ impl InterfaceDefinition {
     }
 
     /// Add a property
-    pub fn with_property(mut self, property: Property) -> Self {
+    pub fn with_property(mut self, property: TsProperty) -> Self {
         self.properties.push(property);
         self
     }
 
     /// Add multiple properties
-    pub fn with_properties(mut self, properties: Vec<Property>) -> Self {
+    pub fn with_properties(mut self, properties: Vec<TsProperty>) -> Self {
         self.properties.extend(properties);
         self
     }
@@ -78,7 +78,7 @@ impl InterfaceDefinition {
     }
 
     /// Add generics
-    pub fn with_generics(mut self, generics: Vec<Generic>) -> Self {
+    pub fn with_generics(mut self, generics: Vec<TsGeneric>) -> Self {
         self.generics = generics;
         self
     }
@@ -90,9 +90,9 @@ impl InterfaceDefinition {
     }
 }
 
-impl TypeAliasDefinition {
+impl TsTypeAliasDefinition {
     /// Create a new type alias
-    pub fn new(name: String, type_expr: TypeExpression) -> Self {
+    pub fn new(name: String, type_expr: TsTypeExpression) -> Self {
         Self {
             name,
             type_expr,
@@ -102,7 +102,7 @@ impl TypeAliasDefinition {
     }
 
     /// Add generics
-    pub fn with_generics(mut self, generics: Vec<Generic>) -> Self {
+    pub fn with_generics(mut self, generics: Vec<TsGeneric>) -> Self {
         self.generics = generics;
         self
     }
@@ -114,7 +114,7 @@ impl TypeAliasDefinition {
     }
 }
 
-impl EnumDefinition {
+impl TsEnumDefinition {
     /// Create a new enum
     pub fn new(name: String) -> Self {
         Self {
@@ -136,13 +136,13 @@ impl EnumDefinition {
     }
 
     /// Add a variant
-    pub fn with_variant(mut self, variant: EnumVariant) -> Self {
+    pub fn with_variant(mut self, variant: TsEnumVariant) -> Self {
         self.variants.push(variant);
         self
     }
 
     /// Add multiple variants
-    pub fn with_variants(mut self, variants: Vec<EnumVariant>) -> Self {
+    pub fn with_variants(mut self, variants: Vec<TsEnumVariant>) -> Self {
         self.variants.extend(variants);
         self
     }
@@ -154,7 +154,7 @@ impl EnumDefinition {
     }
 }
 
-impl ToRcDocWithContext for TypeDefinition {
+impl ToRcDocWithContext for TsTypeDefinition {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -162,14 +162,14 @@ impl ToRcDocWithContext for TypeDefinition {
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         match self {
-            TypeDefinition::Interface(interface) => interface.to_rcdoc_with_context(context),
-            TypeDefinition::TypeAlias(type_alias) => type_alias.to_rcdoc_with_context(context),
-            TypeDefinition::Enum(enum_def) => enum_def.to_rcdoc_with_context(context),
+            TsTypeDefinition::Interface(interface) => interface.to_rcdoc_with_context(context),
+            TsTypeDefinition::TypeAlias(type_alias) => type_alias.to_rcdoc_with_context(context),
+            TsTypeDefinition::Enum(enum_def) => enum_def.to_rcdoc_with_context(context),
         }
     }
 }
 
-impl ToRcDocWithContext for InterfaceDefinition {
+impl ToRcDocWithContext for TsInterfaceDefinition {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -258,7 +258,7 @@ impl ToRcDocWithContext for InterfaceDefinition {
     }
 }
 
-impl ToRcDocWithContext for TypeAliasDefinition {
+impl ToRcDocWithContext for TsTypeAliasDefinition {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -300,7 +300,7 @@ impl ToRcDocWithContext for TypeAliasDefinition {
     }
 }
 
-impl ToRcDocWithContext for EnumDefinition {
+impl ToRcDocWithContext for TsEnumDefinition {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(

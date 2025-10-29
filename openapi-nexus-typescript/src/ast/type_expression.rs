@@ -6,54 +6,54 @@ use std::fmt;
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::PrimitiveType;
+use crate::ast::TsPrimitiveType;
 use crate::emission::error::EmitError;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript type expression
 #[derive(Debug, Clone, Ord, PartialOrd, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TypeExpression {
-    Primitive(PrimitiveType),
-    Union(BTreeSet<TypeExpression>),
-    Intersection(BTreeSet<TypeExpression>),
-    Array(Box<TypeExpression>),
-    Object(BTreeMap<String, TypeExpression>),
+pub enum TsTypeExpression {
+    Primitive(TsPrimitiveType),
+    Union(BTreeSet<TsTypeExpression>),
+    Intersection(BTreeSet<TsTypeExpression>),
+    Array(Box<TsTypeExpression>),
+    Object(BTreeMap<String, TsTypeExpression>),
     Reference(String),
     Generic(String),
     Function {
         parameters: Vec<String>,
-        return_type: Option<Box<TypeExpression>>,
+        return_type: Option<Box<TsTypeExpression>>,
     },
     Literal(String),
-    IndexSignature(String, Box<TypeExpression>),
-    Tuple(Vec<TypeExpression>),
+    IndexSignature(String, Box<TsTypeExpression>),
+    Tuple(Vec<TsTypeExpression>),
 }
 
-impl fmt::Display for TypeExpression {
+impl fmt::Display for TsTypeExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TypeExpression::Primitive(primitive) => match primitive {
-                PrimitiveType::String => write!(f, "string"),
-                PrimitiveType::Number => write!(f, "number"),
-                PrimitiveType::Boolean => write!(f, "boolean"),
-                PrimitiveType::Any => write!(f, "any"),
-                PrimitiveType::Unknown => write!(f, "unknown"),
-                PrimitiveType::Void => write!(f, "void"),
-                PrimitiveType::Never => write!(f, "never"),
-                PrimitiveType::Null => write!(f, "null"),
-                PrimitiveType::Undefined => write!(f, "undefined"),
+            TsTypeExpression::Primitive(primitive) => match primitive {
+                TsPrimitiveType::String => write!(f, "string"),
+                TsPrimitiveType::Number => write!(f, "number"),
+                TsPrimitiveType::Boolean => write!(f, "boolean"),
+                TsPrimitiveType::Any => write!(f, "any"),
+                TsPrimitiveType::Unknown => write!(f, "unknown"),
+                TsPrimitiveType::Void => write!(f, "void"),
+                TsPrimitiveType::Never => write!(f, "never"),
+                TsPrimitiveType::Null => write!(f, "null"),
+                TsPrimitiveType::Undefined => write!(f, "undefined"),
             },
-            TypeExpression::Reference(name) => write!(f, "{}", name),
-            TypeExpression::Array(item_type) => write!(f, "Array<{}>", item_type),
-            TypeExpression::Union(types) => {
+            TsTypeExpression::Reference(name) => write!(f, "{}", name),
+            TsTypeExpression::Array(item_type) => write!(f, "Array<{}>", item_type),
+            TsTypeExpression::Union(types) => {
                 let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
                 write!(f, "{}", type_strings.join(" | "))
             }
-            TypeExpression::Intersection(types) => {
+            TsTypeExpression::Intersection(types) => {
                 let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
                 write!(f, "{}", type_strings.join(" & "))
             }
-            TypeExpression::Function {
+            TsTypeExpression::Function {
                 parameters,
                 return_type,
             } => {
@@ -64,29 +64,29 @@ impl fmt::Display for TypeExpression {
                 };
                 write!(f, "({}) => {}", parameters.join(", "), return_type_str)
             }
-            TypeExpression::Object(properties) => {
+            TsTypeExpression::Object(properties) => {
                 let prop_strings: Vec<String> = properties
                     .iter()
                     .map(|(name, type_expr)| format!("{}: {}", name, type_expr))
                     .collect();
                 write!(f, "{{ {} }}", prop_strings.join("; "))
             }
-            TypeExpression::Tuple(types) => {
+            TsTypeExpression::Tuple(types) => {
                 let type_strings: Vec<String> = types.iter().map(|t| t.to_string()).collect();
                 write!(f, "[{}]", type_strings.join(", "))
             }
-            TypeExpression::Literal(value) => write!(f, "{}", value),
-            TypeExpression::Generic(name) => write!(f, "{}", name),
-            TypeExpression::IndexSignature(key, value_type) => {
+            TsTypeExpression::Literal(value) => write!(f, "{}", value),
+            TsTypeExpression::Generic(name) => write!(f, "{}", name),
+            TsTypeExpression::IndexSignature(key, value_type) => {
                 write!(f, "[{}: {}]", key, value_type)
             }
         }
     }
 }
 
-impl TypeExpression {}
+impl TsTypeExpression {}
 
-impl ToRcDocWithContext for TypeExpression {
+impl ToRcDocWithContext for TsTypeExpression {
     type Error = EmitError;
 
     fn to_rcdoc_with_context(
@@ -94,28 +94,28 @@ impl ToRcDocWithContext for TypeExpression {
         _context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         let doc = match self {
-            TypeExpression::Primitive(primitive) => {
+            TsTypeExpression::Primitive(primitive) => {
                 let s = match primitive {
-                    PrimitiveType::String => "string",
-                    PrimitiveType::Number => "number",
-                    PrimitiveType::Boolean => "boolean",
-                    PrimitiveType::Any => "any",
-                    PrimitiveType::Unknown => "unknown",
-                    PrimitiveType::Void => "void",
-                    PrimitiveType::Never => "never",
-                    PrimitiveType::Null => "null",
-                    PrimitiveType::Undefined => "undefined",
+                    TsPrimitiveType::String => "string",
+                    TsPrimitiveType::Number => "number",
+                    TsPrimitiveType::Boolean => "boolean",
+                    TsPrimitiveType::Any => "any",
+                    TsPrimitiveType::Unknown => "unknown",
+                    TsPrimitiveType::Void => "void",
+                    TsPrimitiveType::Never => "never",
+                    TsPrimitiveType::Null => "null",
+                    TsPrimitiveType::Undefined => "undefined",
                 };
                 RcDoc::text(s)
             }
-            TypeExpression::Reference(name) | TypeExpression::Generic(name) => {
+            TsTypeExpression::Reference(name) | TsTypeExpression::Generic(name) => {
                 RcDoc::text(name.clone())
             }
-            TypeExpression::Array(item_type) => RcDoc::text("Array")
+            TsTypeExpression::Array(item_type) => RcDoc::text("Array")
                 .append(RcDoc::text("<"))
                 .append(item_type.to_rcdoc_with_context(_context)?)
                 .append(RcDoc::text(">")),
-            TypeExpression::Union(types) => {
+            TsTypeExpression::Union(types) => {
                 let docs: Result<Vec<_>, _> = types
                     .iter()
                     .map(|t| t.to_rcdoc_with_context(_context))
@@ -127,7 +127,7 @@ impl ToRcDocWithContext for TypeExpression {
                         .append(RcDoc::space()),
                 )
             }
-            TypeExpression::Intersection(types) => {
+            TsTypeExpression::Intersection(types) => {
                 let docs: Result<Vec<_>, _> = types
                     .iter()
                     .map(|t| t.to_rcdoc_with_context(_context))
@@ -139,7 +139,7 @@ impl ToRcDocWithContext for TypeExpression {
                         .append(RcDoc::space()),
                 )
             }
-            TypeExpression::Function {
+            TsTypeExpression::Function {
                 parameters,
                 return_type,
             } => {
@@ -160,7 +160,7 @@ impl ToRcDocWithContext for TypeExpression {
                     .append(RcDoc::space())
                     .append(ret)
             }
-            TypeExpression::Object(properties) => {
+            TsTypeExpression::Object(properties) => {
                 if properties.is_empty() {
                     RcDoc::text("{}")
                 } else {
@@ -183,7 +183,7 @@ impl ToRcDocWithContext for TypeExpression {
                         .append(RcDoc::text("}"))
                 }
             }
-            TypeExpression::Tuple(types) => {
+            TsTypeExpression::Tuple(types) => {
                 let docs: Result<Vec<_>, _> = types
                     .iter()
                     .map(|t| t.to_rcdoc_with_context(_context))
@@ -195,8 +195,8 @@ impl ToRcDocWithContext for TypeExpression {
                     ))
                     .append(RcDoc::text("]"))
             }
-            TypeExpression::Literal(value) => RcDoc::text(value.clone()),
-            TypeExpression::IndexSignature(key, value_type) => RcDoc::text("[")
+            TsTypeExpression::Literal(value) => RcDoc::text(value.clone()),
+            TsTypeExpression::IndexSignature(key, value_type) => RcDoc::text("[")
                 .append(RcDoc::text(key.clone()))
                 .append(RcDoc::text(":"))
                 .append(RcDoc::space())

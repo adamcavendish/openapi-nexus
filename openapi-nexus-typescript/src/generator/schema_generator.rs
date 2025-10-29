@@ -12,8 +12,8 @@ use utoipa::openapi::schema::{
 use utoipa::openapi::{RefOr, Schema};
 
 use crate::ast::{
-    EnumDefinition, EnumVariant, InterfaceDefinition, PrimitiveType, Property, TsNode,
-    TypeAliasDefinition, TypeDefinition, TypeExpression,
+    TsEnumDefinition, TsEnumVariant, TsInterfaceDefinition, TsPrimitiveType, TsProperty, TsNode,
+    TsTypeAliasDefinition, TsTypeDefinition, TsTypeExpression,
 };
 use crate::core::GeneratorError;
 use crate::generator::schema_context::SchemaContext;
@@ -69,29 +69,29 @@ impl SchemaGenerator {
                 if let Some(enum_values) = &obj_schema.enum_values
                     && !enum_values.is_empty()
                 {
-                    return Ok(TsNode::TypeDefinition(TypeDefinition::Enum(
+                    return Ok(TsNode::TypeDefinition(TsTypeDefinition::Enum(
                         self.schema_to_enum(name, schema)?,
                     )));
                 }
 
                 // Check if this is an object with properties
                 if !obj_schema.properties.is_empty() {
-                    return Ok(TsNode::TypeDefinition(TypeDefinition::Interface(
+                    return Ok(TsNode::TypeDefinition(TsTypeDefinition::Interface(
                         self.schema_to_interface(name, schema, context)?,
                     )));
                 }
 
                 // Check if this has additionalProperties (typed map)
                 if obj_schema.additional_properties.is_some() {
-                    return Ok(TsNode::TypeDefinition(TypeDefinition::Interface(
+                    return Ok(TsNode::TypeDefinition(TsTypeDefinition::Interface(
                         self.schema_to_interface(name, schema, context)?,
                     )));
                 }
 
                 // Otherwise, create a type alias
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                    TypeAliasDefinition {
+                Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                    TsTypeAliasDefinition {
                         name: name.to_string(),
                         type_expr,
                         generics: vec![],
@@ -102,8 +102,8 @@ impl SchemaGenerator {
             Schema::Array(_) => {
                 // Array schemas become type aliases
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                    TypeAliasDefinition {
+                Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                    TsTypeAliasDefinition {
                         name: name.to_string(),
                         type_expr,
                         generics: vec![],
@@ -114,8 +114,8 @@ impl SchemaGenerator {
             Schema::OneOf(_) | Schema::AllOf(_) | Schema::AnyOf(_) => {
                 // Composition schemas become type aliases with union/intersection types
                 let type_expr = self.map_schema_to_type(schema, context);
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                    TypeAliasDefinition {
+                Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                    TsTypeAliasDefinition {
                         name: name.to_string(),
                         type_expr,
                         generics: vec![],
@@ -125,10 +125,10 @@ impl SchemaGenerator {
             }
             _ => {
                 // Fallback for unknown schema types
-                Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                    TypeAliasDefinition {
+                Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                    TsTypeAliasDefinition {
                         name: name.to_string(),
-                        type_expr: TypeExpression::Primitive(PrimitiveType::Any),
+                        type_expr: TsTypeExpression::Primitive(TsPrimitiveType::Any),
                         generics: vec![],
                         documentation: None,
                     },
@@ -143,7 +143,7 @@ impl SchemaGenerator {
         name: &str,
         schema: &Schema,
         context: &mut SchemaContext,
-    ) -> Result<InterfaceDefinition, GeneratorError> {
+    ) -> Result<TsInterfaceDefinition, GeneratorError> {
         match schema {
             Schema::Object(obj_schema) => {
                 let mut properties = Vec::new();
@@ -154,12 +154,12 @@ impl SchemaGenerator {
                     let is_required = obj_schema.required.contains(prop_name);
                     let description = self.extract_description_from_schema(prop_schema);
 
-                    let property = Property {
-                        name: prop_name.clone(),
-                        type_expr,
-                        optional: !is_required,
-                        documentation: description,
-                    };
+                        let property = TsProperty {
+                            name: prop_name.clone(),
+                            type_expr,
+                            optional: !is_required,
+                            documentation: description,
+                        };
                     properties.push(property);
                 }
 
@@ -184,21 +184,21 @@ impl SchemaGenerator {
                             //   [key: string]: string | number;  // Union of all property types
                             // }
                             if !obj_schema.properties.is_empty() {
-                                let mut unique_types: BTreeSet<TypeExpression> = obj_schema
+                                    let mut unique_types: BTreeSet<TsTypeExpression> = obj_schema
                                     .properties
                                     .values()
                                     .map(|prop_schema| {
-                                        self.map_ref_or_schema_to_type(prop_schema, context)
+                                            self.map_ref_or_schema_to_type(prop_schema, context)
                                     })
                                     .collect();
 
                                 if !unique_types.is_empty() {
                                     unique_types.insert(value_type.clone());
-                                    value_type = TypeExpression::Union(unique_types);
+                                    value_type = TsTypeExpression::Union(unique_types);
                                 }
                             }
 
-                            let index_property = Property {
+                            let index_property = TsProperty {
                                 name: "[key: string]".to_string(),
                                 type_expr: value_type,
                                 optional: false,
@@ -207,9 +207,9 @@ impl SchemaGenerator {
                             properties.push(index_property);
                         }
                         AdditionalProperties::FreeForm(true) => {
-                            let index_property = Property {
+                            let index_property = TsProperty {
                                 name: "[key: string]".to_string(),
-                                type_expr: TypeExpression::Primitive(PrimitiveType::Any),
+                                type_expr: TsTypeExpression::Primitive(TsPrimitiveType::Any),
                                 optional: false,
                                 documentation: Some("Additional properties".to_string()),
                             };
@@ -221,7 +221,7 @@ impl SchemaGenerator {
                     }
                 }
 
-                Ok(InterfaceDefinition {
+                Ok(TsInterfaceDefinition {
                     name: name.to_string(),
                     properties,
                     extends: vec![],
@@ -231,7 +231,7 @@ impl SchemaGenerator {
             }
             _ => {
                 // For non-object schemas, create an empty interface
-                Ok(InterfaceDefinition {
+                Ok(TsInterfaceDefinition {
                     name: name.to_string(),
                     properties: vec![],
                     extends: vec![],
@@ -247,10 +247,10 @@ impl SchemaGenerator {
         &self,
         name: &str,
         schema: &Schema,
-    ) -> Result<EnumDefinition, GeneratorError> {
+    ) -> Result<TsEnumDefinition, GeneratorError> {
         match schema {
             Schema::Object(obj_schema) => {
-                let mut variants = Vec::new();
+                let mut variants: Vec<TsEnumVariant> = Vec::new();
 
                 if let Some(enum_values) = &obj_schema.enum_values {
                     for enum_value in enum_values {
@@ -267,7 +267,7 @@ impl SchemaGenerator {
                         } else {
                             value_str.to_pascal_case()
                         };
-                        let variant = EnumVariant {
+                        let variant = TsEnumVariant {
                             name: variant_name,
                             value: Some(value_str),
                             documentation: None,
@@ -276,7 +276,7 @@ impl SchemaGenerator {
                     }
                 }
 
-                Ok(EnumDefinition {
+                Ok(TsEnumDefinition {
                     name: name.to_string(),
                     variants,
                     documentation: obj_schema.description.clone(),
@@ -298,7 +298,7 @@ impl SchemaGenerator {
         &self,
         schema_ref: &RefOr<Schema>,
         context: &mut SchemaContext,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         match schema_ref {
             RefOr::T(schema) => self.map_schema_to_type(schema, context),
             RefOr::Ref(reference) => {
@@ -307,11 +307,11 @@ impl SchemaGenerator {
                     Ok(type_expr) => type_expr,
                     Err(_) => {
                         // Fallback to simple reference if resolution fails
-                        let schema_name = reference
-                            .ref_location
-                            .strip_prefix("#/components/schemas/")
-                            .unwrap_or("any");
-                        TypeExpression::Reference(schema_name.to_string())
+                            let schema_name = reference
+                                .ref_location
+                                .strip_prefix("#/components/schemas/")
+                                .unwrap_or("any");
+                            TsTypeExpression::Reference(schema_name.to_string())
                     }
                 }
             }
@@ -319,7 +319,7 @@ impl SchemaGenerator {
     }
 
     /// Map a Schema to a TypeScript type expression
-    fn map_schema_to_type(&self, schema: &Schema, context: &mut SchemaContext) -> TypeExpression {
+    fn map_schema_to_type(&self, schema: &Schema, context: &mut SchemaContext) -> TsTypeExpression {
         match schema {
             Schema::Object(obj_schema) => {
                 // Handle enum schemas
@@ -340,7 +340,7 @@ impl SchemaGenerator {
             Schema::Array(arr_schema) => {
                 // Map array schema to TypeScript array type using the items field
                 let item_type = self.map_array_items_to_type(&arr_schema.items, context);
-                TypeExpression::Array(Box::new(item_type))
+                TsTypeExpression::Array(Box::new(item_type))
             }
             Schema::OneOf(one_of) => {
                 // Map oneOf to union type with discriminator support
@@ -348,12 +348,12 @@ impl SchemaGenerator {
             }
             Schema::AllOf(all_of) => {
                 // Map allOf to intersection type with deduplication
-                let types: BTreeSet<TypeExpression> = all_of
+                let types: BTreeSet<TsTypeExpression> = all_of
                     .items
                     .iter()
                     .map(|schema_ref| self.map_ref_or_schema_to_type(schema_ref, context))
                     .collect();
-                TypeExpression::Intersection(types)
+                TsTypeExpression::Intersection(types)
             }
             Schema::AnyOf(any_of) => {
                 // Map anyOf to union type with discriminator support
@@ -361,15 +361,15 @@ impl SchemaGenerator {
             }
             _ => {
                 // Fallback for unknown schema types
-                TypeExpression::Primitive(PrimitiveType::Any)
+                TsTypeExpression::Primitive(TsPrimitiveType::Any)
             }
         }
     }
 
     /// Map primitive type from schema object using OpenAPI 3.1.2 features
-    fn map_primitive_type_from_schema(&self, obj_schema: &Object) -> TypeExpression {
+    fn map_primitive_type_from_schema(&self, obj_schema: &Object) -> TsTypeExpression {
         // Handle nullable types (OpenAPI 3.1.2)
-        let base_type = Self::map_schema_type_to_primitive(&obj_schema.schema_type);
+    let base_type = Self::map_schema_type_to_primitive(&obj_schema.schema_type);
 
         // Apply format handling for better type inference
         let formatted_type = self.handle_known_format(base_type, &obj_schema.format);
@@ -379,21 +379,21 @@ impl SchemaGenerator {
     }
 
     /// Map schema type to primitive TypeScript type
-    fn map_schema_type_to_primitive(schema_type: &SchemaType) -> TypeExpression {
+    fn map_schema_type_to_primitive(schema_type: &SchemaType) -> TsTypeExpression {
         match schema_type {
             SchemaType::Type(openapi_type) => match openapi_type {
-                Type::String => TypeExpression::Primitive(PrimitiveType::String),
-                Type::Integer => TypeExpression::Primitive(PrimitiveType::Number),
-                Type::Number => TypeExpression::Primitive(PrimitiveType::Number),
-                Type::Boolean => TypeExpression::Primitive(PrimitiveType::Boolean),
-                Type::Array => TypeExpression::Array(Box::new(TypeExpression::Primitive(
-                    PrimitiveType::String,
+                Type::String => TsTypeExpression::Primitive(TsPrimitiveType::String),
+                Type::Integer => TsTypeExpression::Primitive(TsPrimitiveType::Number),
+                Type::Number => TsTypeExpression::Primitive(TsPrimitiveType::Number),
+                Type::Boolean => TsTypeExpression::Primitive(TsPrimitiveType::Boolean),
+                Type::Array => TsTypeExpression::Array(Box::new(TsTypeExpression::Primitive(
+                    TsPrimitiveType::String,
                 ))),
                 Type::Object => {
                     // For object types, check if it has properties
-                    TypeExpression::Primitive(PrimitiveType::Any)
+                    TsTypeExpression::Primitive(TsPrimitiveType::Any)
                 }
-                Type::Null => TypeExpression::Primitive(PrimitiveType::Null),
+                Type::Null => TsTypeExpression::Primitive(TsPrimitiveType::Null),
             },
             SchemaType::Array(types) => {
                 // Handle multi-type support (OpenAPI 3.1.2)
@@ -402,7 +402,7 @@ impl SchemaGenerator {
                     Self::map_schema_type_to_primitive(&SchemaType::Type(types[0].clone()))
                 } else {
                     // Multiple types - create union
-                    let union_types: BTreeSet<TypeExpression> = types
+                    let union_types: BTreeSet<TsTypeExpression> = types
                         .iter()
                         .map(|t| Self::map_schema_type_to_primitive(&SchemaType::Type(t.clone())))
                         .collect();
@@ -410,13 +410,13 @@ impl SchemaGenerator {
                     if union_types.len() == 1 {
                         union_types.first().unwrap().clone()
                     } else {
-                        TypeExpression::Union(union_types)
+                        TsTypeExpression::Union(union_types)
                     }
                 }
             }
             SchemaType::AnyValue => {
                 // AnyValue represents any JSON value
-                TypeExpression::Primitive(PrimitiveType::Any)
+                TsTypeExpression::Primitive(TsPrimitiveType::Any)
             }
         }
     }
@@ -426,34 +426,34 @@ impl SchemaGenerator {
         &self,
         array_items: &utoipa::openapi::schema::ArrayItems,
         context: &mut SchemaContext,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         match array_items {
             utoipa::openapi::schema::ArrayItems::RefOrSchema(schema_ref) => {
                 self.map_ref_or_schema_to_type(schema_ref, context)
             }
             utoipa::openapi::schema::ArrayItems::False => {
                 // No additional items allowed - use any as fallback
-                TypeExpression::Primitive(PrimitiveType::Any)
+                TsTypeExpression::Primitive(TsPrimitiveType::Any)
             }
         }
     }
 
     /// Map enum values to TypeScript type
-    fn map_enum_to_type(&self, enum_values: &[serde_json::Value]) -> TypeExpression {
+    fn map_enum_to_type(&self, enum_values: &[serde_json::Value]) -> TsTypeExpression {
         let mut types = Vec::new();
         for enum_value in enum_values {
             match enum_value {
                 serde_json::Value::String(s) => {
-                    types.push(TypeExpression::Literal(format!("\"{}\"", s)));
+                    types.push(TsTypeExpression::Literal(format!("\"{}\"", s)));
                 }
                 serde_json::Value::Number(n) => {
-                    types.push(TypeExpression::Literal(n.to_string()));
+                    types.push(TsTypeExpression::Literal(n.to_string()));
                 }
                 serde_json::Value::Bool(b) => {
-                    types.push(TypeExpression::Literal(b.to_string()));
+                    types.push(TsTypeExpression::Literal(b.to_string()));
                 }
                 _ => {
-                    types.push(TypeExpression::Literal(enum_value.to_string()));
+                    types.push(TsTypeExpression::Literal(enum_value.to_string()));
                 }
             }
         }
@@ -461,14 +461,14 @@ impl SchemaGenerator {
         if types.len() == 1 {
             types.into_iter().next().unwrap()
         } else if types.len() > 1 {
-            let unique_types: BTreeSet<TypeExpression> = types.into_iter().collect();
+            let unique_types: BTreeSet<TsTypeExpression> = types.into_iter().collect();
             if unique_types.len() == 1 {
                 unique_types.first().unwrap().clone()
             } else {
-                TypeExpression::Union(unique_types)
+                TsTypeExpression::Union(unique_types)
             }
         } else {
-            TypeExpression::Primitive(PrimitiveType::Any)
+            TsTypeExpression::Primitive(TsPrimitiveType::Any)
         }
     }
 
@@ -477,7 +477,7 @@ impl SchemaGenerator {
         &self,
         obj_schema: &Object,
         context: &mut SchemaContext,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         let mut properties = BTreeMap::new();
 
         // Map each property to its TypeScript type
@@ -486,7 +486,7 @@ impl SchemaGenerator {
             properties.insert(prop_name.clone(), type_expr);
         }
 
-        TypeExpression::Object(properties)
+        TsTypeExpression::Object(properties)
     }
 
     /// Map composition schemas (oneOf/anyOf) to TypeScript types with discriminator support
@@ -495,8 +495,8 @@ impl SchemaGenerator {
         items: &[RefOr<Schema>],
         _discriminator: &Option<utoipa::openapi::schema::Discriminator>,
         context: &mut SchemaContext,
-    ) -> TypeExpression {
-        let types: BTreeSet<TypeExpression> = items
+    ) -> TsTypeExpression {
+        let types: BTreeSet<TsTypeExpression> = items
             .iter()
             .map(|schema_ref| self.map_ref_or_schema_to_type(schema_ref, context))
             .collect();
@@ -506,7 +506,7 @@ impl SchemaGenerator {
         if types.len() == 1 {
             types.into_iter().next().unwrap()
         } else {
-            TypeExpression::Union(types)
+            TsTypeExpression::Union(types)
         }
     }
 
@@ -517,9 +517,9 @@ impl SchemaGenerator {
     /// Handle nullable types by adding null to union types
     fn handle_nullable(
         &self,
-        base_type: TypeExpression,
+        base_type: TsTypeExpression,
         schema_type: &SchemaType,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         // Check if schema_type includes Null (OpenAPI 3.1.2 nullable support)
         let is_nullable = match schema_type {
             SchemaType::Array(types) => types.contains(&Type::Null),
@@ -532,9 +532,9 @@ impl SchemaGenerator {
             if Self::type_contains_null(&base_type) {
                 base_type
             } else {
-                TypeExpression::Union(BTreeSet::from_iter([
+                TsTypeExpression::Union(BTreeSet::from_iter([
                     base_type,
-                    TypeExpression::Primitive(PrimitiveType::Null),
+                    TsTypeExpression::Primitive(TsPrimitiveType::Null),
                 ]))
             }
         } else {
@@ -543,11 +543,11 @@ impl SchemaGenerator {
     }
 
     /// Check if a TypeExpression contains null
-    fn type_contains_null(type_expr: &TypeExpression) -> bool {
+    fn type_contains_null(type_expr: &TsTypeExpression) -> bool {
         match type_expr {
-            TypeExpression::Primitive(PrimitiveType::Null) => true,
-            TypeExpression::Union(types) => types.iter().any(Self::type_contains_null),
-            TypeExpression::Intersection(types) => types.iter().all(Self::type_contains_null),
+            TsTypeExpression::Primitive(TsPrimitiveType::Null) => true,
+            TsTypeExpression::Union(types) => types.iter().any(Self::type_contains_null),
+            TsTypeExpression::Intersection(types) => types.iter().all(Self::type_contains_null),
             _ => false,
         }
     }
@@ -567,9 +567,9 @@ impl SchemaGenerator {
     /// TODO: Implement proper format handling for better type inference
     fn handle_known_format(
         &self,
-        base_type: TypeExpression,
+        base_type: TsTypeExpression,
         format: &Option<SchemaFormat>,
-    ) -> TypeExpression {
+    ) -> TsTypeExpression {
         // For now, format doesn't change the base type, but we could add comments or
         // more specific types in the future (e.g., branded types for email, uuid, etc.)
         match format {
@@ -615,10 +615,10 @@ impl SchemaGenerator {
         // Check for circular dependency
         if context.is_visited(&schema_name) {
             // Circular reference detected - create a type alias to break the cycle
-            return Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                TypeAliasDefinition {
+            return Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                TsTypeAliasDefinition {
                     name: name.to_string(),
-                    type_expr: TypeExpression::Reference(schema_name.clone()),
+                    type_expr: TsTypeExpression::Reference(schema_name.clone()),
                     generics: vec![],
                     documentation: Some(format!("Circular reference to {}", schema_name)),
                 },
@@ -643,10 +643,10 @@ impl SchemaGenerator {
         } else {
             // Unresolved reference - generate warning and fallback
             tracing::warn!("Unresolved schema reference: {}", schema_name);
-            Ok(TsNode::TypeDefinition(TypeDefinition::TypeAlias(
-                TypeAliasDefinition {
+            Ok(TsNode::TypeDefinition(TsTypeDefinition::TypeAlias(
+                TsTypeAliasDefinition {
                     name: name.to_string(),
-                    type_expr: TypeExpression::Reference(schema_name.clone()),
+                    type_expr: TsTypeExpression::Reference(schema_name.clone()),
                     generics: vec![],
                     documentation: Some(format!("Unresolved reference to {}", schema_name)),
                 },
@@ -672,12 +672,12 @@ impl SchemaGenerator {
         &self,
         reference: &utoipa::openapi::Ref,
         context: &mut SchemaContext,
-    ) -> Result<TypeExpression, GeneratorError> {
+    ) -> Result<TsTypeExpression, GeneratorError> {
         let schema_name = self.extract_schema_name(&reference.ref_location)?;
 
         // Check for circular dependency
         if context.is_visited(&schema_name) {
-            return Ok(TypeExpression::Reference(schema_name.clone()));
+            return Ok(TsTypeExpression::Reference(schema_name.clone()));
         }
 
         // Look up the actual schema
@@ -698,7 +698,7 @@ impl SchemaGenerator {
         } else {
             // Unresolved reference - generate warning and fallback
             tracing::warn!("Unresolved schema reference: {}", schema_name);
-            Ok(TypeExpression::Reference(schema_name.clone()))
+            Ok(TsTypeExpression::Reference(schema_name.clone()))
         }
     }
 }

@@ -2,12 +2,12 @@
 
 use minijinja::value::ViaDeserialize;
 
-use crate::ast::class_definition::ImportStatement;
+use crate::ast::TsImportStatement;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting import statements
 pub fn format_import_filter(
-    import: ViaDeserialize<ImportStatement>,
+    import: ViaDeserialize<TsImportStatement>,
     indent_level: Option<usize>,
     max_line_width: usize,
 ) -> String {
@@ -24,6 +24,6 @@ pub fn format_import_filter(
 /// Create a format_import filter with the given max_line_width
 pub fn create_format_import_filter(
     max_line_width: usize,
-) -> impl Fn(ViaDeserialize<ImportStatement>, Option<usize>) -> String + Send + Sync + 'static {
+) -> impl Fn(ViaDeserialize<TsImportStatement>, Option<usize>) -> String + Send + Sync + 'static {
     move |import, indent_level| format_import_filter(import, indent_level, max_line_width)
 }

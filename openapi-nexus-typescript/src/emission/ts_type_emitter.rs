@@ -2,7 +2,7 @@
 
 use pretty::RcDoc;
 
-use crate::ast::{PrimitiveType, TypeExpression};
+use crate::ast::{TsPrimitiveType, TsTypeExpression};
 use crate::emission::error::EmitError;
 
 /// Helper struct for emitting TypeScript type expressions
@@ -12,7 +12,7 @@ impl TsTypeEmitter {
     /// Emit a TypeExpression as a pretty-printed RcDoc
     pub fn emit_type_expression_doc(
         &self,
-        type_expr: &TypeExpression,
+        type_expr: &TsTypeExpression,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         self.emit_type_expression_doc_with_indent(type_expr, 0)
     }
@@ -20,32 +20,32 @@ impl TsTypeEmitter {
     /// Emit a TypeExpression as a pretty-printed RcDoc with specified indentation level
     pub fn emit_type_expression_doc_with_indent(
         &self,
-        type_expr: &TypeExpression,
+        type_expr: &TsTypeExpression,
         indent_level: usize,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         match type_expr {
-            TypeExpression::Primitive(primitive) => {
+            TsTypeExpression::Primitive(primitive) => {
                 let type_name = match primitive {
-                    PrimitiveType::String => "string",
-                    PrimitiveType::Number => "number",
-                    PrimitiveType::Boolean => "boolean",
-                    PrimitiveType::Null => "null",
-                    PrimitiveType::Undefined => "undefined",
-                    PrimitiveType::Any => "any",
-                    PrimitiveType::Unknown => "unknown",
-                    PrimitiveType::Void => "void",
-                    PrimitiveType::Never => "never",
+                    TsPrimitiveType::String => "string",
+                    TsPrimitiveType::Number => "number",
+                    TsPrimitiveType::Boolean => "boolean",
+                    TsPrimitiveType::Null => "null",
+                    TsPrimitiveType::Undefined => "undefined",
+                    TsPrimitiveType::Any => "any",
+                    TsPrimitiveType::Unknown => "unknown",
+                    TsPrimitiveType::Void => "void",
+                    TsPrimitiveType::Never => "never",
                 };
                 Ok(RcDoc::text(type_name.to_string()))
             }
-            TypeExpression::Array(item_type) => {
+            TsTypeExpression::Array(item_type) => {
                 let item_doc =
                     self.emit_type_expression_doc_with_indent(item_type, indent_level + 1)?;
                 Ok(RcDoc::text("Array<".to_string())
                     .append(item_doc)
                     .append(RcDoc::text(">".to_string())))
             }
-            TypeExpression::Union(types) => {
+            TsTypeExpression::Union(types) => {
                 let type_docs: Result<Vec<RcDoc<'static, ()>>, _> = types
                     .iter()
                     .map(|t| self.emit_type_expression_doc_with_indent(t, indent_level + 1))
@@ -58,7 +58,7 @@ impl TsTypeEmitter {
                     Ok(RcDoc::intersperse(docs, separator))
                 }
             }
-            TypeExpression::Intersection(types) => {
+            TsTypeExpression::Intersection(types) => {
                 let type_docs: Result<Vec<RcDoc<'static, ()>>, _> = types
                     .iter()
                     .map(|t| self.emit_type_expression_doc_with_indent(t, indent_level))
@@ -71,9 +71,9 @@ impl TsTypeEmitter {
                     Ok(RcDoc::intersperse(docs, separator))
                 }
             }
-            TypeExpression::Reference(name) => Ok(RcDoc::text(name.clone())),
-            TypeExpression::Literal(value) => Ok(RcDoc::text(value.clone())),
-            TypeExpression::Object(properties) => {
+            TsTypeExpression::Reference(name) => Ok(RcDoc::text(name.clone())),
+            TsTypeExpression::Literal(value) => Ok(RcDoc::text(value.clone())),
+            TsTypeExpression::Object(properties) => {
                 if properties.is_empty() {
                     Ok(RcDoc::text("{}"))
                 } else {
@@ -131,7 +131,7 @@ impl TsTypeEmitter {
                     }
                 }
             }
-            TypeExpression::Function {
+            TsTypeExpression::Function {
                 parameters,
                 return_type,
             } => {
@@ -157,7 +157,7 @@ impl TsTypeEmitter {
 
                 Ok(func_doc)
             }
-            TypeExpression::Tuple(types) => {
+            TsTypeExpression::Tuple(types) => {
                 let type_docs: Result<Vec<RcDoc<'static, ()>>, _> = types
                     .iter()
                     .map(|t| self.emit_type_expression_doc_with_indent(t, indent_level))
@@ -167,8 +167,8 @@ impl TsTypeEmitter {
                     .append(RcDoc::intersperse(docs, RcDoc::text(", ")))
                     .append(RcDoc::text("]")))
             }
-            TypeExpression::Generic(name) => Ok(RcDoc::text(name.clone())),
-            TypeExpression::IndexSignature(key_type, value_type) => {
+            TsTypeExpression::Generic(name) => Ok(RcDoc::text(name.clone())),
+            TsTypeExpression::IndexSignature(key_type, value_type) => {
                 let value_doc =
                     self.emit_type_expression_doc_with_indent(value_type, indent_level)?;
                 Ok(RcDoc::text("[key: ")
@@ -182,7 +182,7 @@ impl TsTypeEmitter {
     /// Determine if an object should be formatted multiline based on complexity
     pub fn should_format_object_multiline(
         &self,
-        properties: &std::collections::BTreeMap<String, TypeExpression>,
+        properties: &std::collections::BTreeMap<String, TsTypeExpression>,
     ) -> bool {
         // Format multiline if:
         // 1. More than 2 properties
@@ -201,9 +201,9 @@ impl TsTypeEmitter {
     }
 
     /// Check if a type expression is complex (nested objects, arrays, unions, etc.)
-    pub fn is_complex_type(type_expr: &TypeExpression) -> bool {
+    pub fn is_complex_type(type_expr: &TsTypeExpression) -> bool {
         match type_expr {
-            TypeExpression::Object(properties) => {
+            TsTypeExpression::Object(properties) => {
                 // Only consider objects complex if they have more than 2 properties
                 // or contain nested complex types
                 if properties.len() > 2 {
@@ -216,11 +216,11 @@ impl TsTypeEmitter {
                 }
                 false
             }
-            TypeExpression::Array(_) => true,
-            TypeExpression::Union(types) => types.len() > 1,
-            TypeExpression::Intersection(types) => types.len() > 1,
-            TypeExpression::Function { .. } => true,
-            TypeExpression::Tuple(types) => types.len() > 1,
+            TsTypeExpression::Array(_) => true,
+            TsTypeExpression::Union(types) => types.len() > 1,
+            TsTypeExpression::Intersection(types) => types.len() > 1,
+            TsTypeExpression::Function { .. } => true,
+            TsTypeExpression::Tuple(types) => types.len() > 1,
             _ => false,
         }
     }
@@ -228,7 +228,7 @@ impl TsTypeEmitter {
     /// Emit a TypeExpression as a string
     pub fn emit_type_expression_string(
         &self,
-        type_expr: &TypeExpression,
+        type_expr: &TsTypeExpression,
     ) -> Result<String, EmitError> {
         let doc = self.emit_type_expression_doc(type_expr)?;
         Ok(doc.pretty(80).to_string())

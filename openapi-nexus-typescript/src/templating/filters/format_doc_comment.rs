@@ -1,6 +1,6 @@
 //! Template filter for formatting documentation comments
 
-use crate::ast::metadata::DocComment;
+use crate::ast::metadata::TsDocComment;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting documentation comments
@@ -9,7 +9,7 @@ pub fn format_doc_comment_filter(
     indent_level: Option<usize>,
     max_line_width: usize,
 ) -> String {
-    let doc_comment = DocComment::new(value.to_string());
+    let doc_comment = TsDocComment::new(value.to_string());
     let ctx = EmissionContext {
         indent_level: indent_level.unwrap_or(0),
         max_line_width,
