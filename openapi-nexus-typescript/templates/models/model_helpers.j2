@@ -1,0 +1,47 @@
+export function instanceOf{{ name }}(value: object): value is {{ name }} {
+{% for prop in required_props %}{{ prop | instance_guard(2) }}
+{% endfor %}    return true;
+}
+
+export function {{ name }}FromJSON(json: any): {{ name }} {
+    return {{ name }}FromJSONTyped(json, false);
+}
+
+export function {{ name }}FromJSONTyped(json: any, ignoreDiscriminator: boolean): {{ name }} {
+    if (json == null) {
+        return json;
+    }
+    return {
+{% for prop in properties if not prop.is_index_signature %}{{ prop.name | from_json_line(4, prop.optional) }}
+{% endfor %}    };
+}
+
+export function {{ name }}ToJSON(value?: {{ name }} | null): any {
+    return {{ name }}ToJSONTyped(value, false);
+}
+
+export function {{ name }}ToJSONTyped(value?: {{ name }} | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+{% for prop in properties if not prop.is_index_signature %}{{ prop.name | to_json_line(4) }}
+{% endfor %}    };
+}
+
+export const {{ name }}PropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

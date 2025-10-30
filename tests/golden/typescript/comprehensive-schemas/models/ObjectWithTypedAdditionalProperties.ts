@@ -7,3 +7,51 @@ export interface ObjectWithTypedAdditionalProperties {
 name: string,
 [key: string]: string | number
 }
+
+export function instanceOfObjectWithTypedAdditionalProperties(value: object): value is ObjectWithTypedAdditionalProperties {
+    if (!('name' in value) || (value as any)['name'] === undefined) return false;
+    return true;
+}
+
+export function ObjectWithTypedAdditionalPropertiesFromJSON(json: any): ObjectWithTypedAdditionalProperties {
+    return ObjectWithTypedAdditionalPropertiesFromJSONTyped(json, false);
+}
+
+export function ObjectWithTypedAdditionalPropertiesFromJSONTyped(json: any, ignoreDiscriminator: boolean): ObjectWithTypedAdditionalProperties {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'name': json['name'],
+    };
+}
+
+export function ObjectWithTypedAdditionalPropertiesToJSON(value?: ObjectWithTypedAdditionalProperties | null): any {
+    return ObjectWithTypedAdditionalPropertiesToJSONTyped(value, false);
+}
+
+export function ObjectWithTypedAdditionalPropertiesToJSONTyped(value?: ObjectWithTypedAdditionalProperties | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'name': value['name'],
+    };
+}
+
+export const ObjectWithTypedAdditionalPropertiesPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

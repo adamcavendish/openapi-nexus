@@ -9,3 +9,61 @@ id: number,
 name: string,
 updatedAt?: string
 }
+
+export function instanceOfUser(value: object): value is User {
+    if (!('email' in value) || (value as any)['email'] === undefined) return false;
+    if (!('id' in value) || (value as any)['id'] === undefined) return false;
+    if (!('name' in value) || (value as any)['name'] === undefined) return false;
+    return true;
+}
+
+export function UserFromJSON(json: any): User {
+    return UserFromJSONTyped(json, false);
+}
+
+export function UserFromJSONTyped(json: any, ignoreDiscriminator: boolean): User {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'createdAt': json['createdAt'] ?? undefined,
+        'email': json['email'],
+        'id': json['id'],
+        'name': json['name'],
+        'updatedAt': json['updatedAt'] ?? undefined,
+    };
+}
+
+export function UserToJSON(value?: User | null): any {
+    return UserToJSONTyped(value, false);
+}
+
+export function UserToJSONTyped(value?: User | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'createdAt': value['createdAt'],
+        'email': value['email'],
+        'id': value['id'],
+        'name': value['name'],
+        'updatedAt': value['updatedAt'],
+    };
+}
+
+export const UserPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

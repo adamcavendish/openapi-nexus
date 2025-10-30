@@ -6,3 +6,52 @@
 export interface NestedObject {
 metadata?: { created: string }, user?: { id: number; name: string }
 }
+
+export function instanceOfNestedObject(value: object): value is NestedObject {
+    return true;
+}
+
+export function NestedObjectFromJSON(json: any): NestedObject {
+    return NestedObjectFromJSONTyped(json, false);
+}
+
+export function NestedObjectFromJSONTyped(json: any, ignoreDiscriminator: boolean): NestedObject {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'metadata': json['metadata'] ?? undefined,
+        'user': json['user'] ?? undefined,
+    };
+}
+
+export function NestedObjectToJSON(value?: NestedObject | null): any {
+    return NestedObjectToJSONTyped(value, false);
+}
+
+export function NestedObjectToJSONTyped(value?: NestedObject | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'metadata': value['metadata'],
+        'user': value['user'],
+    };
+}
+
+export const NestedObjectPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

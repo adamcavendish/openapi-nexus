@@ -7,14 +7,22 @@ use minijinja::Environment;
 use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
-use super::functions::{do_not_edit, get_method_body_template_function};
-use crate::ast::{TsClassDefinition, TsFile};
-use crate::emission::error::EmitError;
-use crate::templating::filters::{
+use super::filters::{
     create_format_doc_comment_filter, create_format_generic_list_filter,
     create_format_import_filter, create_format_property_filter, create_format_type_expr_filter,
-    indent_filter,
+    from_json_line_filter, indent_filter, instance_guard_filter, to_json_line_filter,
 };
+use super::functions::{do_not_edit, http_method_body};
+use crate::ast::{TsClassDefinition, TsFile};
+use crate::emission::error::EmitError;
+
+/// Helper macro to register multiple max_line_width-dependent filters in one
+/// shot to avoid repetition.
+macro_rules! add_mlw_filters {
+    ($env:expr, $max:expr, { $( $name:expr => $factory:path ),+ $(,)? }) => {
+        $( $env.add_filter($name, $factory($max)); )+
+    };
+}
 
 /// Template-based TypeScript code emitter
 #[derive(Debug, Clone)]
@@ -94,6 +102,20 @@ impl TemplatingEmitter {
             })
     }
 
+    /// Emit model helper functions (instanceOf/FromJSON/ToJSON/validation map)
+    pub fn emit_model_helpers(&self, data: &serde_json::Value) -> Result<String, EmitError> {
+        let template = self
+            .env
+            .get_template("models/model_helpers.j2")
+            .map_err(|e| EmitError::TemplateError {
+                message: format!("Failed to get models/model_helpers.j2 template: {}", e),
+            })?;
+
+        template.render(data).map_err(|e| EmitError::TemplateError {
+            message: format!("Failed to render model helpers template: {}", e),
+        })
+    }
+
     /// Create template environment with custom filters and functions
     fn create_template_environment(max_line_width: usize) -> Environment<'static> {
         let mut env = Environment::new();
@@ -101,34 +123,25 @@ impl TemplatingEmitter {
         // Load all embedded templates
         minijinja_embed::load_templates!(&mut env);
 
-        // Add custom filters that don't need configuration
+        // Common filters
         env.add_filter("indent", indent_filter);
+        // Model helpers filters
+        env.add_filter("instance_guard", instance_guard_filter);
+        env.add_filter("from_json_line", from_json_line_filter);
+        env.add_filter("to_json_line", to_json_line_filter);
 
-        // Add filters that need max_line_width using factory functions
-        env.add_filter(
-            "format_doc_comment",
-            create_format_doc_comment_filter(max_line_width),
-        );
-        env.add_filter(
-            "format_generic_list",
-            create_format_generic_list_filter(max_line_width),
-        );
-        env.add_filter("format_import", create_format_import_filter(max_line_width));
-        env.add_filter(
-            "format_property",
-            create_format_property_filter(max_line_width),
-        );
-        env.add_filter(
-            "format_type_expr",
-            create_format_type_expr_filter(max_line_width),
-        );
+        // Add filters that need max_line_width
+        add_mlw_filters!(env, max_line_width, {
+            "format_doc_comment" => create_format_doc_comment_filter,
+            "format_generic_list" => create_format_generic_list_filter,
+            "format_import" => create_format_import_filter,
+            "format_property" => create_format_property_filter,
+            "format_type_expr" => create_format_type_expr_filter,
+        });
 
         // Add custom functions
         env.add_function("do_not_edit", do_not_edit);
-        env.add_function(
-            "get_method_body_template",
-            get_method_body_template_function,
-        );
+        env.add_function("http_method_body", http_method_body);
 
         env
     }

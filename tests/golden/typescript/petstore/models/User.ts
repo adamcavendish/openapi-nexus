@@ -13,3 +13,64 @@ phone?: string | null,
 user_status?: number | null,
 username?: string | null
 }
+
+export function instanceOfUser(value: object): value is User {
+    return true;
+}
+
+export function UserFromJSON(json: any): User {
+    return UserFromJSONTyped(json, false);
+}
+
+export function UserFromJSONTyped(json: any, ignoreDiscriminator: boolean): User {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'email': json['email'] ?? undefined,
+        'first_name': json['first_name'] ?? undefined,
+        'id': json['id'] ?? undefined,
+        'last_name': json['last_name'] ?? undefined,
+        'password': json['password'] ?? undefined,
+        'phone': json['phone'] ?? undefined,
+        'user_status': json['user_status'] ?? undefined,
+        'username': json['username'] ?? undefined,
+    };
+}
+
+export function UserToJSON(value?: User | null): any {
+    return UserToJSONTyped(value, false);
+}
+
+export function UserToJSONTyped(value?: User | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'email': value['email'],
+        'first_name': value['first_name'],
+        'id': value['id'],
+        'last_name': value['last_name'],
+        'password': value['password'],
+        'phone': value['phone'],
+        'user_status': value['user_status'],
+        'username': value['username'],
+    };
+}
+
+export const UserPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

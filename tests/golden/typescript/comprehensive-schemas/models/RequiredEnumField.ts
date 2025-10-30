@@ -6,3 +6,51 @@
 export interface RequiredEnumField {
 status: "active" | "inactive"
 }
+
+export function instanceOfRequiredEnumField(value: object): value is RequiredEnumField {
+    if (!('status' in value) || (value as any)['status'] === undefined) return false;
+    return true;
+}
+
+export function RequiredEnumFieldFromJSON(json: any): RequiredEnumField {
+    return RequiredEnumFieldFromJSONTyped(json, false);
+}
+
+export function RequiredEnumFieldFromJSONTyped(json: any, ignoreDiscriminator: boolean): RequiredEnumField {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'status': json['status'],
+    };
+}
+
+export function RequiredEnumFieldToJSON(value?: RequiredEnumField | null): any {
+    return RequiredEnumFieldToJSONTyped(value, false);
+}
+
+export function RequiredEnumFieldToJSONTyped(value?: RequiredEnumField | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'status': value['status'],
+    };
+}
+
+export const RequiredEnumFieldPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

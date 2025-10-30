@@ -21,3 +21,54 @@ user: {
   };
 }
 }
+
+export function instanceOfComplexNestedObject(value: object): value is ComplexNestedObject {
+    if (!('id' in value) || (value as any)['id'] === undefined) return false;
+    if (!('user' in value) || (value as any)['user'] === undefined) return false;
+    return true;
+}
+
+export function ComplexNestedObjectFromJSON(json: any): ComplexNestedObject {
+    return ComplexNestedObjectFromJSONTyped(json, false);
+}
+
+export function ComplexNestedObjectFromJSONTyped(json: any, ignoreDiscriminator: boolean): ComplexNestedObject {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'id': json['id'],
+        'user': json['user'],
+    };
+}
+
+export function ComplexNestedObjectToJSON(value?: ComplexNestedObject | null): any {
+    return ComplexNestedObjectToJSONTyped(value, false);
+}
+
+export function ComplexNestedObjectToJSONTyped(value?: ComplexNestedObject | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'id': value['id'],
+        'user': value['user'],
+    };
+}
+
+export const ComplexNestedObjectPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

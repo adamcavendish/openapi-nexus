@@ -8,3 +8,54 @@ active?: boolean,
 age?: number,
 name?: string
 }
+
+export function instanceOfObjectWithDefaults(value: object): value is ObjectWithDefaults {
+    return true;
+}
+
+export function ObjectWithDefaultsFromJSON(json: any): ObjectWithDefaults {
+    return ObjectWithDefaultsFromJSONTyped(json, false);
+}
+
+export function ObjectWithDefaultsFromJSONTyped(json: any, ignoreDiscriminator: boolean): ObjectWithDefaults {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'active': json['active'] ?? undefined,
+        'age': json['age'] ?? undefined,
+        'name': json['name'] ?? undefined,
+    };
+}
+
+export function ObjectWithDefaultsToJSON(value?: ObjectWithDefaults | null): any {
+    return ObjectWithDefaultsToJSONTyped(value, false);
+}
+
+export function ObjectWithDefaultsToJSONTyped(value?: ObjectWithDefaults | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'active': value['active'],
+        'age': value['age'],
+        'name': value['name'],
+    };
+}
+
+export const ObjectWithDefaultsPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

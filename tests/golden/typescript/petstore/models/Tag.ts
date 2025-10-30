@@ -7,3 +7,52 @@ export interface Tag {
 id?: number | null,
 name?: string | null
 }
+
+export function instanceOfTag(value: object): value is Tag {
+    return true;
+}
+
+export function TagFromJSON(json: any): Tag {
+    return TagFromJSONTyped(json, false);
+}
+
+export function TagFromJSONTyped(json: any, ignoreDiscriminator: boolean): Tag {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'id': json['id'] ?? undefined,
+        'name': json['name'] ?? undefined,
+    };
+}
+
+export function TagToJSON(value?: Tag | null): any {
+    return TagToJSONTyped(value, false);
+}
+
+export function TagToJSONTyped(value?: Tag | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'id': value['id'],
+        'name': value['name'],
+    };
+}
+
+export const TagPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

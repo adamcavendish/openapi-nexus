@@ -11,3 +11,60 @@ quantity?: number | null,
 ship_date?: string | null,
 status?: null | "approved" | "delivered" | "placed"
 }
+
+export function instanceOfOrder(value: object): value is Order {
+    return true;
+}
+
+export function OrderFromJSON(json: any): Order {
+    return OrderFromJSONTyped(json, false);
+}
+
+export function OrderFromJSONTyped(json: any, ignoreDiscriminator: boolean): Order {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'complete': json['complete'] ?? undefined,
+        'id': json['id'] ?? undefined,
+        'pet_id': json['pet_id'] ?? undefined,
+        'quantity': json['quantity'] ?? undefined,
+        'ship_date': json['ship_date'] ?? undefined,
+        'status': json['status'] ?? undefined,
+    };
+}
+
+export function OrderToJSON(value?: Order | null): any {
+    return OrderToJSONTyped(value, false);
+}
+
+export function OrderToJSONTyped(value?: Order | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'complete': value['complete'],
+        'id': value['id'],
+        'pet_id': value['pet_id'],
+        'quantity': value['quantity'],
+        'ship_date': value['ship_date'],
+        'status': value['status'],
+    };
+}
+
+export const OrderPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

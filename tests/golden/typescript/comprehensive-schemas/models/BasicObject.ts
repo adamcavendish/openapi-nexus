@@ -8,3 +8,56 @@ active?: boolean,
 id: number,
 name: string
 }
+
+export function instanceOfBasicObject(value: object): value is BasicObject {
+    if (!('id' in value) || (value as any)['id'] === undefined) return false;
+    if (!('name' in value) || (value as any)['name'] === undefined) return false;
+    return true;
+}
+
+export function BasicObjectFromJSON(json: any): BasicObject {
+    return BasicObjectFromJSONTyped(json, false);
+}
+
+export function BasicObjectFromJSONTyped(json: any, ignoreDiscriminator: boolean): BasicObject {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'active': json['active'] ?? undefined,
+        'id': json['id'],
+        'name': json['name'],
+    };
+}
+
+export function BasicObjectToJSON(value?: BasicObject | null): any {
+    return BasicObjectToJSONTyped(value, false);
+}
+
+export function BasicObjectToJSONTyped(value?: BasicObject | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'active': value['active'],
+        'id': value['id'],
+        'name': value['name'],
+    };
+}
+
+export const BasicObjectPropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};

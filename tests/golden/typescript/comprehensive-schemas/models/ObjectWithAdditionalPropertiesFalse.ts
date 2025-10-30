@@ -6,3 +6,51 @@
 export interface ObjectWithAdditionalPropertiesFalse {
 name: string
 }
+
+export function instanceOfObjectWithAdditionalPropertiesFalse(value: object): value is ObjectWithAdditionalPropertiesFalse {
+    if (!('name' in value) || (value as any)['name'] === undefined) return false;
+    return true;
+}
+
+export function ObjectWithAdditionalPropertiesFalseFromJSON(json: any): ObjectWithAdditionalPropertiesFalse {
+    return ObjectWithAdditionalPropertiesFalseFromJSONTyped(json, false);
+}
+
+export function ObjectWithAdditionalPropertiesFalseFromJSONTyped(json: any, ignoreDiscriminator: boolean): ObjectWithAdditionalPropertiesFalse {
+    if (json == null) {
+        return json;
+    }
+    return {
+        'name': json['name'],
+    };
+}
+
+export function ObjectWithAdditionalPropertiesFalseToJSON(value?: ObjectWithAdditionalPropertiesFalse | null): any {
+    return ObjectWithAdditionalPropertiesFalseToJSONTyped(value, false);
+}
+
+export function ObjectWithAdditionalPropertiesFalseToJSONTyped(value?: ObjectWithAdditionalPropertiesFalse | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
+    return {
+        'name': value['name'],
+    };
+}
+
+export const ObjectWithAdditionalPropertiesFalsePropertyValidationAttributesMap: {
+    [property: string]: {
+        maxLength?: number,
+        minLength?: number,
+        pattern?: string,
+        maximum?: number,
+        exclusiveMaximum?: boolean,
+        minimum?: number,
+        exclusiveMinimum?: boolean,
+        multipleOf?: number,
+        maxItems?: number,
+        minItems?: number,
+        uniqueItems?: boolean
+    }
+} = {
+};
