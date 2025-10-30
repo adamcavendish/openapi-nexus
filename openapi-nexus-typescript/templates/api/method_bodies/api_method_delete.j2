@@ -1,54 +1,32 @@
-  // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}{{ path | replace('{', '${') }}`;
+  // Build path with path parameters
+  let urlPath = `{{ path | replace('{', '${') }}`;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 {% for param in query_params %}
   if ({{ param.name }} !== undefined) {
-    queryParams.append('{{ param.name }}', String({{ param.name }}));
+    queryParameters['{{ param.name }}'] = {{ param.name }};
   }
 {% endfor %}
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 {% for param in header_params %}
   if ({{ param.name }} !== undefined) {
-    headers['{{ param.name }}'] = String({{ param.name }});
+    headerParameters['{{ param.name }}'] = String({{ param.name }});
   }
 {% endfor %}
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'DELETE',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return new VoidApiResponse(response);
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new VoidApiResponse(response);

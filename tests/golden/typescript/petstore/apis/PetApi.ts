@@ -3,13 +3,7 @@
 // To make changes, modify the source code and regenerate this file.
 
 
-import { BaseAPI } from '../runtime/base_api';
-
-import { type Configuration } from '../runtime/configuration';
-
-import { JSONApiResponse } from '../runtime/classes/json_api_response';
-
-import { ResponseError } from '../runtime/classes/response_error';
+import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
 
 
@@ -24,7 +18,8 @@ export class PetApi extends BaseAPI {
   
   constructor(configuration: Configuration) {
     
-    this.configuration = configuration;
+    // Call BaseAPI constructor with provided configuration or default
+super(configuration ?? DefaultConfig);
     
   }
 
@@ -34,17 +29,17 @@ export class PetApi extends BaseAPI {
   
     /** Add a new pet to the store */
   
-  async addPet(body: Pet): Promise<JSONApiResponse<Pet>> {
+  async addPetRaw(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     
     ...this.configuration?.headers,
   };
@@ -52,43 +47,32 @@ export class PetApi extends BaseAPI {
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
   // Prepare request body
-
   const body = undefined;
 
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: '',
-      headers,
+      headers: headerParameters,
+      query: queryParameters,
       body,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Add a new pet to the store */
+  
+  async addPet(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+    
+      const response = await this.addPetRaw(body, initOverrides);
+  return await response.value();
     
   }
 
@@ -98,17 +82,17 @@ export class PetApi extends BaseAPI {
   
     /** Update an existing pet */
   
-  async updatePet(body: Pet): Promise<JSONApiResponse<Pet>> {
+  async updatePetRaw(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     
     ...this.configuration?.headers,
   };
@@ -116,43 +100,32 @@ export class PetApi extends BaseAPI {
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
   // Prepare request body
-
   const body = undefined;
 
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: '',
-      headers,
+      headers: headerParameters,
+      query: queryParameters,
       body,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Update an existing pet */
+  
+  async updatePet(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+    
+      const response = await this.updatePetRaw(body, initOverrides);
+  return await response.value();
     
   }
 
@@ -162,54 +135,45 @@ export class PetApi extends BaseAPI {
   
     /** Find pets by status */
   
-  async findPetsByStatus(status: string): Promise<JSONApiResponse<Array<string>>> {
+  async findPetsByStatusRaw(status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Find pets by status */
+  
+  async findPetsByStatus(status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Array<string>> {
+    
+      const response = await this.findPetsByStatusRaw(status, initOverrides);
+  return await response.value();
     
   }
 
@@ -219,54 +183,45 @@ export class PetApi extends BaseAPI {
   
     /** Find pets by tags */
   
-  async findPetsByTags(tags: Array<string>): Promise<JSONApiResponse<Array<string>>> {
+  async findPetsByTagsRaw(tags: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Find pets by tags */
+  
+  async findPetsByTags(tags: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<Array<string>> {
+    
+      const response = await this.findPetsByTagsRaw(tags, initOverrides);
+  return await response.value();
     
   }
 
@@ -276,54 +231,45 @@ export class PetApi extends BaseAPI {
   
     /** Find pet by ID */
   
-  async getPetById(petId: string): Promise<JSONApiResponse<Pet>> {
+  async getPetByIdRaw(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Find pet by ID */
+  
+  async getPetById(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+    
+      const response = await this.getPetByIdRaw(petId, initOverrides);
+  return await response.value();
     
   }
 
@@ -333,17 +279,17 @@ export class PetApi extends BaseAPI {
   
     /** Update a pet in the store with form data */
   
-  async updatePetWithForm(petId: string, name: string, status: string): Promise<JSONApiResponse<Pet>> {
+  async updatePetWithFormRaw(petId: string, name: string, status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     
     ...this.configuration?.headers,
   };
@@ -351,43 +297,32 @@ export class PetApi extends BaseAPI {
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
   // Prepare request body
-
   const body = undefined;
 
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: '',
-      headers,
+      headers: headerParameters,
+      query: queryParameters,
       body,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Update a pet in the store with form data */
+  
+  async updatePetWithForm(petId: string, name: string, status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+    
+      const response = await this.updatePetWithFormRaw(petId, name, status, initOverrides);
+  return await response.value();
     
   }
 
@@ -397,54 +332,45 @@ export class PetApi extends BaseAPI {
   
     /** Delete a pet */
   
-  async deletePet(petId: string): Promise<JSONApiResponse<any>> {
+  async deletePetRaw(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'DELETE',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return new VoidApiResponse(response);
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new VoidApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Delete a pet */
+  
+  async deletePet(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+    
+      const response = await this.deletePetRaw(petId, initOverrides);
+  return await response.value();
     
   }
 
@@ -454,17 +380,17 @@ export class PetApi extends BaseAPI {
   
     /** Upload an image */
   
-  async uploadFile(petId: string, additionalMetadata: string): Promise<JSONApiResponse<ApiResponse>> {
+  async uploadFileRaw(petId: string, additionalMetadata: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<ApiResponse>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     
     ...this.configuration?.headers,
   };
@@ -472,43 +398,32 @@ export class PetApi extends BaseAPI {
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
   // Prepare request body
-
   const body = undefined;
 
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: '',
-      headers,
+      headers: headerParameters,
+      query: queryParameters,
       body,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Upload an image */
+  
+  async uploadFile(petId: string, additionalMetadata: string, initOverrides: InitOverrideFunction | RequestInit): Promise<ApiResponse> {
+    
+      const response = await this.uploadFileRaw(petId, additionalMetadata, initOverrides);
+  return await response.value();
     
   }
 

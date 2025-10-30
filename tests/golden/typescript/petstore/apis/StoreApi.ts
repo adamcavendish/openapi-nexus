@@ -3,13 +3,7 @@
 // To make changes, modify the source code and regenerate this file.
 
 
-import { BaseAPI } from '../runtime/base_api';
-
-import { type Configuration } from '../runtime/configuration';
-
-import { JSONApiResponse } from '../runtime/classes/json_api_response';
-
-import { ResponseError } from '../runtime/classes/response_error';
+import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
 
 
@@ -24,7 +18,8 @@ export class StoreApi extends BaseAPI {
   
   constructor(configuration: Configuration) {
     
-    this.configuration = configuration;
+    // Call BaseAPI constructor with provided configuration or default
+super(configuration ?? DefaultConfig);
     
   }
 
@@ -34,54 +29,45 @@ export class StoreApi extends BaseAPI {
   
     /** Returns pet inventories by status */
   
-  async getInventory(): Promise<JSONApiResponse<string>> {
+  async getInventoryRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<string>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Returns pet inventories by status */
+  
+  async getInventory(initOverrides: InitOverrideFunction | RequestInit): Promise<string> {
+    
+      const response = await this.getInventoryRaw(initOverrides);
+  return await response.value();
     
   }
 
@@ -91,17 +77,17 @@ export class StoreApi extends BaseAPI {
   
     /** Place an order for a pet */
   
-  async placeOrder(body: Order): Promise<JSONApiResponse<Order>> {
+  async placeOrderRaw(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     
     ...this.configuration?.headers,
   };
@@ -109,43 +95,32 @@ export class StoreApi extends BaseAPI {
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
   // Prepare request body
-
   const body = undefined;
 
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: '',
-      headers,
+      headers: headerParameters,
+      query: queryParameters,
       body,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Place an order for a pet */
+  
+  async placeOrder(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
+    
+      const response = await this.placeOrderRaw(body, initOverrides);
+  return await response.value();
     
   }
 
@@ -155,54 +130,45 @@ export class StoreApi extends BaseAPI {
   
     /** Find purchase order by ID */
   
-  async getOrderById(orderId: string): Promise<JSONApiResponse<Order>> {
+  async getOrderByIdRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Find purchase order by ID */
+  
+  async getOrderById(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
+    
+      const response = await this.getOrderByIdRaw(orderId, initOverrides);
+  return await response.value();
     
   }
 
@@ -212,54 +178,45 @@ export class StoreApi extends BaseAPI {
   
     /** Delete purchase order by ID */
   
-  async deleteOrder(orderId: string): Promise<JSONApiResponse<any>> {
+  async deleteOrderRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'DELETE',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return new VoidApiResponse(response);
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new VoidApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Delete purchase order by ID */
+  
+  async deleteOrder(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+    
+      const response = await this.deleteOrderRaw(orderId, initOverrides);
+  return await response.value();
     
   }
 

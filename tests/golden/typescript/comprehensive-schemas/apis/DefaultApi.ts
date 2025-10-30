@@ -3,13 +3,7 @@
 // To make changes, modify the source code and regenerate this file.
 
 
-import { BaseAPI } from '../runtime/base_api';
-
-import { type Configuration } from '../runtime/configuration';
-
-import { JSONApiResponse } from '../runtime/classes/json_api_response';
-
-import { ResponseError } from '../runtime/classes/response_error';
+import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
 
 
@@ -24,7 +18,8 @@ export class DefaultApi extends BaseAPI {
   
   constructor(configuration: Configuration) {
     
-    this.configuration = configuration;
+    // Call BaseAPI constructor with provided configuration or default
+super(configuration ?? DefaultConfig);
     
   }
 
@@ -34,54 +29,45 @@ export class DefaultApi extends BaseAPI {
   
     /** Test endpoint */
   
-  async test(): Promise<JSONApiResponse<any>> {
+  async testRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build URL with path parameters
-  const url = `${this.configuration?.basePath || ''}`;
+      // Build path with path parameters
+  let urlPath = ``;
 
   // Build query parameters
-  const queryParams = new URLSearchParams();
+  const queryParameters: any = {};
 
 
   // Build headers
-  const headers: Record<string, string> = {
+  const headerParameters: Record<string, string> = {
     ...this.configuration?.headers,
   };
 
   // Add header parameters
 
 
-  // Add authentication
-  if (this.configuration?.apiKey) {
-    headers['X-API-Key'] = this.configuration.apiKey;
-  }
-  if (this.configuration?.accessToken) {
-    headers['Authorization'] = `Bearer ${this.configuration.accessToken}`;
-  }
-  if (this.configuration?.username && this.configuration?.password) {
-    const credentials = btoa(`${this.configuration.username}:${this.configuration.password}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  // Build final URL
-  const finalUrl = queryParams.toString() 
-    ? `${url}?${queryParams.toString()}`
-    : url;
-
-  // Make request and return response with error handling
-  return this.request({
-    url: finalUrl,
-    init: {
+  // Make request
+  const response = await this.request({
+      path: urlPath,
       method: 'GET',
-      headers,
-    },
-  }).then(response => {
-    if (response.ok) {
-      return response.json().then(data => new JSONApiResponse(data, response));
-    } else {
-      throw new ResponseError(response, 'Request failed');
-    }
-  });
+      headers: headerParameters,
+      query: queryParameters,
+  }, initOverrides);
+
+  return new JSONApiResponse(response);
+    
+  }
+
+
+
+
+  
+    /** Test endpoint */
+  
+  async test(initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+    
+      const response = await this.testRaw(initOverrides);
+  return await response.value();
     
   }
 

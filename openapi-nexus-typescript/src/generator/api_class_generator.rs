@@ -66,21 +66,25 @@ impl ApiClassGenerator {
                         message: format!("Invalid HTTP method '{}': {}", method_name, e),
                     })?;
 
-            // Generate single method (using default response mode)
-            let method = self.generate_operation_method(path, &http_method, operation)?;
-            methods.push(method);
+            // Generate Raw method (returns ApiResponse wrapper)
+            let raw_method = self.generate_operation_method_raw(path, &http_method, operation)?;
+            methods.push(raw_method.clone());
+
+            // Generate convenience method (unwraps value from Raw)
+            let convenience_method =
+                self.generate_operation_method_convenience(path, &http_method, operation)?;
+            methods.push(convenience_method);
         }
 
         // Create imports
         let imports = vec![
-            TsImportStatement::new("../runtime/base_api".to_string())
-                .with_import("BaseAPI".to_string(), None),
-            TsImportStatement::new("../runtime/configuration".to_string())
-                .with_type_import("Configuration".to_string(), None),
-            TsImportStatement::new("../runtime/classes/json_api_response".to_string())
-                .with_import("JSONApiResponse".to_string(), None),
-            TsImportStatement::new("../runtime/classes/response_error".to_string())
-                .with_import("ResponseError".to_string(), None),
+            TsImportStatement::new("../runtime/runtime".to_string())
+                .with_import("BaseAPI".to_string(), None)
+                .with_import("JSONApiResponse".to_string(), None)
+                .with_import("VoidApiResponse".to_string(), None)
+                .with_import("ResponseError".to_string(), None)
+                .with_type_import("Configuration".to_string(), None)
+                .with_type_import("InitOverrideFunction".to_string(), None),
         ];
 
         let api_class = TsClassDefinition::new(class_name.clone())
@@ -95,16 +99,16 @@ impl ApiClassGenerator {
         Ok(TsNode::Class(api_class))
     }
 
-    /// Generate a method for a specific operation
-    fn generate_operation_method(
+    /// Generate a Raw method for a specific operation (returns ApiResponse wrapper)
+    fn generate_operation_method_raw(
         &self,
         path: &str,
         http_method: &Method,
         operation: &Operation,
     ) -> Result<TsClassMethod, GeneratorError> {
-        let method_name = self.generate_method_name(path, operation, http_method);
+        let method_name = format!("{}Raw", self.generate_method_name(path, operation, http_method));
         let parameters = self.generate_method_parameters(path, operation)?;
-        let return_type = self.generate_return_type(operation)?;
+        let return_type = self.generate_raw_return_type(http_method, operation)?;
 
         // Determine template based on HTTP method
         let template_name = match http_method {
@@ -115,7 +119,7 @@ impl ApiClassGenerator {
         };
 
         // Create template data
-        let template_data = self.create_method_template_data(path, http_method, operation)?;
+    let template_data = self.create_method_template_data(path, http_method, operation)?;
 
         let mut method = TsClassMethod::new(method_name)
             .with_parameters(parameters)
@@ -137,6 +141,37 @@ impl ApiClassGenerator {
         Ok(method)
     }
 
+    /// Generate a convenience method that calls the Raw method and unwraps the value
+    fn generate_operation_method_convenience(
+        &self,
+        path: &str,
+        http_method: &Method,
+        operation: &Operation,
+    ) -> Result<TsClassMethod, GeneratorError> {
+    let base_name = self.generate_method_name(path, operation, http_method);
+        let parameters = self.generate_method_parameters(path, operation)?;
+
+        let mut method = TsClassMethod::new(base_name)
+            .with_parameters(parameters)
+            .with_async()
+            .with_body_template("api_method_convenience".to_string(), None);
+
+        let convenience_return = self
+            .generate_convenience_return_type(http_method, operation)?
+            .unwrap_or_else(|| TsExpression::Reference("Promise<any>".to_string()));
+        method = method.with_return_type(convenience_return);
+
+        if let Some(docs) = operation
+            .summary
+            .clone()
+            .or_else(|| operation.description.clone())
+        {
+            method = method.with_docs(TsDocComment::new(docs));
+        }
+
+        Ok(method)
+    }
+
     /// Create template data for method body generation
     fn create_method_template_data(
         &self,
@@ -145,7 +180,7 @@ impl ApiClassGenerator {
         operation: &Operation,
     ) -> Result<serde_json::Value, GeneratorError> {
         let parameters = self.generate_method_parameters(path, operation)?;
-        let return_type = self.generate_return_type(operation)?;
+        let return_type = self.generate_raw_return_type(http_method, operation)?;
 
         // Extract different parameter types
         let mut path_params = Vec::new();
@@ -303,33 +338,44 @@ impl ApiClassGenerator {
             });
         }
 
+        // Add initOverrides parameter at the end
+        use std::collections::BTreeSet;
+        let mut union: BTreeSet<TsExpression> = BTreeSet::new();
+        union.insert(TsExpression::Reference("RequestInit".to_string()));
+        union.insert(TsExpression::Reference("InitOverrideFunction".to_string()));
+        parameters.push(TsParameter::optional(
+            "initOverrides".to_string(),
+            Some(TsExpression::Union(union)),
+        ));
+
         Ok(parameters)
     }
 
-    /// Generate return type from operation
-    fn generate_return_type(
+    /// Determine Raw return type (ApiResponse wrappers) based on operation responses
+    fn generate_raw_return_type(
         &self,
+        http_method: &Method,
         operation: &Operation,
     ) -> Result<Option<TsExpression>, GeneratorError> {
         // Look for successful response (200, 201, etc.)
         for (status_code, response_ref) in operation.responses.responses.iter() {
-            if status_code.starts_with("2") {
-                // 2xx status codes
+            if status_code.starts_with('2') {
                 match response_ref {
                     RefOr::T(response) => {
                         if let Some(json_content) = response.content.get("application/json")
                             && let Some(schema_ref) = &json_content.schema
                         {
-                            let return_type =
-                                self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
+                            let return_type = self
+                                .schema_mapper
+                                .map_ref_or_schema_to_type(schema_ref);
                             return Ok(Some(TsExpression::Reference(format!(
                                 "Promise<JSONApiResponse<{}>>",
                                 return_type
                             ))));
                         }
-                        // If no JSON content, return VoidApiResponse for DELETE, JSONApiResponse for others
+                        // No JSON content: treat as void
                         return Ok(Some(TsExpression::Reference(
-                            "Promise<JSONApiResponse<any>>".to_string(),
+                            "Promise<VoidApiResponse>".to_string(),
                         )));
                     }
                     RefOr::Ref(_) => {
@@ -339,10 +385,51 @@ impl ApiClassGenerator {
             }
         }
 
-        // Default return type - wrapped response
+        // Fallbacks: DELETE with no content -> VoidApiResponse; otherwise JSON any
+        if *http_method == Method::DELETE {
+            return Ok(Some(TsExpression::Reference(
+                "Promise<VoidApiResponse>".to_string(),
+            )));
+        }
         Ok(Some(TsExpression::Reference(
             "Promise<JSONApiResponse<any>>".to_string(),
         )))
+    }
+
+    /// Determine convenience return type (unwrapped)
+    fn generate_convenience_return_type(
+        &self,
+        http_method: &Method,
+        operation: &Operation,
+    ) -> Result<Option<TsExpression>, GeneratorError> {
+        // Look for JSON success schema
+        for (status_code, response_ref) in operation.responses.responses.iter() {
+            if status_code.starts_with('2') {
+                match response_ref {
+                    RefOr::T(response) => {
+                        if let Some(json_content) = response.content.get("application/json")
+                            && let Some(schema_ref) = &json_content.schema
+                        {
+                            let t = self
+                                .schema_mapper
+                                .map_ref_or_schema_to_type(schema_ref);
+                            return Ok(Some(TsExpression::Reference(format!(
+                                "Promise<{}>",
+                                t
+                            ))));
+                        }
+                        return Ok(Some(TsExpression::Reference(
+                            "Promise<void>".to_string(),
+                        )));
+                    }
+                    RefOr::Ref(_) => {}
+                }
+            }
+        }
+        if *http_method == Method::DELETE {
+            return Ok(Some(TsExpression::Reference("Promise<void>".to_string())));
+        }
+        Ok(Some(TsExpression::Reference("Promise<any>".to_string())))
     }
 
     /// Generate implementation body for an API method using templates
