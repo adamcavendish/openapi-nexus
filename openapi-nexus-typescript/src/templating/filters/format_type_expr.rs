@@ -2,12 +2,12 @@
 
 use minijinja::value::ViaDeserialize;
 
-use crate::ast::TsTypeExpression;
+use crate::ast::TsExpression;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting TypeExpression as TypeScript string
 pub fn format_type_expr_filter(
-    type_expr: ViaDeserialize<TsTypeExpression>,
+    type_expr: ViaDeserialize<TsExpression>,
     indent_level: Option<usize>,
     max_line_width: usize,
 ) -> String {
@@ -24,6 +24,6 @@ pub fn format_type_expr_filter(
 /// Create a format_type_expr filter with the given max_line_width
 pub fn create_format_type_expr_filter(
     max_line_width: usize,
-) -> impl Fn(ViaDeserialize<TsTypeExpression>, Option<usize>) -> String + Send + Sync + 'static {
+) -> impl Fn(ViaDeserialize<TsExpression>, Option<usize>) -> String + Send + Sync + 'static {
     move |type_expr, indent_level| format_type_expr_filter(type_expr, indent_level, max_line_width)
 }

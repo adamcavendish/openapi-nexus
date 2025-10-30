@@ -18,11 +18,11 @@ use crate::templating::filters::{
 
 /// Template-based TypeScript code emitter
 #[derive(Debug, Clone)]
-pub struct Templating {
+pub struct TemplatingEmitter {
     env: Environment<'static>,
 }
 
-impl Templating {
+impl TemplatingEmitter {
     /// Create a new template-based emitter with initialized templates
     pub fn new(max_line_width: usize) -> Self {
         let env = Self::create_template_environment(max_line_width);

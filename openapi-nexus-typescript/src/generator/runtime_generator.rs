@@ -3,20 +3,20 @@
 use crate::core::GeneratorError;
 use crate::emission::TsFileCategory;
 use crate::generator::file_generator::GeneratedFile;
-use crate::templating::Templating;
+use crate::templating::TemplatingEmitter;
 use utoipa::openapi::OpenApi;
 
 /// Runtime module generator using template-based approach
 #[derive(Debug, Clone)]
 pub struct RuntimeGenerator {
-    templating: Templating,
+    templating: TemplatingEmitter,
 }
 
 impl RuntimeGenerator {
     /// Create a new runtime generator
     pub fn new(max_line_width: usize) -> Self {
         Self {
-            templating: Templating::new(max_line_width),
+            templating: TemplatingEmitter::new(max_line_width),
         }
     }
 

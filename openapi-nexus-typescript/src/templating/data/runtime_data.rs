@@ -25,10 +25,10 @@ impl RuntimeData {
 
     /// Extract base path from OpenAPI servers
     fn extract_base_path(openapi: &OpenApi) -> String {
-        if let Some(servers) = &openapi.servers {
-            if let Some(first_server) = servers.first() {
-                return first_server.url.clone();
-            }
+        if let Some(servers) = &openapi.servers
+            && let Some(first_server) = servers.first()
+        {
+            return first_server.url.clone();
         }
         "http://localhost".to_string()
     }

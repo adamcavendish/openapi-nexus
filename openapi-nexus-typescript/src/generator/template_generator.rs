@@ -261,7 +261,6 @@ mod tests {
         init_test_logging();
         let _t = TemplateGenerator::new_empty();
         // Test that the generator can be created successfully with no templates
-        assert!(true);
     }
 
     #[test]
@@ -351,6 +350,5 @@ mod tests {
         init_test_logging();
         let _generator = TemplateGenerator::new();
         // Test that the generator can be created successfully
-        assert!(true);
     }
 }

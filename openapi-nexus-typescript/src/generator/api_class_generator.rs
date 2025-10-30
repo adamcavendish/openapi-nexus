@@ -6,7 +6,8 @@ use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
 
 use crate::ast::{
-    TsClassDefinition, TsClassMethod, TsImportStatement, TsParameter, TsNode, TsTypeExpression,
+    TsClassDefinition, TsClassMethod, TsDocComment, TsExpression, TsImportStatement, TsNode,
+    TsParameter,
 };
 use crate::core::GeneratorError;
 use crate::generator::parameter_extractor::ParameterExtractor;
@@ -50,9 +51,9 @@ impl ApiClassGenerator {
             TsClassMethod::new("constructor".to_string())
                 .with_parameters(vec![TsParameter::optional(
                     "configuration".to_string(),
-                    Some(TsTypeExpression::Reference("Configuration".to_string())),
+                    Some(TsExpression::Reference("Configuration".to_string())),
                 )])
-                .with_docs("Initialize the API client".to_string())
+                .with_docs(TsDocComment::new("Initialize the API client".to_string()))
                 .with_body_template("constructor_base_api".to_string(), None),
         ];
 
@@ -85,7 +86,10 @@ impl ApiClassGenerator {
         let api_class = TsClassDefinition::new(class_name.clone())
             .with_methods(methods)
             .with_extends("BaseAPI".to_string())
-            .with_docs(format!("API client for {} operations", tag))
+            .with_docs(TsDocComment::new(format!(
+                "API client for {} operations",
+                tag
+            )))
             .with_imports(imports);
 
         Ok(TsNode::Class(api_class))
@@ -127,7 +131,7 @@ impl ApiClassGenerator {
             .clone()
             .or_else(|| operation.description.clone())
         {
-            method = method.with_docs(docs);
+            method = method.with_docs(TsDocComment::new(docs));
         }
 
         Ok(method)
@@ -306,7 +310,7 @@ impl ApiClassGenerator {
     fn generate_return_type(
         &self,
         operation: &Operation,
-    ) -> Result<Option<TsTypeExpression>, GeneratorError> {
+    ) -> Result<Option<TsExpression>, GeneratorError> {
         // Look for successful response (200, 201, etc.)
         for (status_code, response_ref) in operation.responses.responses.iter() {
             if status_code.starts_with("2") {
@@ -318,13 +322,13 @@ impl ApiClassGenerator {
                         {
                             let return_type =
                                 self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
-                            return Ok(Some(TsTypeExpression::Reference(format!(
+                            return Ok(Some(TsExpression::Reference(format!(
                                 "Promise<JSONApiResponse<{}>>",
                                 return_type
                             ))));
                         }
                         // If no JSON content, return VoidApiResponse for DELETE, JSONApiResponse for others
-                        return Ok(Some(TsTypeExpression::Reference(
+                        return Ok(Some(TsExpression::Reference(
                             "Promise<JSONApiResponse<any>>".to_string(),
                         )));
                     }
@@ -336,7 +340,7 @@ impl ApiClassGenerator {
         }
 
         // Default return type - wrapped response
-        Ok(Some(TsTypeExpression::Reference(
+        Ok(Some(TsExpression::Reference(
             "Promise<JSONApiResponse<any>>".to_string(),
         )))
     }

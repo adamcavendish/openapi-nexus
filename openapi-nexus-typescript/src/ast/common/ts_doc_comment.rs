@@ -1,7 +1,3 @@
-//! TypeScript metadata and documentation
-//!
-//! This module consolidates comment handling, documentation, and file headers.
-
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
@@ -10,35 +6,12 @@ use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// TypeScript documentation comment
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TsDocComment {
-    pub content: String,
-    pub is_multiline: bool,
-}
+pub struct TsDocComment(pub String);
 
 impl TsDocComment {
     /// Create a new documentation comment
-    pub fn new(content: String) -> Self {
-        let is_multiline = content.contains('\n');
-        Self {
-            content,
-            is_multiline,
-        }
-    }
-
-    /// Create a single-line doc comment
-    pub fn single_line(content: String) -> Self {
-        Self {
-            content,
-            is_multiline: false,
-        }
-    }
-
-    /// Create a multi-line doc comment
-    pub fn multi_line(content: String) -> Self {
-        Self {
-            content,
-            is_multiline: true,
-        }
+    pub fn new(content: impl Into<String>) -> Self {
+        Self(content.into())
     }
 }
 
@@ -93,15 +66,15 @@ pub fn create_method_doc(
         lines.push(format_example_doc(example));
     }
 
-    TsDocComment::multi_line(lines.join("\n"))
+    TsDocComment::new(lines.join("\n"))
 }
 
 /// Create a simple class or interface documentation comment
 pub fn create_type_doc(description: &str, additional_info: Option<&str>) -> TsDocComment {
     if let Some(info) = additional_info {
-        TsDocComment::multi_line(format!("{}\n\n{}", description, info))
+        TsDocComment::new(format!("{}\n\n{}", description, info))
     } else {
-        TsDocComment::single_line(description.to_string())
+        TsDocComment::new(description.to_string())
     }
 }
 
@@ -115,8 +88,15 @@ impl ToRcDocWithContext for TsDocComment {
     ) -> Result<RcDoc<'static, ()>, EmitError> {
         let indent_str = " ".repeat(context.indent_level);
 
-        let doc = if self.is_multiline {
-            let lines: Vec<&str> = self.content.lines().collect();
+        // Determine if we need multiline format based on:
+        // 1. Content contains newlines (explicit multiline)
+        // 2. Single-line format (including indentation) would exceed max_line_width
+        let has_newlines = self.0.contains('\n');
+        let single_line_length = indent_str.len() + 7 + self.0.len(); // indent + "/** " + content + " */"
+        let needs_multiline = has_newlines || single_line_length > context.max_line_width;
+
+        let doc = if needs_multiline {
+            let lines: Vec<&str> = self.0.lines().collect();
             let mut parts = vec![RcDoc::text(format!("{}/**", indent_str))];
             for line in lines {
                 parts.push(RcDoc::hardline());
@@ -126,11 +106,9 @@ impl ToRcDocWithContext for TsDocComment {
             parts.push(RcDoc::text(format!("{} */", indent_str)));
             RcDoc::concat(parts)
         } else {
-            RcDoc::text(format!("{}/** {} */", indent_str, self.content))
+            RcDoc::text(format!("{}/** {} */", indent_str, self.0))
         };
 
         Ok(doc)
     }
 }
-
-// Note: simple line/block `Comment` and `GeneratedFileHeader` types were removed as they were unused or minimal.
