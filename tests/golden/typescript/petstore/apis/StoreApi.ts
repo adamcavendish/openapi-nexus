@@ -2,223 +2,175 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
-
-
 /** API client for store operations */
-
 export class StoreApi extends BaseAPI {
-
-
-
   
-    /** Initialize the API client */
-  
+
+  /** Initialize the API client */
   constructor(configuration: Configuration) {
     
-    // Call BaseAPI constructor with provided configuration or default
-super(configuration ?? DefaultConfig);
-    
+        // Call BaseAPI constructor with provided configuration or default
+    super(configuration ?? DefaultConfig);
+        
   }
-
-
-
-
   
-    /** Returns pet inventories by status */
-  
+
+  /** Returns pet inventories by status */
   async getInventoryRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<string>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'GET',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'GET',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Returns pet inventories by status */
-  
+
+  /** Returns pet inventories by status */
   async getInventory(initOverrides: InitOverrideFunction | RequestInit): Promise<string> {
     
-      const response = await this.getInventoryRaw(initOverrides);
-  return await response.value();
-    
+          const response = await this.getInventoryRaw(initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Place an order for a pet */
-  
+
+  /** Place an order for a pet */
   async placeOrderRaw(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Prepare request body
+      const body = undefined;
 
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: '',
+          headers: headerParameters,
+          query: queryParameters,
+          body,
+      }, initOverrides);
 
-  // Prepare request body
-  const body = undefined;
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: '',
-      headers: headerParameters,
-      query: queryParameters,
-      body,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Place an order for a pet */
-  
+
+  /** Place an order for a pet */
   async placeOrder(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
     
-      const response = await this.placeOrderRaw(body, initOverrides);
-  return await response.value();
-    
+          const response = await this.placeOrderRaw(body, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Find purchase order by ID */
-  
+
+  /** Find purchase order by ID */
   async getOrderByIdRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'GET',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'GET',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Find purchase order by ID */
-  
+
+  /** Find purchase order by ID */
   async getOrderById(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
     
-      const response = await this.getOrderByIdRaw(orderId, initOverrides);
-  return await response.value();
-    
+          const response = await this.getOrderByIdRaw(orderId, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Delete purchase order by ID */
-  
+
+  /** Delete purchase order by ID */
   async deleteOrderRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'DELETE',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'DELETE',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new VoidApiResponse(response);
-    
+      return new VoidApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Delete purchase order by ID */
-  
+
+  /** Delete purchase order by ID */
   async deleteOrder(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
     
-      const response = await this.deleteOrderRaw(orderId, initOverrides);
-  return await response.value();
-    
+          const response = await this.deleteOrderRaw(orderId, initOverrides);
+      return await response.value();
+        
   }
-
-
+  
 }

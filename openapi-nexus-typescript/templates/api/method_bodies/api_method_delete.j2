@@ -3,11 +3,11 @@
 
   // Build query parameters
   const queryParameters: any = {};
-{% for param in query_params %}
+{%- for param in query_params -%}
   if ({{ param.name }} !== undefined) {
     queryParameters['{{ param.name }}'] = {{ param.name }};
   }
-{% endfor %}
+{%- endfor %}
 
   // Build headers
   const headerParameters: Record<string, string> = {
@@ -15,11 +15,11 @@
   };
 
   // Add header parameters
-{% for param in header_params %}
+{%- for param in header_params -%}
   if ({{ param.name }} !== undefined) {
     headerParameters['{{ param.name }}'] = String({{ param.name }});
   }
-{% endfor %}
+{%- endfor %}
 
   // Make request
   const response = await this.request({

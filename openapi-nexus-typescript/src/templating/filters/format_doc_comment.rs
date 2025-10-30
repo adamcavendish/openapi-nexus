@@ -29,11 +29,11 @@ impl DocCommentInput {
 /// Accepts either a String or a serialized TsDocComment Value
 pub fn format_doc_comment_filter(
     value: ViaDeserialize<DocCommentInput>,
-    indent_level: Option<usize>,
+    indent: Option<usize>,
     max_line_width: usize,
 ) -> Result<String, minijinja::Error> {
     let ctx = EmissionContext {
-        indent_level: indent_level.unwrap_or(0),
+        indent: indent.unwrap_or(0),
         max_line_width,
     };
 
@@ -57,5 +57,5 @@ pub fn create_format_doc_comment_filter(
 + Send
 + Sync
 + 'static {
-    move |value, indent_level| format_doc_comment_filter(value, indent_level, max_line_width)
+    move |value, indent| format_doc_comment_filter(value, indent, max_line_width)
 }

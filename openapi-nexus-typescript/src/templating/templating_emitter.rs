@@ -124,7 +124,7 @@ impl TemplatingEmitter {
         minijinja_embed::load_templates!(&mut env);
 
         // Common filters
-        env.add_filter("indent", indent_filter);
+        // env.add_filter("indent", indent_filter);
         // Model helpers filters
         env.add_filter("instance_guard", instance_guard_filter);
         env.add_filter("from_json_line", from_json_line_filter);

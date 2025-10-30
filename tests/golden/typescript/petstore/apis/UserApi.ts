@@ -2,377 +2,299 @@
 // Any manual changes will be overwritten on the next generation.
 // To make changes, modify the source code and regenerate this file.
 
-
 import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
-
-
 /** API client for user operations */
-
 export class UserApi extends BaseAPI {
-
-
-
   
-    /** Initialize the API client */
-  
+
+  /** Initialize the API client */
   constructor(configuration: Configuration) {
     
-    // Call BaseAPI constructor with provided configuration or default
-super(configuration ?? DefaultConfig);
-    
+        // Call BaseAPI constructor with provided configuration or default
+    super(configuration ?? DefaultConfig);
+        
   }
-
-
-
-
   
-    /** Create user */
-  
+
+  /** Create user */
   async createUserRaw(body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Prepare request body
+      const body = undefined;
 
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: '',
+          headers: headerParameters,
+          query: queryParameters,
+          body,
+      }, initOverrides);
 
-  // Prepare request body
-  const body = undefined;
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: '',
-      headers: headerParameters,
-      query: queryParameters,
-      body,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Create user */
-  
+
+  /** Create user */
   async createUser(body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
     
-      const response = await this.createUserRaw(body, initOverrides);
-  return await response.value();
-    
+          const response = await this.createUserRaw(body, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Creates list of users with given input array */
-  
+
+  /** Creates list of users with given input array */
   async createUsersWithListInputRaw(body: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Prepare request body
+      const body = undefined;
 
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: '',
+          headers: headerParameters,
+          query: queryParameters,
+          body,
+      }, initOverrides);
 
-  // Prepare request body
-  const body = undefined;
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: '',
-      headers: headerParameters,
-      query: queryParameters,
-      body,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Creates list of users with given input array */
-  
+
+  /** Creates list of users with given input array */
   async createUsersWithListInput(body: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
     
-      const response = await this.createUsersWithListInputRaw(body, initOverrides);
-  return await response.value();
-    
+          const response = await this.createUsersWithListInputRaw(body, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Logs user into the system */
-  
+
+  /** Logs user into the system */
   async loginUserRaw(username: string, password: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'GET',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'GET',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Logs user into the system */
-  
+
+  /** Logs user into the system */
   async loginUser(username: string, password: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
     
-      const response = await this.loginUserRaw(username, password, initOverrides);
-  return await response.value();
-    
+          const response = await this.loginUserRaw(username, password, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Logs out current logged in user session */
-  
+
+  /** Logs out current logged in user session */
   async logoutUserRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'GET',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'GET',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Logs out current logged in user session */
-  
+
+  /** Logs out current logged in user session */
   async logoutUser(initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
     
-      const response = await this.logoutUserRaw(initOverrides);
-  return await response.value();
-    
+          const response = await this.logoutUserRaw(initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Get user by user name */
-  
+
+  /** Get user by user name */
   async getUserByNameRaw(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'GET',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'GET',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Get user by user name */
-  
+
+  /** Get user by user name */
   async getUserByName(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
     
-      const response = await this.getUserByNameRaw(username, initOverrides);
-  return await response.value();
-    
+          const response = await this.getUserByNameRaw(username, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Update user */
-  
+
+  /** Update user */
   async updateUserRaw(username: string, body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Prepare request body
+      const body = undefined;
 
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: '',
+          headers: headerParameters,
+          query: queryParameters,
+          body,
+      }, initOverrides);
 
-  // Prepare request body
-  const body = undefined;
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: '',
-      headers: headerParameters,
-      query: queryParameters,
-      body,
-  }, initOverrides);
-
-  return new JSONApiResponse(response);
-    
+      return new JSONApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Update user */
-  
+
+  /** Update user */
   async updateUser(username: string, body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
     
-      const response = await this.updateUserRaw(username, body, initOverrides);
-  return await response.value();
-    
+          const response = await this.updateUserRaw(username, body, initOverrides);
+      return await response.value();
+        
   }
-
-
-
-
   
-    /** Delete user */
-  
+
+  /** Delete user */
   async deleteUserRaw(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
-      // Build path with path parameters
-  let urlPath = ``;
+          // Build path with path parameters
+      let urlPath = ``;
 
-  // Build query parameters
-  const queryParameters: any = {};
+      // Build query parameters
+      const queryParameters: any = {};
 
+      // Build headers
+      const headerParameters: Record<string, string> = {
+        ...this.configuration?.headers,
+      };
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+      // Add header parameters
 
-  // Add header parameters
+      // Make request
+      const response = await this.request({
+          path: urlPath,
+          method: 'DELETE',
+          headers: headerParameters,
+          query: queryParameters,
+      }, initOverrides);
 
-
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'DELETE',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
-
-  return new VoidApiResponse(response);
-    
+      return new VoidApiResponse(response);
+        
   }
-
-
-
-
   
-    /** Delete user */
-  
+
+  /** Delete user */
   async deleteUser(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
     
-      const response = await this.deleteUserRaw(username, initOverrides);
-  return await response.value();
-    
+          const response = await this.deleteUserRaw(username, initOverrides);
+      return await response.value();
+        
   }
-
-
+  
 }

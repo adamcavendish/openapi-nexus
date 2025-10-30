@@ -86,7 +86,7 @@ impl ToRcDocWithContext for TsDocComment {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let indent_str = " ".repeat(context.indent_level);
+        let indent_str = " ".repeat(context.indent);
 
         // Determine if we need multiline format based on:
         // 1. Content contains newlines (explicit multiline)

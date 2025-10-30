@@ -69,7 +69,7 @@ impl TypeScriptFileGenerator {
     /// Create an emission context with the configured max line width
     fn create_emission_context(&self) -> EmissionContext {
         EmissionContext {
-            indent_level: 0,
+            indent: 0,
             max_line_width: self.file_config.max_line_width,
         }
     }

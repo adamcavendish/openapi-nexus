@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmissionContext {
     /// Current indentation level
-    pub indent_level: usize,
+    pub indent: usize,
     /// Maximum line width for pretty printing
     pub max_line_width: usize,
 }
@@ -28,7 +28,7 @@ impl EmissionContext {
     /// Increment indentation level
     pub fn inc_indent(&self) -> Self {
         Self {
-            indent_level: self.indent_level + 1,
+            indent: self.indent + 1,
             max_line_width: self.max_line_width,
         }
     }
@@ -36,7 +36,7 @@ impl EmissionContext {
     /// Decrement indentation level
     pub fn dec_indent(&self) -> Self {
         Self {
-            indent_level: self.indent_level.saturating_sub(1),
+            indent: self.indent.saturating_sub(1),
             max_line_width: self.max_line_width,
         }
     }
@@ -44,7 +44,7 @@ impl EmissionContext {
     /// Set indentation level
     pub fn with_indent(&self, level: usize) -> Self {
         Self {
-            indent_level: level,
+            indent: level,
             max_line_width: self.max_line_width,
         }
     }
@@ -53,7 +53,7 @@ impl EmissionContext {
 impl Default for EmissionContext {
     fn default() -> Self {
         Self {
-            indent_level: 0,
+            indent: 0,
             max_line_width: 80,
         }
     }

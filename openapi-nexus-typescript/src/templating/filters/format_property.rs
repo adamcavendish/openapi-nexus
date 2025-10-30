@@ -12,7 +12,7 @@ pub fn format_property_filter(
     max_line_width: usize,
 ) -> String {
     let ctx = EmissionContext {
-        indent_level: indent_level.unwrap_or(0),
+        indent: indent_level.unwrap_or(0),
         max_line_width,
     };
     property

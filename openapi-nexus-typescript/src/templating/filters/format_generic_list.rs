@@ -15,7 +15,7 @@ pub fn format_generic_list_filter(
         String::new()
     } else {
         let ctx = EmissionContext {
-            indent_level: indent_level.unwrap_or(0),
+            indent: indent_level.unwrap_or(0),
             max_line_width,
         };
         let generic_strings: Vec<String> = generics

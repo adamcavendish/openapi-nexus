@@ -189,7 +189,7 @@ impl ApiClassGenerator {
         let mut body_param = None;
 
         let ctx = EmissionContext {
-            indent_level: 0,
+            indent: 0,
             max_line_width: self.max_line_width,
         };
 
