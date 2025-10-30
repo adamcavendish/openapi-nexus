@@ -9,8 +9,9 @@ use utoipa::openapi::OpenApi;
 use super::data::RuntimeData;
 use super::filters::{
     create_format_doc_comment_filter, create_format_generic_list_filter,
-    create_format_import_filter, create_format_property_filter, create_format_type_expr_filter,
-    from_json_line_filter, indent_filter, instance_guard_filter, to_json_line_filter,
+    create_format_import_filter, create_format_method_signature_filter,
+    create_format_property_filter, create_format_type_expr_filter, from_json_line_filter,
+    instance_guard_filter, to_json_line_filter,
 };
 use super::functions::{do_not_edit, http_method_body};
 use crate::ast::{TsClassDefinition, TsFile};
@@ -123,8 +124,6 @@ impl TemplatingEmitter {
         // Load all embedded templates
         minijinja_embed::load_templates!(&mut env);
 
-        // Common filters
-        // env.add_filter("indent", indent_filter);
         // Model helpers filters
         env.add_filter("instance_guard", instance_guard_filter);
         env.add_filter("from_json_line", from_json_line_filter);
@@ -135,6 +134,7 @@ impl TemplatingEmitter {
             "format_doc_comment" => create_format_doc_comment_filter,
             "format_generic_list" => create_format_generic_list_filter,
             "format_import" => create_format_import_filter,
+            "format_method_signature" => create_format_method_signature_filter,
             "format_property" => create_format_property_filter,
             "format_type_expr" => create_format_type_expr_filter,
         });

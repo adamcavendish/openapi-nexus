@@ -9,7 +9,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Initialize the API client */
-  constructor(configuration: Configuration) {
+  constructor(configuration?: Configuration) {
     
         // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
@@ -18,7 +18,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Test endpoint */
-  async testRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async testRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -47,7 +47,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Test endpoint */
-  async test(initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async test(initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.testRaw(initOverrides);
       return await response.value();

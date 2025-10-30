@@ -9,7 +9,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Initialize the API client */
-  constructor(configuration: Configuration) {
+  constructor(configuration?: Configuration) {
     
         // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
@@ -18,7 +18,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Add a new pet to the store */
-  async addPetRaw(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
+  async addPetRaw(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -52,7 +52,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Add a new pet to the store */
-  async addPet(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+  async addPet(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
     
           const response = await this.addPetRaw(body, initOverrides);
       return await response.value();
@@ -61,7 +61,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Update an existing pet */
-  async updatePetRaw(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
+  async updatePetRaw(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -95,7 +95,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Update an existing pet */
-  async updatePet(body: Pet, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+  async updatePet(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
     
           const response = await this.updatePetRaw(body, initOverrides);
       return await response.value();
@@ -104,7 +104,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pets by status */
-  async findPetsByStatusRaw(status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
+  async findPetsByStatusRaw(status: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -133,7 +133,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pets by status */
-  async findPetsByStatus(status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Array<string>> {
+  async findPetsByStatus(status: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
     
           const response = await this.findPetsByStatusRaw(status, initOverrides);
       return await response.value();
@@ -142,7 +142,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pets by tags */
-  async findPetsByTagsRaw(tags: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
+  async findPetsByTagsRaw(tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -171,7 +171,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pets by tags */
-  async findPetsByTags(tags: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<Array<string>> {
+  async findPetsByTags(tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
     
           const response = await this.findPetsByTagsRaw(tags, initOverrides);
       return await response.value();
@@ -180,7 +180,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pet by ID */
-  async getPetByIdRaw(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
+  async getPetByIdRaw(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -209,7 +209,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Find pet by ID */
-  async getPetById(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+  async getPetById(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
     
           const response = await this.getPetByIdRaw(petId, initOverrides);
       return await response.value();
@@ -218,7 +218,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Update a pet in the store with form data */
-  async updatePetWithFormRaw(petId: string, name: string, status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
+  async updatePetWithFormRaw(petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -252,7 +252,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Update a pet in the store with form data */
-  async updatePetWithForm(petId: string, name: string, status: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Pet> {
+  async updatePetWithForm(petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
     
           const response = await this.updatePetWithFormRaw(petId, name, status, initOverrides);
       return await response.value();
@@ -261,7 +261,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Delete a pet */
-  async deletePetRaw(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async deletePetRaw(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -290,7 +290,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Delete a pet */
-  async deletePet(petId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async deletePet(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.deletePetRaw(petId, initOverrides);
       return await response.value();
@@ -299,7 +299,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Upload an image */
-  async uploadFileRaw(petId: string, additionalMetadata: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<ApiResponse>> {
+  async uploadFileRaw(petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<ApiResponse>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -333,7 +333,7 @@ export class PetApi extends BaseAPI {
   
 
   /** Upload an image */
-  async uploadFile(petId: string, additionalMetadata: string, initOverrides: InitOverrideFunction | RequestInit): Promise<ApiResponse> {
+  async uploadFile(petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<ApiResponse> {
     
           const response = await this.uploadFileRaw(petId, additionalMetadata, initOverrides);
       return await response.value();

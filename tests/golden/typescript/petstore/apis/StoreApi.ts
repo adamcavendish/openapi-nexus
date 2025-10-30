@@ -9,7 +9,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Initialize the API client */
-  constructor(configuration: Configuration) {
+  constructor(configuration?: Configuration) {
     
         // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
@@ -18,7 +18,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Returns pet inventories by status */
-  async getInventoryRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<string>> {
+  async getInventoryRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<string>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -47,7 +47,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Returns pet inventories by status */
-  async getInventory(initOverrides: InitOverrideFunction | RequestInit): Promise<string> {
+  async getInventory(initOverrides?: InitOverrideFunction | RequestInit): Promise<string> {
     
           const response = await this.getInventoryRaw(initOverrides);
       return await response.value();
@@ -56,7 +56,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Place an order for a pet */
-  async placeOrderRaw(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
+  async placeOrderRaw(body: Order, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -90,7 +90,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Place an order for a pet */
-  async placeOrder(body: Order, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
+  async placeOrder(body: Order, initOverrides?: InitOverrideFunction | RequestInit): Promise<Order> {
     
           const response = await this.placeOrderRaw(body, initOverrides);
       return await response.value();
@@ -99,7 +99,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Find purchase order by ID */
-  async getOrderByIdRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
+  async getOrderByIdRaw(orderId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Order>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -128,7 +128,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Find purchase order by ID */
-  async getOrderById(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<Order> {
+  async getOrderById(orderId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Order> {
     
           const response = await this.getOrderByIdRaw(orderId, initOverrides);
       return await response.value();
@@ -137,7 +137,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Delete purchase order by ID */
-  async deleteOrderRaw(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async deleteOrderRaw(orderId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -166,7 +166,7 @@ export class StoreApi extends BaseAPI {
   
 
   /** Delete purchase order by ID */
-  async deleteOrder(orderId: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async deleteOrder(orderId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.deleteOrderRaw(orderId, initOverrides);
       return await response.value();

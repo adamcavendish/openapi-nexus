@@ -5,8 +5,8 @@ use super::ts_enum_definition::TsEnumDefinition;
 use super::ts_interface_definition::TsInterfaceDefinition;
 use super::ts_type_alias_definition::TsTypeAliasDefinition;
 use crate::emission::error::EmitError;
-use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 use crate::templating::TemplatingEmitter;
+use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Unified TypeScript type definition
 #[derive(Debug, Clone, Serialize, Deserialize)]

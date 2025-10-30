@@ -106,7 +106,10 @@ impl ApiClassGenerator {
         http_method: &Method,
         operation: &Operation,
     ) -> Result<TsClassMethod, GeneratorError> {
-        let method_name = format!("{}Raw", self.generate_method_name(path, operation, http_method));
+        let method_name = format!(
+            "{}Raw",
+            self.generate_method_name(path, operation, http_method)
+        );
         let parameters = self.generate_method_parameters(path, operation)?;
         let return_type = self.generate_raw_return_type(http_method, operation)?;
 
@@ -119,7 +122,7 @@ impl ApiClassGenerator {
         };
 
         // Create template data
-    let template_data = self.create_method_template_data(path, http_method, operation)?;
+        let template_data = self.create_method_template_data(path, http_method, operation)?;
 
         let mut method = TsClassMethod::new(method_name)
             .with_parameters(parameters)
@@ -148,7 +151,7 @@ impl ApiClassGenerator {
         http_method: &Method,
         operation: &Operation,
     ) -> Result<TsClassMethod, GeneratorError> {
-    let base_name = self.generate_method_name(path, operation, http_method);
+        let base_name = self.generate_method_name(path, operation, http_method);
         let parameters = self.generate_method_parameters(path, operation)?;
 
         let mut method = TsClassMethod::new(base_name)
@@ -365,9 +368,8 @@ impl ApiClassGenerator {
                         if let Some(json_content) = response.content.get("application/json")
                             && let Some(schema_ref) = &json_content.schema
                         {
-                            let return_type = self
-                                .schema_mapper
-                                .map_ref_or_schema_to_type(schema_ref);
+                            let return_type =
+                                self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
                             return Ok(Some(TsExpression::Reference(format!(
                                 "Promise<JSONApiResponse<{}>>",
                                 return_type
@@ -410,17 +412,10 @@ impl ApiClassGenerator {
                         if let Some(json_content) = response.content.get("application/json")
                             && let Some(schema_ref) = &json_content.schema
                         {
-                            let t = self
-                                .schema_mapper
-                                .map_ref_or_schema_to_type(schema_ref);
-                            return Ok(Some(TsExpression::Reference(format!(
-                                "Promise<{}>",
-                                t
-                            ))));
+                            let t = self.schema_mapper.map_ref_or_schema_to_type(schema_ref);
+                            return Ok(Some(TsExpression::Reference(format!("Promise<{}>", t))));
                         }
-                        return Ok(Some(TsExpression::Reference(
-                            "Promise<void>".to_string(),
-                        )));
+                        return Ok(Some(TsExpression::Reference("Promise<void>".to_string())));
                     }
                     RefOr::Ref(_) => {}
                 }

@@ -9,7 +9,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Initialize the API client */
-  constructor(configuration: Configuration) {
+  constructor(configuration?: Configuration) {
     
         // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
@@ -18,7 +18,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Create user */
-  async createUserRaw(body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
+  async createUserRaw(body: User, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -52,7 +52,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Create user */
-  async createUser(body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
+  async createUser(body: User, initOverrides?: InitOverrideFunction | RequestInit): Promise<User> {
     
           const response = await this.createUserRaw(body, initOverrides);
       return await response.value();
@@ -61,7 +61,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Creates list of users with given input array */
-  async createUsersWithListInputRaw(body: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
+  async createUsersWithListInputRaw(body: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -95,7 +95,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Creates list of users with given input array */
-  async createUsersWithListInput(body: Array<string>, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
+  async createUsersWithListInput(body: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<User> {
     
           const response = await this.createUsersWithListInputRaw(body, initOverrides);
       return await response.value();
@@ -104,7 +104,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Logs user into the system */
-  async loginUserRaw(username: string, password: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async loginUserRaw(username?: string, password?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -133,7 +133,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Logs user into the system */
-  async loginUser(username: string, password: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async loginUser(username?: string, password?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.loginUserRaw(username, password, initOverrides);
       return await response.value();
@@ -142,7 +142,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Logs out current logged in user session */
-  async logoutUserRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async logoutUserRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -171,7 +171,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Logs out current logged in user session */
-  async logoutUser(initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async logoutUser(initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.logoutUserRaw(initOverrides);
       return await response.value();
@@ -180,7 +180,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Get user by user name */
-  async getUserByNameRaw(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
+  async getUserByNameRaw(username: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<User>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -209,7 +209,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Get user by user name */
-  async getUserByName(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<User> {
+  async getUserByName(username: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<User> {
     
           const response = await this.getUserByNameRaw(username, initOverrides);
       return await response.value();
@@ -218,7 +218,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Update user */
-  async updateUserRaw(username: string, body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async updateUserRaw(username: string, body: User, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -252,7 +252,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Update user */
-  async updateUser(username: string, body: User, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async updateUser(username: string, body: User, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.updateUserRaw(username, body, initOverrides);
       return await response.value();
@@ -261,7 +261,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Delete user */
-  async deleteUserRaw(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
+  async deleteUserRaw(username: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -290,7 +290,7 @@ export class UserApi extends BaseAPI {
   
 
   /** Delete user */
-  async deleteUser(username: string, initOverrides: InitOverrideFunction | RequestInit): Promise<void> {
+  async deleteUser(username: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
     
           const response = await this.deleteUserRaw(username, initOverrides);
       return await response.value();

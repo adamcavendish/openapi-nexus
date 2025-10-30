@@ -9,7 +9,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Initialize the API client */
-  constructor(configuration: Configuration) {
+  constructor(configuration?: Configuration) {
     
         // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
@@ -18,7 +18,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Get all users */
-  async getUsersRaw(initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
+  async getUsersRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -47,7 +47,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Get all users */
-  async getUsers(initOverrides: InitOverrideFunction | RequestInit): Promise<Array<string>> {
+  async getUsers(initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
     
           const response = await this.getUsersRaw(initOverrides);
       return await response.value();
@@ -56,7 +56,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Get user by ID */
-  async getUsersRaw(id: string, initOverrides: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<object>> {
+  async getUsersRaw(id: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<object>> {
     
           // Build path with path parameters
       let urlPath = ``;
@@ -85,7 +85,7 @@ export class DefaultApi extends BaseAPI {
   
 
   /** Get user by ID */
-  async getUsers(id: string, initOverrides: InitOverrideFunction | RequestInit): Promise<object> {
+  async getUsers(id: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<object> {
     
           const response = await this.getUsersRaw(id, initOverrides);
       return await response.value();
