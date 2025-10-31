@@ -48,8 +48,8 @@ const TEMPLATE_PATHS: &[(&str, &str)] = &[
     ),
     ("api_method_get", "api/method_bodies/api_method_get.j2"),
     (
-        "api_method_post_put",
-        "api/method_bodies/api_method_post_put.j2",
+        "api_method_post_put_patch",
+        "api/method_bodies/api_method_post_put_patch.j2",
     ),
     (
         "api_method_delete",
@@ -189,7 +189,7 @@ impl fmt::Display for Template {
             Template::ConstructorWithExtends => write!(f, "constructor_with_extends"),
             Template::ConstructorDefault => write!(f, "constructor_default"),
             Template::ApiMethodGet(_) => write!(f, "api_method_get"),
-            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put"),
+            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put_patch"),
             Template::ApiMethodDelete(_) => write!(f, "api_method_delete"),
             Template::DefaultMethod => write!(f, "default_method"),
         }
@@ -315,7 +315,7 @@ mod tests {
                 has_error_handling: false,
             })
             .to_string(),
-            "api_method_post_put"
+            "api_method_post_put_patch"
         );
         assert_eq!(
             Template::ApiMethodDelete(ApiMethodData {

@@ -44,7 +44,7 @@ mod tests {
             "README.md.j2",
             "api/method_bodies/constructor_base_api.j2",
             "api/method_bodies/api_method_get.j2",
-            "api/method_bodies/api_method_post_put.j2",
+            "api/method_bodies/api_method_post_put_patch.j2",
             "api/method_bodies/api_method_delete.j2",
             "api/method_bodies/api_method_convenience.j2",
             "api/method_bodies/default.j2",

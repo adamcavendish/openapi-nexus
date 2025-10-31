@@ -4,6 +4,7 @@
 //! template-driven code generation.
 
 use minijinja::{Environment, context};
+use tracing::debug;
 use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
@@ -15,7 +16,7 @@ use super::filters::{
     create_format_ts_property_filter, create_format_type_expr_filter, from_json_line_filter,
     instance_guard_filter, to_json_line_filter,
 };
-use super::functions::{do_not_edit, file_header, http_method_body};
+use super::functions::{do_not_edit, file_header};
 use crate::ast::{
     TsClassDefinition, TsExpression, TsInterfaceDefinition, TsInterfaceSignature, TsProperty,
 };
@@ -142,6 +143,33 @@ impl TemplatingEmitter {
         })
     }
 
+    /// Emit file header with optional OpenAPI metadata
+    pub fn emit_file_header(
+        &self,
+        title: &str,
+        description: &str,
+        version: &str,
+    ) -> Result<String, EmitError> {
+        debug!(%title, %description, %version, "Emit file header.");
+
+        let template =
+            self.env
+                .get_template("file_header.j2")
+                .map_err(|e| EmitError::TemplateError {
+                    message: format!("Failed to get file_header.j2 template: {}", e),
+                })?;
+        let template_data = context! {
+            title => title,
+            description => description,
+            version => version,
+        };
+        template
+            .render(template_data)
+            .map_err(|e| EmitError::TemplateError {
+                message: format!("Failed to render file header template: {}", e),
+            })
+    }
+
     /// Create template environment with custom filters and functions
     fn create_template_environment(max_line_width: usize) -> Environment<'static> {
         let mut env = Environment::new();
@@ -173,7 +201,6 @@ impl TemplatingEmitter {
         // Add custom functions
         env.add_function("do_not_edit", do_not_edit);
         env.add_function("file_header", file_header);
-        env.add_function("http_method_body", http_method_body);
 
         env
     }

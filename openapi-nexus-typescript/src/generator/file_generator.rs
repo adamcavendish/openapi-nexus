@@ -64,7 +64,7 @@ impl TypeScriptFileGenerator {
         openapi: &OpenApi,
     ) -> Self {
         let metadata = OpenApiMetadata {
-            title: openapi.info.title.clone().into(),
+            title: Some(openapi.info.title.clone()),
             description: openapi.info.description.clone(),
             version: Some(openapi.info.version.clone()),
         };

@@ -144,7 +144,7 @@ impl ApiClassGenerator {
         // Determine template based on HTTP method
         let template_name = match http_method {
             &Method::GET => "api_method_get",
-            &Method::POST | &Method::PUT | &Method::PATCH => "api_method_post_put",
+            &Method::POST | &Method::PUT | &Method::PATCH => "api_method_post_put_patch",
             &Method::DELETE => "api_method_delete",
             _ => "default_method",
         };
