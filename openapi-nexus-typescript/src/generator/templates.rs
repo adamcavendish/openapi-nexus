@@ -42,14 +42,11 @@ mod tests {
         // Check that we have the expected templates
         let expected_templates = [
             "README.md.j2",
-            "api/method_bodies/base_api_request.j2",
             "api/method_bodies/constructor_base_api.j2",
-            "api/method_bodies/constructor_required_error.j2",
-            "api/method_bodies/constructor_with_extends.j2",
-            "api/method_bodies/constructor_default.j2",
             "api/method_bodies/api_method_get.j2",
             "api/method_bodies/api_method_post_put.j2",
             "api/method_bodies/api_method_delete.j2",
+            "api/method_bodies/api_method_convenience.j2",
             "api/method_bodies/default.j2",
         ];
 

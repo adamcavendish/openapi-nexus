@@ -160,6 +160,10 @@ impl TypeScriptFileGenerator {
             });
         }
 
+        // Generate subdirectory index files
+        files.push(self.generate_apis_index_file(&api_classes)?);
+        files.push(self.generate_models_index_file(&other_schemas)?);
+
         // Generate main index.ts
         files.push(self.generate_main_index_file(&api_classes, &other_schemas)?);
 
@@ -172,37 +176,71 @@ impl TypeScriptFileGenerator {
         Ok(files)
     }
 
-    /// Generate main index file
-    fn generate_main_index_file(
+    /// Generate apis/index.ts file
+    fn generate_apis_index_file(
         &self,
         api_classes: &HashMap<String, TsNode>,
-        schemas: &HashMap<String, TsNode>,
     ) -> Result<GeneratedFile, FileGeneratorError> {
         let mut exports = Vec::new();
 
-        // Export runtime files from runtime directory
-        exports.push("export * from './runtime/core';".to_string());
-        exports.push("export * from './runtime/config';".to_string());
-        exports.push("export * from './runtime/api';".to_string());
-
-        // Export all models from models directory
-        let mut sorted_names: Vec<&String> = schemas.keys().collect();
-        sorted_names.sort();
-        for name in sorted_names {
-            let filename = self.generate_filename(name);
-            let import_name = filename.trim_end_matches(".ts");
-            exports.push(format!("export * from './models/{}';", import_name));
-        }
-
-        // Export all API classes from apis directory
+        // Export all API classes
         let mut sorted_api_names: Vec<&String> = api_classes.keys().collect();
         sorted_api_names.sort();
         for name in sorted_api_names {
             let filename = self.generate_filename(name);
             let import_name = filename.trim_end_matches(".ts");
-            exports.push(format!("export * from './apis/{}';", import_name));
+            exports.push(format!("export * from './{}';", import_name));
         }
 
+        let content = exports.join("\n");
+
+        Ok(GeneratedFile {
+            filename: "apis/index.ts".to_string(),
+            content,
+            file_category: TsFileCategory::Index,
+        })
+    }
+
+    /// Generate models/index.ts file
+    fn generate_models_index_file(
+        &self,
+        schemas: &HashMap<String, TsNode>,
+    ) -> Result<GeneratedFile, FileGeneratorError> {
+        let mut exports = Vec::new();
+
+        // Export all models
+        let mut sorted_names: Vec<&String> = schemas.keys().collect();
+        sorted_names.sort();
+        for name in sorted_names {
+            let filename = self.generate_filename(name);
+            let import_name = filename.trim_end_matches(".ts");
+            exports.push(format!("export * from './{}';", import_name));
+        }
+
+        let content = exports.join("\n");
+
+        Ok(GeneratedFile {
+            filename: "models/index.ts".to_string(),
+            content,
+            file_category: TsFileCategory::Index,
+        })
+    }
+
+    /// Generate main index file
+    fn generate_main_index_file(
+        &self,
+        _api_classes: &HashMap<String, TsNode>,
+        _schemas: &HashMap<String, TsNode>,
+    ) -> Result<GeneratedFile, FileGeneratorError> {
+        let exports = [
+            // Export runtime files from runtime directory
+            "export * from './runtime/api';".to_string(),
+            "export * from './runtime/config';".to_string(),
+            "export * from './runtime/core';".to_string(),
+            // Export all from apis and models
+            "export * from './apis';".to_string(),
+            "export * from './models';".to_string(),
+        ];
         let content = exports.join("\n");
 
         Ok(GeneratedFile {

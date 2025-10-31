@@ -42,22 +42,9 @@ pub enum Template {
 /// Template file path mapping
 const TEMPLATE_PATHS: &[(&str, &str)] = &[
     ("readme", "README.md.j2"),
-    ("base_api_request", "api/method_bodies/base_api_request.j2"),
     (
         "constructor_base_api",
         "api/method_bodies/constructor_base_api.j2",
-    ),
-    (
-        "constructor_required_error",
-        "api/method_bodies/constructor_required_error.j2",
-    ),
-    (
-        "constructor_with_extends",
-        "api/method_bodies/constructor_with_extends.j2",
-    ),
-    (
-        "constructor_default",
-        "api/method_bodies/constructor_default.j2",
     ),
     ("api_method_get", "api/method_bodies/api_method_get.j2"),
     (
@@ -67,6 +54,10 @@ const TEMPLATE_PATHS: &[(&str, &str)] = &[
     (
         "api_method_delete",
         "api/method_bodies/api_method_delete.j2",
+    ),
+    (
+        "api_method_convenience",
+        "api/method_bodies/api_method_convenience.j2",
     ),
     ("default_method", "api/method_bodies/default.j2"),
 ];
