@@ -48,6 +48,13 @@ impl TsLangGenerator {
         let mut file_infos = Vec::new();
         let mut schemas = HashMap::new();
 
+        // Create a file generator with OpenAPI metadata for enhanced headers
+        let file_generator_with_metadata = TypeScriptFileGenerator::with_openapi(
+            self.file_generator.file_config.clone(),
+            self.file_generator.package_config.clone(),
+            openapi,
+        );
+
         // Generate interfaces and types from schemas
         if let Some(components) = &openapi.components {
             // Create schema context for reference resolution
@@ -81,9 +88,8 @@ impl TsLangGenerator {
             schemas.insert(class_name, api_class);
         }
 
-        // Generate files using file generator
-        let generated_files = self
-            .file_generator
+        // Generate files using file generator with metadata
+        let generated_files = file_generator_with_metadata
             .generate_files(&schemas, openapi)
             .map_err(|e| GeneratorError::Generic {
                 message: format!("File generation error: {}", e),

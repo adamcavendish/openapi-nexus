@@ -9,7 +9,7 @@ use utoipa::openapi::OpenApi;
 use crate::ast::TsNode;
 use crate::config::{FileConfig, NamingConvention, PackageConfig};
 use crate::emission::ts_file_category::TsFileCategory;
-use crate::emission::ts_language_emitter::TsLanguageEmitter;
+use crate::emission::ts_language_emitter::{OpenApiMetadata, TsLanguageEmitter};
 use crate::generator::package_files_generator::PackageFilesGenerator;
 use openapi_nexus_core::traits::EmissionContext;
 
@@ -43,8 +43,8 @@ impl std::error::Error for FileGeneratorError {}
 #[derive(Debug, Clone)]
 pub struct TypeScriptFileGenerator {
     emitter: TsLanguageEmitter,
-    file_config: FileConfig,
-    package_config: PackageConfig,
+    pub file_config: FileConfig,
+    pub package_config: PackageConfig,
 }
 
 impl TypeScriptFileGenerator {
@@ -52,6 +52,25 @@ impl TypeScriptFileGenerator {
     pub fn new(file_config: FileConfig, package_config: PackageConfig) -> Self {
         Self {
             emitter: TsLanguageEmitter::new(file_config.max_line_width),
+            file_config,
+            package_config,
+        }
+    }
+
+    /// Create a new file generator with OpenAPI metadata
+    pub fn with_openapi(
+        file_config: FileConfig,
+        package_config: PackageConfig,
+        openapi: &OpenApi,
+    ) -> Self {
+        let metadata = OpenApiMetadata {
+            title: openapi.info.title.clone().into(),
+            description: openapi.info.description.clone(),
+            version: Some(openapi.info.version.clone()),
+        };
+
+        Self {
+            emitter: TsLanguageEmitter::with_metadata(file_config.max_line_width, metadata),
             file_config,
             package_config,
         }

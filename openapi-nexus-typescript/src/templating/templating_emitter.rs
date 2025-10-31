@@ -15,7 +15,7 @@ use super::filters::{
     create_format_ts_property_filter, create_format_type_expr_filter, from_json_line_filter,
     instance_guard_filter, to_json_line_filter,
 };
-use super::functions::{do_not_edit, http_method_body};
+use super::functions::{do_not_edit, file_header, http_method_body};
 use crate::ast::{
     TsClassDefinition, TsExpression, TsInterfaceDefinition, TsInterfaceSignature, TsProperty,
 };
@@ -172,6 +172,7 @@ impl TemplatingEmitter {
 
         // Add custom functions
         env.add_function("do_not_edit", do_not_edit);
+        env.add_function("file_header", file_header);
         env.add_function("http_method_body", http_method_body);
 
         env
