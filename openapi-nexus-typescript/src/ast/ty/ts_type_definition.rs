@@ -69,7 +69,7 @@ fn emit_model_helpers_with_template(
         .collect();
 
     let data = serde_json::json!({
-        "name": interface.name,
+        "name": interface.signature.name,
         "required_props": required_props,
         "properties": properties,
     });

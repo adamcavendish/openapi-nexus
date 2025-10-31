@@ -3,19 +3,24 @@
 //! This module handles template-based emission for API classes and other
 //! template-driven code generation.
 
-use minijinja::Environment;
+use minijinja::{Environment, context};
 use utoipa::openapi::OpenApi;
 
 use super::data::RuntimeData;
 use super::filters::{
-    create_format_doc_comment_filter, create_format_generic_list_filter,
-    create_format_import_filter, create_format_method_signature_filter,
-    create_format_property_filter, create_format_type_expr_filter, from_json_line_filter,
+    create_format_class_signature_filter, create_format_doc_comment_filter,
+    create_format_generic_list_filter, create_format_import_filter,
+    create_format_interface_signature_filter, create_format_method_signature_filter,
+    create_format_method_signature_iface_filter, create_format_ts_class_property_filter,
+    create_format_ts_property_filter, create_format_type_expr_filter, from_json_line_filter,
     instance_guard_filter, to_json_line_filter,
 };
 use super::functions::{do_not_edit, http_method_body};
-use crate::ast::{TsClassDefinition, TsFile};
+use crate::ast::{
+    TsClassDefinition, TsExpression, TsInterfaceDefinition, TsInterfaceSignature, TsProperty,
+};
 use crate::emission::error::EmitError;
+use openapi_nexus_core::traits::EmissionContext;
 
 /// Helper macro to register multiple max_line_width-dependent filters in one
 /// shot to avoid repetition.
@@ -29,41 +34,62 @@ macro_rules! add_mlw_filters {
 #[derive(Debug, Clone)]
 pub struct TemplatingEmitter {
     env: Environment<'static>,
+    max_line_width: usize,
 }
 
 impl TemplatingEmitter {
     /// Create a new template-based emitter with initialized templates
     pub fn new(max_line_width: usize) -> Self {
         let env = Self::create_template_environment(max_line_width);
-        Self { env }
-    }
-
-    /// Emit TypeScript code from a file using templates
-    pub fn emit_file(&self, file: &TsFile) -> Result<String, EmitError> {
-        match file.get_template_data() {
-            Some(template_data) => self.emit_with_template_data(&template_data),
-            None => Err(EmitError::TemplateError {
-                message: "File does not support template rendering".to_string(),
-            }),
+        Self {
+            env,
+            max_line_width,
         }
     }
 
     /// Emit TypeScript code from a class definition
     pub fn emit_class(&self, class: &TsClassDefinition) -> Result<String, EmitError> {
-        let template_data = serde_json::json!({
-            "class": class,
-            "imports": class.imports
-        });
+        // Build interface methods list from class methods (exclude constructor)
+        let _ctx = EmissionContext {
+            indent: 0,
+            max_line_width: self.max_line_width,
+        };
 
-        self.emit_with_template_data(&template_data)
-    }
+        let class = class.clone();
 
-    /// Emit TypeScript code from template data
-    pub fn emit_with_template_data(
-        &self,
-        template_data: &serde_json::Value,
-    ) -> Result<String, EmitError> {
-        // Get the API class template
+        // Build interface signature (export interface FooInterface ...)
+        let interface_signature =
+            TsInterfaceSignature::new(format!("{}Interface", class.signature.name))
+                .with_generics(class.signature.generics.clone());
+        // Convert methods into function-typed properties for the interface
+        let interface_properties: Vec<TsProperty> = class
+            .methods
+            .clone()
+            .into_iter()
+            .filter(|m| m.name != "constructor")
+            .map(|m| {
+                let func_type = TsExpression::Function {
+                    parameters: m.parameters,
+                    return_type: m.return_type.map(Box::new),
+                };
+                TsProperty {
+                    name: m.name,
+                    type_expr: func_type,
+                    optional: false,
+                    documentation: m.documentation,
+                }
+            })
+            .collect();
+        let api_interface =
+            TsInterfaceDefinition::new(interface_signature).with_properties(interface_properties);
+
+        let template_data = context! {
+            class => class,
+            imports => class.imports.clone(),
+            api_interface => api_interface,
+        };
+
+        // Get the API class template and render directly
         let template =
             self.env
                 .get_template("api/api_class.j2")
@@ -71,7 +97,6 @@ impl TemplatingEmitter {
                     message: format!("Failed to get api/api_class.j2 template: {}", e),
                 })?;
 
-        // Render the template
         template
             .render(template_data)
             .map_err(|e| EmitError::TemplateError {
@@ -120,6 +145,8 @@ impl TemplatingEmitter {
     /// Create template environment with custom filters and functions
     fn create_template_environment(max_line_width: usize) -> Environment<'static> {
         let mut env = Environment::new();
+        env.set_trim_blocks(true);
+        env.set_lstrip_blocks(true);
 
         // Load all embedded templates
         minijinja_embed::load_templates!(&mut env);
@@ -131,11 +158,15 @@ impl TemplatingEmitter {
 
         // Add filters that need max_line_width
         add_mlw_filters!(env, max_line_width, {
+            "format_class_signature" => create_format_class_signature_filter,
             "format_doc_comment" => create_format_doc_comment_filter,
             "format_generic_list" => create_format_generic_list_filter,
             "format_import" => create_format_import_filter,
+            "format_interface_signature" => create_format_interface_signature_filter,
             "format_method_signature" => create_format_method_signature_filter,
-            "format_property" => create_format_property_filter,
+            "format_method_signature_iface" => create_format_method_signature_iface_filter,
+            "format_ts_class_property" => create_format_ts_class_property_filter,
+            "format_ts_property" => create_format_ts_property_filter,
             "format_type_expr" => create_format_type_expr_filter,
         });
 

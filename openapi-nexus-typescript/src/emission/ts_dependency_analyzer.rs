@@ -37,7 +37,7 @@ impl TsDependencyAnalyzer {
                         }
 
                         // Extract dependencies from extends clause
-                        for extend in &interface.extends {
+                        for extend in &interface.signature.extends {
                             dependencies.add_model_dependency(extend.clone());
                         }
                     }
@@ -107,12 +107,15 @@ impl TsDependencyAnalyzer {
                 }
             }
             TsExpression::Function {
-                parameters: _,
+                parameters,
                 return_type,
             } => {
-                // Extract dependencies from function parameters (simplified)
-                // Parameters are now just strings, so no type dependencies to extract
-
+                // Extract dependencies from function parameters
+                for p in parameters {
+                    if let Some(ref t) = p.type_expr {
+                        Self::extract_type_dependencies(t, dependencies);
+                    }
+                }
                 // Extract dependencies from return type
                 if let Some(return_type) = return_type {
                     Self::extract_type_dependencies(return_type, dependencies);

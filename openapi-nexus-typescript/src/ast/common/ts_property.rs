@@ -25,14 +25,10 @@ impl TsProperty {
         }
     }
 
-    /// Create an optional property
-    pub fn optional(name: String, type_expr: TsExpression) -> Self {
-        Self {
-            name,
-            type_expr,
-            optional: true,
-            documentation: None,
-        }
+    /// Set whether the property is optional
+    pub fn with_optional(mut self, optional: bool) -> Self {
+        self.optional = optional;
+        self
     }
 
     /// Add documentation

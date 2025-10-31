@@ -2,7 +2,7 @@
 
 use pretty::RcDoc;
 
-use crate::ast::{TsClassDefinition, TsFile, TsNode, TsTypeDefinition};
+use crate::ast::{TsClassDefinition, TsNode, TsTypeDefinition};
 use crate::emission::error::EmitError;
 use crate::templating::TemplatingEmitter;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
@@ -22,17 +22,6 @@ impl TsLanguageEmitter {
     pub fn new(max_line_width: usize) -> Self {
         Self {
             templating: TemplatingEmitter::new(max_line_width),
-        }
-    }
-
-    /// Emit TypeScript code from a file (routes to appropriate emitter)
-    pub fn emit_file(&self, file: &TsFile) -> Result<String, EmitError> {
-        if file.needs_template_rendering() {
-            // Use template-based emission for API classes
-            self.templating.emit_file(file)
-        } else {
-            // Use RcDoc-based emission for type definitions
-            self.emit_type_definitions(&file.get_type_definitions())
         }
     }
 

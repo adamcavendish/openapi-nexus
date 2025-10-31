@@ -1,32 +1,33 @@
-  // Build path with path parameters
-  let urlPath = `{{ path | replace('{', '${') }}`;
+{% set data = method.body_data %}
+// Build path with path parameters
+let urlPath = `{{ data.path | replace('{', '${') }}`;
 
-  // Build query parameters
-  const queryParameters: any = {};
-{%- for param in query_params -%}
-  if ({{ param.name }} !== undefined) {
-    queryParameters['{{ param.name }}'] = {{ param.name }};
-  }
-{%- endfor %}
+// Build query parameters
+const queryParameters: any = {};
+{% for param in data.query_params %}
+if ({{ param.name }} !== undefined) {
+  queryParameters['{{ param.name }}'] = {{ param.name }};
+}
+{% endfor %}
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    ...this.configuration?.headers,
-  };
+// Build headers
+const headerParameters: Record<string, string> = {
+  ...this.configuration?.headers,
+};
 
-  // Add header parameters
-{%- for param in header_params -%}
-  if ({{ param.name }} !== undefined) {
-    headerParameters['{{ param.name }}'] = String({{ param.name }});
-  }
-{%- endfor %}
+// Add header parameters
+{% for param in data.header_params %}
+if ({{ param.name }} !== undefined) {
+  headerParameters['{{ param.name }}'] = String({{ param.name }});
+}
+{% endfor %}
 
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: 'DELETE',
-      headers: headerParameters,
-      query: queryParameters,
-  }, initOverrides);
+// Make request
+const response = await this.request({
+    path: urlPath,
+    method: 'DELETE',
+    headers: headerParameters,
+    query: queryParameters,
+}, initOverrides);
 
-  return new VoidApiResponse(response);
+return new VoidApiResponse(response);

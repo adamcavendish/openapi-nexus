@@ -3,6 +3,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
+use tracing::warn;
 use utoipa::openapi::OpenApi;
 use utoipa::openapi::path::Operation;
 
@@ -62,7 +63,7 @@ impl TsLangGenerator {
                         schemas.insert(name.clone(), node);
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to convert schema {}: {}", name, e);
+                        warn!("Failed to convert schema {}: {}", name, e);
                     }
                 }
             }
@@ -73,9 +74,9 @@ impl TsLangGenerator {
 
         // Generate API class for each tag
         for (tag, operations) in tag_operations {
-            let api_class =
-                self.api_class_generator
-                    .generate_api_class(&tag, &operations, openapi)?;
+            let api_class = self
+                .api_class_generator
+                .generate_api_class(&tag, &operations)?;
             let class_name = format!("{}Api", self.to_pascal_case(&tag));
             schemas.insert(class_name, api_class);
         }

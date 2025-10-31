@@ -32,7 +32,7 @@ pub enum Template {
     /// GET method body
     ApiMethodGet(ApiMethodData),
     /// POST/PUT/PATCH method body
-    ApiMethodPostPut(ApiMethodData),
+    ApiMethodPostPutPatch(ApiMethodData),
     /// DELETE method body
     ApiMethodDelete(ApiMethodData),
     /// Default method body
@@ -115,7 +115,7 @@ impl TemplateGenerator {
         match template {
             Template::Readme(data) => tmpl.render(data),
             Template::ApiMethodGet(data) => tmpl.render(data),
-            Template::ApiMethodPostPut(data) => tmpl.render(data),
+            Template::ApiMethodPostPutPatch(data) => tmpl.render(data),
             Template::ApiMethodDelete(data) => tmpl.render(data),
             _ => tmpl.render(serde_json::Value::Null),
         }
@@ -198,7 +198,7 @@ impl fmt::Display for Template {
             Template::ConstructorWithExtends => write!(f, "constructor_with_extends"),
             Template::ConstructorDefault => write!(f, "constructor_default"),
             Template::ApiMethodGet(_) => write!(f, "api_method_get"),
-            Template::ApiMethodPostPut(_) => write!(f, "api_method_post_put"),
+            Template::ApiMethodPostPutPatch(_) => write!(f, "api_method_post_put"),
             Template::ApiMethodDelete(_) => write!(f, "api_method_delete"),
             Template::DefaultMethod => write!(f, "default_method"),
         }
@@ -311,7 +311,7 @@ mod tests {
             "api_method_get"
         );
         assert_eq!(
-            Template::ApiMethodPostPut(ApiMethodData {
+            Template::ApiMethodPostPutPatch(ApiMethodData {
                 method_name: "test".to_string(),
                 http_method: "POST".to_string(),
                 path: "/test".to_string(),

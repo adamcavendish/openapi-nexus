@@ -12,8 +12,8 @@ use utoipa::openapi::schema::{
 use utoipa::openapi::{RefOr, Schema};
 
 use crate::ast::{
-    TsDocComment, TsEnumDefinition, TsEnumVariant, TsExpression, TsInterfaceDefinition, TsNode,
-    TsPrimitive, TsProperty, TsTypeAliasDefinition, TsTypeDefinition,
+    TsDocComment, TsEnumDefinition, TsEnumVariant, TsExpression, TsInterfaceDefinition,
+    TsInterfaceSignature, TsNode, TsPrimitive, TsProperty, TsTypeAliasDefinition, TsTypeDefinition,
 };
 use crate::core::GeneratorError;
 use crate::generator::schema_context::SchemaContext;
@@ -226,20 +226,16 @@ impl SchemaGenerator {
                 }
 
                 Ok(TsInterfaceDefinition {
-                    name: name.to_string(),
+                    signature: TsInterfaceSignature::new(name.to_string()),
                     properties,
-                    extends: vec![],
-                    generics: vec![],
                     documentation: obj_schema.description.clone().map(TsDocComment::new),
                 })
             }
             _ => {
                 // For non-object schemas, create an empty interface
                 Ok(TsInterfaceDefinition {
-                    name: name.to_string(),
+                    signature: TsInterfaceSignature::new(name.to_string()),
                     properties: vec![],
-                    extends: vec![],
-                    generics: vec![],
                     documentation: None,
                 })
             }

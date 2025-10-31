@@ -5,53 +5,47 @@
 import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
 /** API client for default operations */
-export class DefaultApi extends BaseAPI {
-  
+
+export interface DefaultApiInterface {
+  getTestRaw: (initOverrides?: InitOverrideFunction | RequestInit) => Promise<VoidApiResponse>;
+  getTest: (initOverrides?: InitOverrideFunction | RequestInit) => Promise<void>;
+}
+
+export class DefaultApi extends BaseAPI implements DefaultApiInterface {
 
   /** Initialize the API client */
   constructor(configuration?: Configuration) {
-    
-        // Call BaseAPI constructor with provided configuration or default
+    // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
-        
   }
-  
 
-  
   async getTestRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/test`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response);
   }
-  
 
-  
   async getTest(initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
-    
-          const response = await this.getTestRaw(initOverrides);
+      const response = await this.getTestRaw(initOverrides);
       return await response.value();
-        
   }
-  
 }

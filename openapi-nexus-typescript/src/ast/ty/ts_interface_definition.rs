@@ -2,7 +2,7 @@ use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
 use crate::ast::TsDocComment;
-use crate::ast::{TsGeneric, TsProperty};
+use crate::ast::{TsInterfaceSignature, TsProperty};
 use crate::emission::error::EmitError;
 use crate::emission::ts_type_emitter::TsTypeEmitter;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
@@ -10,22 +10,21 @@ use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 /// TypeScript interface definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TsInterfaceDefinition {
-    pub name: String,
+    /// Single-line interface header (export/interface name/generics/extends)
+    pub signature: TsInterfaceSignature,
+    /// Members of the interface body. Methods are represented as function-typed properties.
     pub properties: Vec<TsProperty>,
-    pub extends: Vec<String>,
-    pub generics: Vec<TsGeneric>,
+    /// Optional documentation attached to the interface
     pub documentation: Option<TsDocComment>,
 }
 
 impl TsInterfaceDefinition {
-    /// Create a new interface
-    pub fn new(name: String) -> Self {
+    /// Create a new interface from a structured signature
+    pub fn new(signature: TsInterfaceSignature) -> Self {
         Self {
-            name,
             properties: Vec::new(),
-            extends: Vec::new(),
-            generics: Vec::new(),
             documentation: None,
+            signature,
         }
     }
 
@@ -38,18 +37,6 @@ impl TsInterfaceDefinition {
     /// Add multiple properties
     pub fn with_properties(mut self, properties: Vec<TsProperty>) -> Self {
         self.properties.extend(properties);
-        self
-    }
-
-    /// Add extends clause
-    pub fn with_extends(mut self, extends: Vec<String>) -> Self {
-        self.extends = extends;
-        self
-    }
-
-    /// Add generics
-    pub fn with_generics(mut self, generics: Vec<TsGeneric>) -> Self {
-        self.generics = generics;
         self
     }
 
@@ -67,54 +54,18 @@ impl ToRcDocWithContext for TsInterfaceDefinition {
         &self,
         context: &EmissionContext,
     ) -> Result<RcDoc<'static, ()>, EmitError> {
-        let mut doc = RcDoc::text("export ")
-            .append(RcDoc::text("interface"))
-            .append(RcDoc::space())
-            .append(RcDoc::text(self.name.clone()));
-
-        // Add generics
-        if !self.generics.is_empty() {
-            let generic_docs: Result<Vec<_>, _> = self
-                .generics
-                .iter()
-                .map(|g| g.to_rcdoc_with_context(context))
-                .collect();
-            let generic_strings: Vec<String> = generic_docs?
-                .iter()
-                .map(|doc| format!("{}", doc.pretty(80)))
-                .collect();
-            doc = doc.append(RcDoc::text(format!("<{}>", generic_strings.join(", "))));
-        }
-
-        // Add extends clause
-        if !self.extends.is_empty() {
-            doc = doc
-                .append(RcDoc::space())
-                .append(RcDoc::text("extends"))
-                .append(RcDoc::space())
-                .append(RcDoc::text(self.extends.join(", ")));
-        }
+        // Start with the signature header (export interface Name<...> extends ...)
+        let mut doc = self.signature.to_rcdoc_with_context(context)?;
 
         // Add body with properties
         if self.properties.is_empty() {
             doc = doc.append(RcDoc::space()).append(RcDoc::text("{}"));
         } else {
+            // Render each property using its ToRcDoc
             let prop_docs: Result<Vec<_>, _> = self
                 .properties
                 .iter()
-                .map(|p| {
-                    let type_emitter = TsTypeEmitter;
-                    let mut property_line = RcDoc::text(p.name.clone());
-
-                    if p.optional {
-                        property_line = property_line.append(RcDoc::text("?"));
-                    }
-
-                    let type_doc = type_emitter.emit_type_expression_doc(&p.type_expr)?;
-                    property_line = property_line.append(RcDoc::text(": ")).append(type_doc);
-
-                    Ok(property_line)
-                })
+                .map(|p| p.to_rcdoc_with_context(context))
                 .collect();
             let properties = prop_docs?;
 

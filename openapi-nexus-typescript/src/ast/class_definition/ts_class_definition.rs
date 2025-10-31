@@ -1,18 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use super::{TsClassMethod, TsClassProperty, TsImportStatement};
-use crate::ast::{TsDocComment, TsGeneric};
+use crate::ast::{TsClassSignature, TsDocComment, TsGeneric};
 
 /// TypeScript class definition for template rendering
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TsClassDefinition {
-    pub name: String,
+    pub signature: TsClassSignature,
     pub properties: Vec<TsClassProperty>,
     pub methods: Vec<TsClassMethod>,
-    pub extends: Option<String>,
-    pub implements: Vec<String>,
-    pub generics: Vec<TsGeneric>,
-    pub is_export: bool,
     pub documentation: Option<TsDocComment>,
     pub imports: Vec<TsImportStatement>,
 }
@@ -21,13 +17,15 @@ impl TsClassDefinition {
     /// Create a new class definition
     pub fn new(name: String) -> Self {
         Self {
-            name,
+            signature: TsClassSignature {
+                is_export: true,
+                name,
+                generics: Vec::new(),
+                extends: None,
+                implements: Vec::new(),
+            },
             properties: Vec::new(),
             methods: Vec::new(),
-            extends: None,
-            implements: Vec::new(),
-            generics: Vec::new(),
-            is_export: true,
             documentation: None,
             imports: Vec::new(),
         }
@@ -59,25 +57,25 @@ impl TsClassDefinition {
 
     /// Set extends clause
     pub fn with_extends(mut self, extends: String) -> Self {
-        self.extends = Some(extends);
+        self.signature.extends = Some(extends);
         self
     }
 
     /// Add implements clause
     pub fn with_implements(mut self, implements: Vec<String>) -> Self {
-        self.implements = implements;
+        self.signature.implements = implements;
         self
     }
 
     /// Add generics
     pub fn with_generics(mut self, generics: Vec<TsGeneric>) -> Self {
-        self.generics = generics;
+        self.signature.generics = generics;
         self
     }
 
     /// Set export flag
     pub fn with_export(mut self, is_export: bool) -> Self {
-        self.is_export = is_export;
+        self.signature.is_export = is_export;
         self
     }
 
@@ -96,6 +94,12 @@ impl TsClassDefinition {
     /// Add multiple imports
     pub fn with_imports(mut self, imports: Vec<TsImportStatement>) -> Self {
         self.imports.extend(imports);
+        self
+    }
+
+    /// Replace the entire class signature
+    pub fn with_signature(mut self, signature: TsClassSignature) -> Self {
+        self.signature = signature;
         self
     }
 

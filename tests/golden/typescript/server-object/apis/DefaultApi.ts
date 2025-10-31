@@ -5,91 +5,87 @@
 import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
 
 /** API client for default operations */
-export class DefaultApi extends BaseAPI {
-  
+
+export interface DefaultApiInterface {
+  /** Get all users */
+  getUsersRaw: (initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Array<string>>>;
+  /** Get all users */
+  getUsers: (initOverrides?: InitOverrideFunction | RequestInit) => Promise<Array<string>>;
+  /** Get user by ID */
+  getUsersRaw: (id: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<object>>;
+  /** Get user by ID */
+  getUsers: (id: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<object>;
+}
+
+export class DefaultApi extends BaseAPI implements DefaultApiInterface {
 
   /** Initialize the API client */
   constructor(configuration?: Configuration) {
-    
-        // Call BaseAPI constructor with provided configuration or default
+    // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
-        
   }
-  
 
   /** Get all users */
   async getUsersRaw(initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/users`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response);
   }
-  
 
   /** Get all users */
   async getUsers(initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
-    
-          const response = await this.getUsersRaw(initOverrides);
+      const response = await this.getUsersRaw(initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Get user by ID */
   async getUsersRaw(id: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<object>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/users/${id}`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response);
   }
-  
 
   /** Get user by ID */
   async getUsers(id: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<object> {
-    
-          const response = await this.getUsersRaw(id, initOverrides);
+      const response = await this.getUsersRaw(id, initOverrides);
       return await response.value();
-        
   }
-  
 }

@@ -6,7 +6,7 @@ use std::fmt;
 use pretty::RcDoc;
 use serde::{Deserialize, Serialize};
 
-use crate::ast::TsPrimitive;
+use crate::ast::{TsParameter, TsPrimitive};
 use crate::emission::error::EmitError;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
@@ -21,7 +21,7 @@ pub enum TsExpression {
     Reference(String),
     Generic(String),
     Function {
-        parameters: Vec<String>,
+        parameters: Vec<TsParameter>,
         return_type: Option<Box<TsExpression>>,
     },
     Literal(String),
@@ -57,12 +57,19 @@ impl fmt::Display for TsExpression {
                 parameters,
                 return_type,
             } => {
+                let params: Vec<String> = parameters
+                    .iter()
+                    .map(|p| match &p.type_expr {
+                        Some(t) => format!("{}: {}", p.name, t),
+                        None => p.name.clone(),
+                    })
+                    .collect();
                 let return_type_str = if let Some(ret_type) = return_type {
                     ret_type.to_string()
                 } else {
                     "void".to_string()
                 };
-                write!(f, "({}) => {}", parameters.join(", "), return_type_str)
+                write!(f, "({}) => {}", params.join(", "), return_type_str)
             }
             TsExpression::Object(properties) => {
                 let prop_strings: Vec<String> = properties
@@ -143,9 +150,13 @@ impl ToRcDocWithContext for TsExpression {
                 parameters,
                 return_type,
             } => {
+                let param_docs: Result<Vec<_>, _> = parameters
+                    .iter()
+                    .map(|p| p.to_rcdoc_with_context(_context))
+                    .collect();
                 let params = RcDoc::text("(")
                     .append(RcDoc::intersperse(
-                        parameters.iter().map(|p| RcDoc::text(p.clone())),
+                        param_docs?,
                         RcDoc::text(",").append(RcDoc::space()),
                     ))
                     .append(RcDoc::text(")"));

@@ -1,16 +1,19 @@
 //! Individual API class generator for TypeScript
 
+use std::collections::BTreeSet;
+
 use heck::{ToLowerCamelCase as _, ToPascalCase as _};
 use http::Method;
 use utoipa::openapi::RefOr;
 use utoipa::openapi::path::Operation;
+use utoipa::openapi::schema::{ArrayItems, Schema};
 
 use crate::ast::{
     TsClassDefinition, TsClassMethod, TsDocComment, TsExpression, TsImportStatement, TsNode,
     TsParameter,
 };
 use crate::core::GeneratorError;
-use crate::generator::parameter_extractor::ParameterExtractor;
+use crate::generator::parameter_extractor::{ParameterExtractor, ParameterInfo};
 use crate::generator::template_generator::{
     ApiMethodData, ParameterData as TemplateParameterData, Template, TemplateGenerator,
 };
@@ -42,9 +45,9 @@ impl ApiClassGenerator {
         &self,
         tag: &str,
         operations: &[(String, String, Operation)],
-        _openapi: &utoipa::openapi::OpenApi,
     ) -> Result<TsNode, GeneratorError> {
         let class_name = format!("{}Api", tag.to_pascal_case());
+        let interface_name = format!("{}Interface", class_name);
 
         let mut methods = vec![
             // Constructor method
@@ -76,8 +79,24 @@ impl ApiClassGenerator {
             methods.push(convenience_method);
         }
 
+        // Collect model imports for FromJSON transformers
+        let mut model_imports: BTreeSet<String> = BTreeSet::new();
+        for (_path, method_name, operation) in operations {
+            let http_method =
+                method_name
+                    .parse::<Method>()
+                    .map_err(|e| GeneratorError::Generic {
+                        message: format!("Invalid HTTP method '{}': {}", method_name, e),
+                    })?;
+            if let Some((_, model_name)) =
+                self.compute_transformer_and_model(&http_method, operation)
+            {
+                model_imports.insert(model_name);
+            }
+        }
+
         // Create imports
-        let imports = vec![
+        let mut imports = vec![
             TsImportStatement::new("../runtime/runtime".to_string())
                 .with_import("BaseAPI".to_string(), None)
                 .with_import("JSONApiResponse".to_string(), None)
@@ -87,9 +106,18 @@ impl ApiClassGenerator {
                 .with_type_import("InitOverrideFunction".to_string(), None),
         ];
 
+        // Add model helper imports
+        for name in model_imports {
+            imports.push(
+                TsImportStatement::new(format!("../models/{}", name))
+                    .with_import(format!("{}FromJSON", name), None),
+            );
+        }
+
         let api_class = TsClassDefinition::new(class_name.clone())
             .with_methods(methods)
             .with_extends("BaseAPI".to_string())
+            .with_implements(vec![interface_name.clone()])
             .with_docs(TsDocComment::new(format!(
                 "API client for {} operations",
                 tag
@@ -240,6 +268,10 @@ impl ApiClassGenerator {
             }
         }
 
+        let transformer = self
+            .compute_transformer_and_model(http_method, operation)
+            .map(|(expr, _)| expr);
+
         let method_data = ApiMethodData {
             method_name: self.generate_method_name(path, operation, http_method),
             http_method: http_method.to_string(),
@@ -250,13 +282,32 @@ impl ApiClassGenerator {
             body_param,
             return_type: return_type
                 .and_then(|t| t.to_rcdoc_with_context(&ctx).ok())
-                .map(|doc| format!("{}", doc.pretty(self.max_line_width)))
+                .map(|doc| doc.pretty(self.max_line_width).to_string())
                 .unwrap_or_else(|| "Promise<any>".to_string()),
             has_auth: true, // Assume auth is needed
             has_error_handling: true,
         };
 
-        Ok(serde_json::to_value(method_data).unwrap_or_default())
+        let mut v = serde_json::to_value(method_data).unwrap_or_default();
+        if let Some(transformer_expr) = transformer
+            && let serde_json::Value::Object(ref mut map) = v
+        {
+            map.insert(
+                "transformer".to_string(),
+                serde_json::Value::String(transformer_expr),
+            );
+        }
+
+        Ok(v)
+    }
+
+    /// Convert a single ParameterInfo into TemplateParameterData using raw `Display` formatting
+    fn parameter_info_to_template_raw(&self, p: &ParameterInfo) -> TemplateParameterData {
+        TemplateParameterData {
+            name: p.name.clone(),
+            type_expr: Some(format!("{}", p.type_expr)),
+            optional: !p.required,
+        }
     }
 
     /// Generate method name from operation
@@ -427,6 +478,55 @@ impl ApiClassGenerator {
         Ok(Some(TsExpression::Reference("Promise<any>".to_string())))
     }
 
+    /// Compute JSON transformer expression and model name if applicable
+    fn compute_transformer_and_model(
+        &self,
+        _http_method: &Method,
+        operation: &Operation,
+    ) -> Option<(String, String)> {
+        for (status_code, response_ref) in operation.responses.responses.iter() {
+            if !status_code.starts_with('2') {
+                continue;
+            }
+            if let RefOr::T(response) = response_ref
+                && let Some(json_content) = response.content.get("application/json")
+                && let Some(schema_ref) = &json_content.schema
+            {
+                match schema_ref {
+                    RefOr::Ref(reference) => {
+                        if let Some(name) =
+                            reference.ref_location.strip_prefix("#/components/schemas/")
+                        {
+                            let expr = format!("(jsonValue) => {}FromJSON(jsonValue)", name);
+                            return Some((expr, name.to_string()));
+                        }
+                    }
+                    RefOr::T(schema) => {
+                        if let Schema::Array(arr) = schema {
+                            match &arr.items {
+                                ArrayItems::RefOrSchema(item_ref) => {
+                                    if let RefOr::Ref(reference) = &**item_ref
+                                        && let Some(name) = reference
+                                            .ref_location
+                                            .strip_prefix("#/components/schemas/")
+                                    {
+                                        let expr = format!(
+                                            "(jsonValue) => (jsonValue as Array<any>).map({}FromJSON)",
+                                            name
+                                        );
+                                        return Some((expr, name.to_string()));
+                                    }
+                                }
+                                ArrayItems::False => {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Generate implementation body for an API method using templates
     pub fn generate_method_implementation(
         &self,
@@ -440,42 +540,29 @@ impl ApiClassGenerator {
             .parameter_extractor
             .extract_parameters(operation, path)?;
 
-        // Convert parameters to template format
+        // Convert parameters to template format using the raw formatter helper
         let template_path_params: Vec<TemplateParameterData> = extracted_params
             .path_params
             .iter()
-            .map(|p| TemplateParameterData {
-                name: p.name.clone(),
-                type_expr: Some(format!("{}", p.type_expr)),
-                optional: !p.required,
-            })
+            .map(|p| self.parameter_info_to_template_raw(p))
             .collect();
 
         let template_query_params: Vec<TemplateParameterData> = extracted_params
             .query_params
             .iter()
-            .map(|p| TemplateParameterData {
-                name: p.name.clone(),
-                type_expr: Some(format!("{}", p.type_expr)),
-                optional: !p.required,
-            })
+            .map(|p| self.parameter_info_to_template_raw(p))
             .collect();
 
         let template_header_params: Vec<TemplateParameterData> = extracted_params
             .header_params
             .iter()
-            .map(|p| TemplateParameterData {
-                name: p.name.clone(),
-                type_expr: Some(format!("{}", p.type_expr)),
-                optional: !p.required,
-            })
+            .map(|p| self.parameter_info_to_template_raw(p))
             .collect();
 
-        let template_body_param = extracted_params.body_param.map(|p| TemplateParameterData {
-            name: p.name.clone(),
-            type_expr: Some(format!("{}", p.type_expr)),
-            optional: !p.required,
-        });
+        let template_body_param = extracted_params
+            .body_param
+            .as_ref()
+            .map(|p| self.parameter_info_to_template_raw(p));
 
         // Create API method data for template
         let api_method_data = ApiMethodData {
@@ -495,7 +582,7 @@ impl ApiClassGenerator {
         let template = match *http_method {
             Method::GET => Template::ApiMethodGet(api_method_data),
             Method::POST | Method::PUT | Method::PATCH => {
-                Template::ApiMethodPostPut(api_method_data)
+                Template::ApiMethodPostPutPatch(api_method_data)
             }
             Method::DELETE => Template::ApiMethodDelete(api_method_data),
             _ => Template::DefaultMethod,

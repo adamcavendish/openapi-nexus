@@ -1,37 +1,40 @@
-  // Build path with path parameters
-  let urlPath = `{{ path | replace('{', '${') }}`;
+{% set data = method.body_data %}
+// Build path with path parameters
+let urlPath = `{{ data.path | replace('{', '${') }}`;
 
-  // Build query parameters
-  const queryParameters: any = {};
-{%- for param in query_params -%}
-  if ({{ param.name }} !== undefined) {
-    queryParameters['{{ param.name }}'] = {{ param.name }};
-  }
+// Build query parameters
+const queryParameters: any = {};
+{%- for param in data.query_params -%}
+if ({{ param.name }} !== undefined) {
+  queryParameters['{{ param.name }}'] = {{ param.name }};
+}
 {%- endfor %}
 
-  // Build headers
-  const headerParameters: Record<string, string> = {
-    {% if body_param %}'Content-Type': 'application/json',{% endif %}
-    ...this.configuration?.headers,
-  };
+// Build headers
+const headerParameters: Record<string, string> = {
+  {% if data.body_param %}
+  'Content-Type': 'application/json',
+  {% endif %}
+  ...this.configuration?.headers,
+};
 
-  // Add header parameters
-{%- for param in header_params -%}
-  if ({{ param.name }} !== undefined) {
-    headerParameters['{{ param.name }}'] = String({{ param.name }});
-  }
+// Add header parameters
+{%- for param in data.header_params -%}
+if ({{ param.name }} !== undefined) {
+  headerParameters['{{ param.name }}'] = String({{ param.name }});
+}
 {%- endfor %}
 
-  // Prepare request body
-  const body = {% if body_param %}{{ body_param.name }}{% else %}undefined{% endif %};
+// Prepare request body
+const body = {% if data.body_param %}{{ data.body_param.name }}{% else %}undefined{% endif %};
 
-  // Make request
-  const response = await this.request({
-      path: urlPath,
-      method: '{{ http_method }}',
-      headers: headerParameters,
-      query: queryParameters,
-      body,
-  }, initOverrides);
+// Make request
+const response = await this.request({
+    path: urlPath,
+    method: '{{ data.http_method }}',
+    headers: headerParameters,
+    query: queryParameters,
+    body,
+}, initOverrides);
 
-  return new JSONApiResponse(response);
+return new JSONApiResponse(response{%- if data.transformer %}, {{ data.transformer }}{%- endif %});

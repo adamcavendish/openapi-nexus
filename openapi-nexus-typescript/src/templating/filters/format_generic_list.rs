@@ -23,7 +23,7 @@ pub fn format_generic_list_filter(
             .filter_map(|g| {
                 g.to_rcdoc_with_context(&ctx)
                     .ok()
-                    .map(|doc| format!("{}", doc.pretty(max_line_width)))
+                    .map(|doc| doc.pretty(max_line_width).to_string())
             })
             .collect();
 

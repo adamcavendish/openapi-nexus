@@ -4,18 +4,12 @@
 
 /** Pet model */
 export interface Pet {
-category?: null | {
-    id: number | null;
-    name: string | null;
-  },
+category?: null | { id: number | null; name: string | null },
 id?: number | null,
 name: string,
 photo_urls: Array<string>,
 status?: null | "available" | "pending" | "sold",
-tags?: Array<{
-    id: number | null;
-    name: string | null;
-  }>
+tags?: Array<{ id: number | null; name: string | null }>
 }
 
 export function instanceOfPet(value: object): value is Pet {

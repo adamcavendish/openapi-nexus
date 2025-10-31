@@ -6,7 +6,7 @@ use crate::ast::TsClassProperty;
 use openapi_nexus_core::traits::{EmissionContext, ToRcDocWithContext};
 
 /// Template filter for formatting ClassProperty as TypeScript string
-pub fn format_property_filter(
+pub fn format_ts_class_property_filter(
     property: ViaDeserialize<TsClassProperty>,
     indent_level: Option<usize>,
     max_line_width: usize,
@@ -21,9 +21,11 @@ pub fn format_property_filter(
         .unwrap_or_else(|_| "unknown".to_string())
 }
 
-/// Create a format_property filter with the given max_line_width
-pub fn create_format_property_filter(
+/// Create a format_ts_class_property filter with the given max_line_width
+pub fn create_format_ts_class_property_filter(
     max_line_width: usize,
 ) -> impl Fn(ViaDeserialize<TsClassProperty>, Option<usize>) -> String + Send + Sync + 'static {
-    move |property, indent_level| format_property_filter(property, indent_level, max_line_width)
+    move |property, indent_level| {
+        format_ts_class_property_filter(property, indent_level, max_line_width)
+    }
 }

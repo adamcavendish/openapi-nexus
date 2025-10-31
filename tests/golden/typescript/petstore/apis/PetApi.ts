@@ -3,341 +3,317 @@
 // To make changes, modify the source code and regenerate this file.
 
 import { BaseAPI, JSONApiResponse, VoidApiResponse, ResponseError, type Configuration, type InitOverrideFunction } from '../runtime/runtime';
+import { ApiResponseFromJSON } from '../models/ApiResponse';
+import { PetFromJSON } from '../models/Pet';
 
 /** API client for pet operations */
-export class PetApi extends BaseAPI {
-  
+
+export interface PetApiInterface {
+  /** Add a new pet to the store */
+  addPetRaw: (body: Pet, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Pet>>;
+  /** Add a new pet to the store */
+  addPet: (body: Pet, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Pet>;
+  /** Update an existing pet */
+  updatePetRaw: (body: Pet, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Pet>>;
+  /** Update an existing pet */
+  updatePet: (body: Pet, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Pet>;
+  /** Find pets by status */
+  findPetsByStatusRaw: (status: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Array<string>>>;
+  /** Find pets by status */
+  findPetsByStatus: (status: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Array<string>>;
+  /** Find pets by tags */
+  findPetsByTagsRaw: (tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Array<string>>>;
+  /** Find pets by tags */
+  findPetsByTags: (tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Array<string>>;
+  /** Find pet by ID */
+  getPetByIdRaw: (petId: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Pet>>;
+  /** Find pet by ID */
+  getPetById: (petId: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Pet>;
+  /** Update a pet in the store with form data */
+  updatePetWithFormRaw: (petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<Pet>>;
+  /** Update a pet in the store with form data */
+  updatePetWithForm: (petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<Pet>;
+  /** Delete a pet */
+  deletePetRaw: (petId: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<VoidApiResponse>;
+  /** Delete a pet */
+  deletePet: (petId: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<void>;
+  /** Upload an image */
+  uploadFileRaw: (petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<JSONApiResponse<ApiResponse>>;
+  /** Upload an image */
+  uploadFile: (petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit) => Promise<ApiResponse>;
+}
+
+export class PetApi extends BaseAPI implements PetApiInterface {
 
   /** Initialize the API client */
   constructor(configuration?: Configuration) {
-    
-        // Call BaseAPI constructor with provided configuration or default
+    // Call BaseAPI constructor with provided configuration or default
     super(configuration ?? DefaultConfig);
-        
   }
-  
 
   /** Add a new pet to the store */
   async addPetRaw(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        
-        ...this.configuration?.headers,
-      };
+    // Add header parameters
+    // Prepare request body
+    const body = body;
 
-      // Add header parameters
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body,
+    }, initOverrides);
 
-      // Prepare request body
-      const body = undefined;
-
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: '',
-          headers: headerParameters,
-          query: queryParameters,
-          body,
-      }, initOverrides);
-
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => PetFromJSON(jsonValue));
   }
-  
 
   /** Add a new pet to the store */
   async addPet(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
-    
-          const response = await this.addPetRaw(body, initOverrides);
+      const response = await this.addPetRaw(body, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Update an existing pet */
   async updatePetRaw(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...this.configuration?.headers,
+    };
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        
-        ...this.configuration?.headers,
-      };
+    // Add header parameters
+    // Prepare request body
+    const body = body;
 
-      // Add header parameters
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'PUT',
+        headers: headerParameters,
+        query: queryParameters,
+        body,
+    }, initOverrides);
 
-      // Prepare request body
-      const body = undefined;
-
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: '',
-          headers: headerParameters,
-          query: queryParameters,
-          body,
-      }, initOverrides);
-
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => PetFromJSON(jsonValue));
   }
-  
 
   /** Update an existing pet */
   async updatePet(body: Pet, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
-    
-          const response = await this.updatePetRaw(body, initOverrides);
+      const response = await this.updatePetRaw(body, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Find pets by status */
   async findPetsByStatusRaw(status: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/findByStatus`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => (jsonValue as Array<any>).map(PetFromJSON));
   }
-  
 
   /** Find pets by status */
   async findPetsByStatus(status: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
-    
-          const response = await this.findPetsByStatusRaw(status, initOverrides);
+      const response = await this.findPetsByStatusRaw(status, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Find pets by tags */
   async findPetsByTagsRaw(tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Array<string>>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/findByTags`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => (jsonValue as Array<any>).map(PetFromJSON));
   }
-  
 
   /** Find pets by tags */
   async findPetsByTags(tags: Array<string>, initOverrides?: InitOverrideFunction | RequestInit): Promise<Array<string>> {
-    
-          const response = await this.findPetsByTagsRaw(tags, initOverrides);
+      const response = await this.findPetsByTagsRaw(tags, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Find pet by ID */
   async getPetByIdRaw(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/${petId}`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'GET',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'GET',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => PetFromJSON(jsonValue));
   }
-  
 
   /** Find pet by ID */
   async getPetById(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
-    
-          const response = await this.getPetByIdRaw(petId, initOverrides);
+      const response = await this.getPetByIdRaw(petId, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Update a pet in the store with form data */
   async updatePetWithFormRaw(petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<Pet>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/${petId}`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        
-        ...this.configuration?.headers,
-      };
+    // Add header parameters
+    // Prepare request body
+    const body = undefined;
 
-      // Add header parameters
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body,
+    }, initOverrides);
 
-      // Prepare request body
-      const body = undefined;
-
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: '',
-          headers: headerParameters,
-          query: queryParameters,
-          body,
-      }, initOverrides);
-
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => PetFromJSON(jsonValue));
   }
-  
 
   /** Update a pet in the store with form data */
   async updatePetWithForm(petId: string, name?: string, status?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<Pet> {
-    
-          const response = await this.updatePetWithFormRaw(petId, name, status, initOverrides);
+      const response = await this.updatePetWithFormRaw(petId, name, status, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Delete a pet */
   async deletePetRaw(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<VoidApiResponse> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/${petId}`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        ...this.configuration?.headers,
-      };
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Add header parameters
+    // Add header parameters
 
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: 'DELETE',
-          headers: headerParameters,
-          query: queryParameters,
-      }, initOverrides);
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'DELETE',
+        headers: headerParameters,
+        query: queryParameters,
+    }, initOverrides);
 
-      return new VoidApiResponse(response);
-        
+    return new VoidApiResponse(response);
   }
-  
 
   /** Delete a pet */
   async deletePet(petId: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<void> {
-    
-          const response = await this.deletePetRaw(petId, initOverrides);
+      const response = await this.deletePetRaw(petId, initOverrides);
       return await response.value();
-        
   }
-  
 
   /** Upload an image */
   async uploadFileRaw(petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<JSONApiResponse<ApiResponse>> {
-    
-          // Build path with path parameters
-      let urlPath = ``;
+    // Build path with path parameters
+    let urlPath = `/pet/${petId}/uploadImage`;
 
-      // Build query parameters
-      const queryParameters: any = {};
+    // Build query parameters
+    const queryParameters: any = {};
+    // Build headers
+    const headerParameters: Record<string, string> = {
+      ...this.configuration?.headers,
+    };
 
-      // Build headers
-      const headerParameters: Record<string, string> = {
-        
-        ...this.configuration?.headers,
-      };
+    // Add header parameters
+    // Prepare request body
+    const body = undefined;
 
-      // Add header parameters
+    // Make request
+    const response = await this.request({
+        path: urlPath,
+        method: 'POST',
+        headers: headerParameters,
+        query: queryParameters,
+        body,
+    }, initOverrides);
 
-      // Prepare request body
-      const body = undefined;
-
-      // Make request
-      const response = await this.request({
-          path: urlPath,
-          method: '',
-          headers: headerParameters,
-          query: queryParameters,
-          body,
-      }, initOverrides);
-
-      return new JSONApiResponse(response);
-        
+    return new JSONApiResponse(response, (jsonValue) => ApiResponseFromJSON(jsonValue));
   }
-  
 
   /** Upload an image */
   async uploadFile(petId: string, additionalMetadata?: string, initOverrides?: InitOverrideFunction | RequestInit): Promise<ApiResponse> {
-    
-          const response = await this.uploadFileRaw(petId, additionalMetadata, initOverrides);
+      const response = await this.uploadFileRaw(petId, additionalMetadata, initOverrides);
       return await response.value();
-        
   }
-  
 }

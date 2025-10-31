@@ -122,9 +122,6 @@ impl TypeScriptFileGenerator {
             }
         }
 
-        // Create schema-to-file mapping for import resolution
-        let _schema_to_file_map = self.create_schema_to_file_map(&api_classes, &other_schemas);
-
         // Generate models files (no directory prefix - handled by core)
         for (name, node) in &other_schemas {
             let filename = self.generate_filename(name);
@@ -225,29 +222,6 @@ impl TypeScriptFileGenerator {
         };
 
         format!("{}.ts", base_name)
-    }
-
-    /// Create a mapping from schema names to their corresponding filenames
-    fn create_schema_to_file_map(
-        &self,
-        api_classes: &HashMap<String, TsNode>,
-        other_schemas: &HashMap<String, TsNode>,
-    ) -> HashMap<String, String> {
-        let mut map = HashMap::new();
-
-        // Add API classes
-        for name in api_classes.keys() {
-            let filename = self.generate_filename(name);
-            map.insert(name.clone(), filename);
-        }
-
-        // Add other schemas
-        for name in other_schemas.keys() {
-            let filename = self.generate_filename(name);
-            map.insert(name.clone(), filename);
-        }
-
-        map
     }
 }
 
