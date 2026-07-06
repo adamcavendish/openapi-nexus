@@ -4,5 +4,5 @@
  * All Optional Properties Test — 1.0.0
  * Test case for object with all optional properties including arrays, references, and inline objects
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

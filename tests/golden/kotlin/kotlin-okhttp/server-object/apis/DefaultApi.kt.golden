@@ -10,6 +10,7 @@ import com.example.sdk.runtime.ApiClient
 import com.example.sdk.runtime.ApiException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response
 
 /**
@@ -19,12 +20,81 @@ data class GetAllUsersResponse(val statusCode: Int, val raw: Response,
 val status200: List<GetAllUsersResponse200Item>? = null) {
 }
 
+sealed interface GetAllUsersExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetAllUsersException(
+    val detail: GetAllUsersExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetAllUsersUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetAllUsersExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * GetUserByIdResponse carries the response from getUserById.
  */
 data class GetUserByIdResponse(val statusCode: Int, val raw: Response,
-val status200: GetUserByIdResponse200? = null,
-val status404: GetUserByIdResponse404? = null) {
+val status200: GetUserByIdResponse200? = null) {
+}
+
+sealed interface GetUserByIdExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetUserByIdException(
+    val detail: GetUserByIdExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetUserByIdNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetUserByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): GetUserByIdResponse404 = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<GetUserByIdResponse404>() {}.type)
+}
+
+class GetUserByIdUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetUserByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -42,13 +112,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetAllUsersExceptionDetail = when (response.code)  {
+                else ->  {
+                    GetAllUsersUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetAllUsersException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: List<GetAllUsersResponse200Item>? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<List<GetAllUsersResponse200Item>>(responseText.ifEmpty { "null" }, object : TypeToken<List<GetAllUsersResponse200Item>>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<List<GetAllUsersResponse200Item>>(responseText.ifEmpty { "null" }, object : TypeToken<List<GetAllUsersResponse200Item>>() {}.type)
+        }
         return GetAllUsersResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -61,15 +143,26 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetUserByIdExceptionDetail = when (response.code)  {
+                404 -> GetUserByIdNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    GetUserByIdUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetUserByIdException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: GetUserByIdResponse200? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<GetUserByIdResponse200>(responseText.ifEmpty { "null" }, object : TypeToken<GetUserByIdResponse200>() {}.type) else null
-
-        val status404 = if (response.code == 404) gson.fromJson<GetUserByIdResponse404>(responseText.ifEmpty { "null" }, object : TypeToken<GetUserByIdResponse404>() {}.type) else null
-        return GetUserByIdResponse(statusCode = response.code, raw = response, status200 = status200, status404 = status404)
+        if (response.code == 200) {
+            status200 = gson.fromJson<GetUserByIdResponse200>(responseText.ifEmpty { "null" }, object : TypeToken<GetUserByIdResponse200>() {}.type)
+        }
+        return GetUserByIdResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

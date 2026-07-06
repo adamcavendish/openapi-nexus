@@ -4,5 +4,5 @@
  * Complex Array Structure Test — 1.0.0
  * Test case for array of inline objects where each object has nested inline objects
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

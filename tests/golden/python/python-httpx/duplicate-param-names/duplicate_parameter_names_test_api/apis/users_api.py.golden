@@ -5,9 +5,44 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.get_user_by_id_duplicate_response200 import GetUserByIdDuplicateResponse200
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class GetUserByIdDuplicateBadRequest:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class GetUserByIdDuplicateNotFound:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class GetUserByIdDuplicateUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetUserByIdDuplicateErrorDetail = (
+    GetUserByIdDuplicateBadRequest
+    | GetUserByIdDuplicateNotFound
+    | GetUserByIdDuplicateUnexpected
+)
+
+class GetUserByIdDuplicateError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetUserByIdDuplicateErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetUserByIdDuplicateErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class UsersApi:
     def __init__(self, client: Client) -> None:
@@ -23,6 +58,12 @@ class UsersApi:
         if id3 is not None:
             headers["id"] = str(id3)
         response = self._client.request("GET", path, params=params, headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 400:
+                detail = GetUserByIdDuplicateBadRequest(response.status_code, response.headers, response.content)
+            elif response.status_code == 404:
+                detail = GetUserByIdDuplicateNotFound(response.status_code, response.headers, response.content)
+            else:
+                detail = GetUserByIdDuplicateUnexpected(response.status_code, response.headers, response.content)
+            raise GetUserByIdDuplicateError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return GetUserByIdDuplicateResponse200.from_dict(response.json())

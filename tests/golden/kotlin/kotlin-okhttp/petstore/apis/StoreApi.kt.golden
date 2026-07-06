@@ -21,10 +21,76 @@ data class GetInventoryResponse(val statusCode: Int, val raw: Response,
 val status200: Map<String, Int>? = null) {
 }
 
+sealed interface GetInventoryExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetInventoryException(
+    val detail: GetInventoryExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetInventoryUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetInventoryExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * PlaceOrderResponse carries the response from placeOrder.
  */
 data class PlaceOrderResponse(val statusCode: Int, val raw: Response, val status200: Order? = null) {
+}
+
+sealed interface PlaceOrderExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class PlaceOrderException(
+    val detail: PlaceOrderExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class PlaceOrderBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : PlaceOrderExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class PlaceOrderUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : PlaceOrderExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -33,10 +99,106 @@ data class PlaceOrderResponse(val statusCode: Int, val raw: Response, val status
 data class GetOrderByIdResponse(val statusCode: Int, val raw: Response, val status200: Order? = null) {
 }
 
+sealed interface GetOrderByIdExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetOrderByIdException(
+    val detail: GetOrderByIdExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetOrderByIdBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetOrderByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class GetOrderByIdNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetOrderByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class GetOrderByIdUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetOrderByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * DeleteOrderResponse carries the response from deleteOrder.
  */
 data class DeleteOrderResponse(val statusCode: Int, val raw: Response) {
+}
+
+sealed interface DeleteOrderExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class DeleteOrderException(
+    val detail: DeleteOrderExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class DeleteOrderBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : DeleteOrderExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class DeleteOrderNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : DeleteOrderExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class DeleteOrderUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : DeleteOrderExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -54,13 +216,25 @@ class StoreApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetInventoryExceptionDetail = when (response.code)  {
+                else ->  {
+                    GetInventoryUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetInventoryException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Map<String, Int>? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Map<String, Int>>(responseText.ifEmpty { "null" }, object : TypeToken<Map<String, Int>>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Map<String, Int>>(responseText.ifEmpty { "null" }, object : TypeToken<Map<String, Int>>() {}.type)
+        }
         return GetInventoryResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -75,13 +249,26 @@ class StoreApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: PlaceOrderExceptionDetail = when (response.code)  {
+                400 -> PlaceOrderBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    PlaceOrderUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw PlaceOrderException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Order? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Order>(responseText.ifEmpty { "null" }, object : TypeToken<Order>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Order>(responseText.ifEmpty { "null" }, object : TypeToken<Order>() {}.type)
+        }
         return PlaceOrderResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -94,13 +281,27 @@ class StoreApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetOrderByIdExceptionDetail = when (response.code)  {
+                400 -> GetOrderByIdBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                404 -> GetOrderByIdNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    GetOrderByIdUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetOrderByIdException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Order? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Order>(responseText.ifEmpty { "null" }, object : TypeToken<Order>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Order>(responseText.ifEmpty { "null" }, object : TypeToken<Order>() {}.type)
+        }
         return GetOrderByIdResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -113,8 +314,18 @@ class StoreApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: DeleteOrderExceptionDetail = when (response.code)  {
+                400 -> DeleteOrderBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                404 -> DeleteOrderNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    DeleteOrderUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw DeleteOrderException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
         return DeleteOrderResponse(statusCode = response.code, raw = response)
     }

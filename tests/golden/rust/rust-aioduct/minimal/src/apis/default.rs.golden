@@ -4,7 +4,7 @@
 // Minimal API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -22,12 +22,25 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
     /// GET /test
     pub async fn get_test(
         &self,
-    ) -> Result<GetTestResponse, Error> {
+    ) -> Result<GetTestResponse, GetTestError> {
         let path = "/test".to_string();
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        Ok(GetTestResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = GetTestResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::from)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(GetTestError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -35,4 +48,35 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
 #[derive(Debug)]
 pub struct GetTestResponse {
     pub status_code: u16,
+}
+
+/// Error from `get_test`.
+#[derive(Debug)]
+pub enum GetTestError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetTestError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetTestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetTestError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

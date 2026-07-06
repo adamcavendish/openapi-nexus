@@ -4,5 +4,5 @@
  * Comprehensive Schema Types Example — 1.0.0
  * Comprehensive test for all OpenAPI v3.1.2 schema types
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

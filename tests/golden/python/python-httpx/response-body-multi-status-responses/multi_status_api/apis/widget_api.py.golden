@@ -4,9 +4,56 @@
 
 from __future__ import annotations
 
+import json
+
+from collections.abc import Mapping
+
+from ..models.error_response import ErrorResponse
 from ..models.widget import Widget
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class ListWidgetsNotFound:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+        self._body_loaded: bool = False
+        self._body_value: ErrorResponse | None = None
+        self._body_error: Exception | None = None
+    @property
+    def body(self) -> ErrorResponse:
+        if not self._body_loaded:
+            try:
+                self._body_value = ErrorResponse.from_dict(json.loads(self.raw_body.decode("utf-8")))
+            except Exception as exc:
+                self._body_error = exc
+            self._body_loaded = True
+        if self._body_error is not None:
+            raise self._body_error
+        if self._body_value is None:
+            raise RuntimeError("error body was not decoded")
+        return self._body_value
+
+class ListWidgetsUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type ListWidgetsErrorDetail = (
+    ListWidgetsNotFound
+    | ListWidgetsUnexpected
+)
+
+class ListWidgetsError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: ListWidgetsErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: ListWidgetsErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class WidgetApi:
     def __init__(self, client: Client) -> None:
@@ -15,6 +62,10 @@ class WidgetApi:
     def list_widgets(self) -> list[Widget]:
         path = "/widgets"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 404:
+                detail = ListWidgetsNotFound(response.status_code, response.headers, response.content)
+            else:
+                detail = ListWidgetsUnexpected(response.status_code, response.headers, response.content)
+            raise ListWidgetsError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return [Widget.from_dict(item) for item in response.json()]

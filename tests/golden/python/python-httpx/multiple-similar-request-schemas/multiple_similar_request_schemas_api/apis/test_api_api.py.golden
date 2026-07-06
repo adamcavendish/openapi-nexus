@@ -5,12 +5,51 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.create_request_type_a import CreateRequestTypeA
 from ..models.create_request_type_b import CreateRequestTypeB
 from ..models.resource_type_a import ResourceTypeA
 from ..models.resource_type_b import ResourceTypeB
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class CreateTypeAUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type CreateTypeAErrorDetail = (
+    CreateTypeAUnexpected
+)
+
+class CreateTypeAError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: CreateTypeAErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: CreateTypeAErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
+class CreateTypeBUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type CreateTypeBErrorDetail = (
+    CreateTypeBUnexpected
+)
+
+class CreateTypeBError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: CreateTypeBErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: CreateTypeBErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class TestApiApi:
     def __init__(self, client: Client) -> None:
@@ -22,8 +61,9 @@ class TestApiApi:
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("POST", path, json=body.to_dict(), headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = CreateTypeAUnexpected(response.status_code, response.headers, response.content)
+            raise CreateTypeAError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return ResourceTypeA.from_dict(response.json())
 
     def create_type_b(self, *, body: CreateRequestTypeB) -> ResourceTypeB:
@@ -32,6 +72,7 @@ class TestApiApi:
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("POST", path, json=body.to_dict(), headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = CreateTypeBUnexpected(response.status_code, response.headers, response.content)
+            raise CreateTypeBError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return ResourceTypeB.from_dict(response.json())

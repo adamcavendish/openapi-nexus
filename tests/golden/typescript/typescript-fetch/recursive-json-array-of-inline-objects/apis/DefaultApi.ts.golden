@@ -4,12 +4,25 @@
  * Array of Inline Objects Test — 1.0.0
  * Test case for array of inline objects with snake_case to camelCase conversion (main case from user issue)
  */
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export type TestRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
+
+
+export type TestErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class TestError extends ResponseError {
+  readonly detail: TestErrorDetail;
+
+  constructor(response: Response, detail: TestErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -44,11 +57,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new TestError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 

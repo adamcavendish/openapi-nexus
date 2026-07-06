@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::response_entry_kind as response_detail_kind;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
     ParameterLocation as IrParameterLocation,
@@ -102,6 +103,7 @@ pub fn collect_api_file_exports(ir: &IrSpec) -> Vec<ApiFileExports> {
         let interface_name = format!("{}Interface", class_name);
 
         let mut type_names = Vec::new();
+        let mut value_names = vec![class_name.clone()];
         for op in ops {
             if !op.parameters.is_empty() || op.request_body.is_some() {
                 type_names.push(format!(
@@ -110,13 +112,15 @@ pub fn collect_api_file_exports(ir: &IrSpec) -> Vec<ApiFileExports> {
                 ));
             }
             type_names.push(raw_response_alias_name(op));
+            type_names.push(error_detail_alias_name(op));
+            value_names.push(error_class_name(op));
         }
         type_names.push(interface_name);
 
         out.push(ApiFileExports {
             filename_base: class_name.clone(),
             type_names,
-            value_names: vec![class_name],
+            value_names,
         });
     }
     out
@@ -162,6 +166,7 @@ fn emit_api_file(
     // own line so readers can scan each `Wrapper & { status: N }` pair without
     // the pretty printer splitting intersections across lines.
     fb = fb.add_code(build_response_aliases_block(ops)?);
+    fb = fb.add_code(build_error_types_block(ops)?);
 
     // ApiInterface — emit as a raw CodeBlock so `%T` slots propagate imports
     // for every arrow-function parameter and return type. (TypeSpec with
@@ -227,6 +232,17 @@ fn raw_response_alias_name(op: &IrOperation) -> String {
     )
 }
 
+fn error_class_name(op: &IrOperation) -> String {
+    format!(
+        "{}Error",
+        op.operation_id.to_lower_camel_case().to_pascal_case()
+    )
+}
+
+fn error_detail_alias_name(op: &IrOperation) -> String {
+    format!("{}Detail", error_class_name(op))
+}
+
 /// Emit one `export type {OpId}RawResponse = | A | B | C;` block per op.
 /// Each member is a `%T` slot so imports still flow through the collector,
 /// and each sits on its own line so intersections (`Wrapper & { status: N }`)
@@ -255,6 +271,60 @@ fn build_response_aliases_block(ops: &[&IrOperation]) -> Result<CodeBlock, Strin
         .map_err(|e| format!("sigil_emit_api: response aliases block: {e}"))
 }
 
+fn build_error_types_block(ops: &[&IrOperation]) -> Result<CodeBlock, String> {
+    let mut cb = CodeBlock::builder();
+    for op in ops {
+        let detail_alias = error_detail_alias_name(op);
+        let class_name = error_class_name(op);
+        let error_responses: Vec<&IrResponse> = op
+            .responses
+            .iter()
+            .filter(|resp| !is_success_status(&resp.status))
+            .collect();
+        cb.add(&format!("export type {detail_alias} =\n"), vec![]);
+        let mut used = HashSet::new();
+        for (idx, resp) in error_responses.iter().enumerate() {
+            let prefix = if idx == 0 { "  " } else { "  | " };
+            let kind = unique_ts_kind(&response_detail_kind(&resp.status), &mut used);
+            let status_ty = resp
+                .status
+                .parse::<u16>()
+                .ok()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| "number".to_string());
+            let value_ty = response_value_type(resp);
+            cb.add(prefix, vec![]);
+            cb.add(
+                &format!(
+                    "{{ kind: '{}'; status: {}; raw: Response; value(): Promise<%T> }}\n",
+                    kind, status_ty
+                ),
+                vec![Arg::TypeName(value_ty)],
+            );
+        }
+        let prefix = if error_responses.is_empty() {
+            "  "
+        } else {
+            "  | "
+        };
+        cb.add(
+            &format!(
+                "{prefix}{{ kind: 'unexpected'; status: number; raw: Response; value(): Promise<%T> }};\n"
+            ),
+            vec![Arg::TypeName(TypeName::primitive("Blob"))],
+        );
+        cb.add("\n", vec![]);
+        cb.add(
+            &format!(
+                "export class {class_name} extends %T {{\n  readonly detail: {detail_alias};\n\n  constructor(response: Response, detail: {detail_alias}, msg = 'Response returned an error code') {{\n    super(response, msg);\n    this.detail = detail;\n  }}\n}}\n\n"
+            ),
+            vec![Arg::TypeName(rt_value("ResponseError"))],
+        );
+    }
+    cb.build()
+        .map_err(|e| format!("sigil_emit_api: error types block: {e}"))
+}
+
 /// Compute the deduplicated list of union members for an operation's raw
 /// response type (wrapper intersected with status literal).
 fn raw_response_members(op: &IrOperation) -> Vec<TypeName> {
@@ -262,7 +332,11 @@ fn raw_response_members(op: &IrOperation) -> Vec<TypeName> {
     let mut any_body = false;
     let mut has_default = false;
 
-    for resp in &op.responses {
+    for resp in op
+        .responses
+        .iter()
+        .filter(|resp| is_success_status(&resp.status))
+    {
         if resp.status.eq_ignore_ascii_case("default") {
             has_default = true;
         }
@@ -960,11 +1034,16 @@ fn emit_response_handler(
     convertible: &HashSet<String>,
 ) {
     cb.add("// Handle responses\n", vec![]);
+    emit_error_throw(cb, op, property_naming_camel_case, convertible);
 
     let mut numeric: Vec<(u16, &IrResponse)> = Vec::new();
     let mut wildcards: Vec<(&str, &IrResponse)> = Vec::new();
     let mut default: Option<&IrResponse> = None;
-    for resp in &op.responses {
+    for resp in op
+        .responses
+        .iter()
+        .filter(|resp| is_success_status(&resp.status))
+    {
         if resp.status.eq_ignore_ascii_case("default") {
             default = Some(resp);
         } else if let Ok(code) = resp.status.parse::<u16>() {
@@ -975,7 +1054,11 @@ fn emit_response_handler(
     }
     numeric.sort_by_key(|(code, _)| *code);
 
-    let fallback_has_body = op.responses.iter().any(|r| !r.content.is_empty());
+    let fallback_has_body = op
+        .responses
+        .iter()
+        .filter(|resp| is_success_status(&resp.status))
+        .any(|r| !r.content.is_empty());
 
     if numeric.is_empty() && wildcards.is_empty() {
         if let Some(d) = default {
@@ -1031,6 +1114,162 @@ fn wildcard_status_range(status: &str) -> (u16, u16) {
         "4XX" => (400, 500),
         "5XX" => (500, 600),
         _ => (0, 1000),
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
+}
+
+fn emit_error_throw(
+    cb: &mut sigil_stitch::code_block::CodeBlockBuilder,
+    op: &IrOperation,
+    property_naming_camel_case: bool,
+    convertible: &HashSet<String>,
+) {
+    cb.add(
+        "if (!(response.status >= 200 && response.status < 300)) {\n",
+        vec![],
+    );
+    cb.add("  const errorRaw = response.clone();\n", vec![]);
+
+    let mut numeric = Vec::new();
+    let mut wildcards = Vec::new();
+    let mut default = None;
+    for resp in op
+        .responses
+        .iter()
+        .filter(|resp| !is_success_status(&resp.status))
+    {
+        if resp.status.eq_ignore_ascii_case("default") {
+            default = Some(resp);
+        } else if let Ok(code) = resp.status.parse::<u16>() {
+            numeric.push((code, resp));
+        } else {
+            wildcards.push((&resp.status, resp));
+        }
+    }
+    numeric.sort_by_key(|(code, _)| *code);
+
+    let mut used = HashSet::new();
+    let mut emitted_any = false;
+    for (code, resp) in numeric {
+        let keyword = if emitted_any { "else if" } else { "if" };
+        let kind = unique_ts_kind(&response_detail_kind(&resp.status), &mut used);
+        cb.add(
+            &format!("  {keyword} (response.status === {code}) {{\n    "),
+            vec![],
+        );
+        emit_error_throw_for_response(cb, op, resp, &kind, property_naming_camel_case, convertible);
+        cb.add("  }\n", vec![]);
+        emitted_any = true;
+    }
+    for (status, resp) in wildcards {
+        let (low, high) = wildcard_status_range(status);
+        let keyword = if emitted_any { "else if" } else { "if" };
+        let kind = unique_ts_kind(&response_detail_kind(&resp.status), &mut used);
+        cb.add(
+            &format!("  {keyword} (response.status >= {low} && response.status < {high}) {{\n    "),
+            vec![],
+        );
+        emit_error_throw_for_response(cb, op, resp, &kind, property_naming_camel_case, convertible);
+        cb.add("  }\n", vec![]);
+        emitted_any = true;
+    }
+
+    let keyword = if emitted_any { "else" } else { "" };
+    cb.add(&format!("  {keyword} {{\n    "), vec![]);
+    if let Some(resp) = default {
+        let kind = unique_ts_kind(&response_detail_kind(&resp.status), &mut used);
+        emit_error_throw_for_response(cb, op, resp, &kind, property_naming_camel_case, convertible);
+    } else {
+        let class_name = error_class_name(op);
+        cb.add(
+            &format!(
+                "let errorValue: Promise<Blob> | undefined;\n    throw new {class_name}(response, {{ kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() }});\n"
+            ),
+            vec![],
+        );
+    }
+    cb.add("  }\n", vec![]);
+    cb.add("}\n", vec![]);
+}
+
+fn emit_error_throw_for_response(
+    cb: &mut sigil_stitch::code_block::CodeBlockBuilder,
+    op: &IrOperation,
+    resp: &IrResponse,
+    kind: &str,
+    property_naming_camel_case: bool,
+    convertible: &HashSet<String>,
+) {
+    let class_name = error_class_name(op);
+    let status_expr = resp
+        .status
+        .parse::<u16>()
+        .ok()
+        .map(|code| format!("response.status as {code}"))
+        .unwrap_or_else(|| "response.status".to_string());
+    let value_expr = error_value_expr(resp, property_naming_camel_case, convertible);
+    let value_ty = response_value_type(resp);
+    cb.add(
+        &format!(
+            "let errorValue: Promise<%T> | undefined;\n    throw new {class_name}(response, {{ kind: '{}', status: {}, raw: response, value: () => errorValue ??= {} }});\n",
+            kind, status_expr, value_expr.0
+        ),
+        std::iter::once(Arg::TypeName(value_ty))
+            .chain(value_expr.1)
+            .collect::<Vec<_>>(),
+    );
+}
+
+fn error_value_expr(
+    resp: &IrResponse,
+    property_naming_camel_case: bool,
+    convertible: &HashSet<String>,
+) -> (String, Vec<Arg>) {
+    let kind = classify_response(resp);
+    if property_naming_camel_case
+        && let ResponseKind::Json(Some(_)) = &kind
+        && let Some(from_json) = response_from_json_transformer(resp, convertible)
+    {
+        let wrapper_type =
+            TypeName::generic(rt_value("JSONApiResponse"), vec![response_value_type(resp)]);
+        return (
+            format!("new %T(errorRaw.clone(), {from_json}).value()"),
+            vec![Arg::TypeName(wrapper_type)],
+        );
+    }
+    match kind {
+        ResponseKind::Json(Some(body_ty)) => (
+            "new %T(errorRaw.clone()).value()".to_string(),
+            vec![Arg::TypeName(TypeName::generic(
+                rt_value("JSONApiResponse"),
+                vec![body_ty],
+            ))],
+        ),
+        ResponseKind::Json(None) => (
+            "new %T(errorRaw.clone()).value()".to_string(),
+            vec![Arg::TypeName(TypeName::generic(
+                rt_value("JSONApiResponse"),
+                vec![TypeName::primitive("unknown")],
+            ))],
+        ),
+        ResponseKind::Text => (
+            "new %T(errorRaw.clone()).value()".to_string(),
+            vec![Arg::TypeName(rt_value("TextApiResponse"))],
+        ),
+        ResponseKind::Blob => (
+            "new %T(errorRaw.clone()).value()".to_string(),
+            vec![Arg::TypeName(rt_value("BlobApiResponse"))],
+        ),
+        ResponseKind::None => (
+            "new %T(errorRaw.clone()).value()".to_string(),
+            vec![Arg::TypeName(rt_value("VoidApiResponse"))],
+        ),
     }
 }
 
@@ -1098,7 +1337,7 @@ fn emit_response_return(
     );
 }
 
-/// `return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };`
+/// `return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: 2xx };`
 /// (or VoidApiResponse equivalent when no body appears anywhere).
 fn emit_fallback_return(
     cb: &mut sigil_stitch::code_block::CodeBlockBuilder,
@@ -1108,14 +1347,13 @@ fn emit_fallback_return(
     let json_response = rt_value("JSONApiResponse");
     let void_response = rt_value("VoidApiResponse");
     let unknown = TypeName::primitive("unknown");
-    let json_status_shape = TypeName::raw(" { status: number }");
-    let void_status_shape = TypeName::raw("{ status: number }");
+    let success_response = rt_type("HttpSuccessResponse");
     cb.add_code(
         sigil_quote!(TypeScript {
             $if(any_body) {
-                return new $T(json_response.clone())(response) as $T(json_response)<$T(unknown)> & $T(json_status_shape);
+                return new $T(json_response.clone())(response) as $T(json_response)<$T(unknown)> & $T(success_response.clone());
             } $else {
-                return new $T(void_response.clone())(response) as $T(void_response) & $T(void_status_shape);
+                return new $T(void_response.clone())(response) as $T(void_response) & $T(success_response);
             }
         })
         .expect("fallback response return block builds"),
@@ -1268,13 +1506,17 @@ fn fallback_member(any_body: bool) -> TypeName {
     } else {
         rt_value("VoidApiResponse")
     };
-    TypeName::intersection(vec![wrapper, TypeName::raw("{ status: number }")])
+    TypeName::intersection(vec![wrapper, rt_type("HttpSuccessResponse")])
 }
 
 fn convenience_body_type(op: &IrOperation) -> TypeName {
     let mut members: Vec<TypeName> = Vec::new();
     let mut any_body = false;
-    for resp in &op.responses {
+    for resp in op
+        .responses
+        .iter()
+        .filter(|resp| is_success_status(&resp.status))
+    {
         match classify_response(resp) {
             ResponseKind::Json(Some(body)) => {
                 any_body = true;
@@ -1301,6 +1543,16 @@ fn convenience_body_type(op: &IrOperation) -> TypeName {
         members.pop().unwrap()
     } else {
         dedup_union(members)
+    }
+}
+
+fn response_value_type(resp: &IrResponse) -> TypeName {
+    match classify_response(resp) {
+        ResponseKind::Json(Some(body)) => body,
+        ResponseKind::Json(None) => TypeName::primitive("unknown"),
+        ResponseKind::Text => TypeName::primitive("string"),
+        ResponseKind::Blob => TypeName::primitive("Blob"),
+        ResponseKind::None => TypeName::primitive("void"),
     }
 }
 
@@ -1358,6 +1610,19 @@ fn classify_response(resp: &IrResponse) -> ResponseKind {
         | "text/event-stream" => ResponseKind::Text,
         _ => ResponseKind::Blob,
     }
+}
+
+fn unique_ts_kind(desired: &str, used: &mut HashSet<String>) -> String {
+    if used.insert(desired.to_string()) {
+        return desired.to_string();
+    }
+    for i in 2..=u32::MAX {
+        let candidate = format!("{desired}{i}");
+        if used.insert(candidate.clone()) {
+            return candidate;
+        }
+    }
+    unreachable!("kind collision space exhausted")
 }
 
 // ============================================================================

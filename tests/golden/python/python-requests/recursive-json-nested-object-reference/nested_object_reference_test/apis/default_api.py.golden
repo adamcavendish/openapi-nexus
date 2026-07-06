@@ -5,8 +5,29 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class TestUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type TestErrorDetail = (
+    TestUnexpected
+)
+
+class TestError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: TestErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: TestErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class DefaultApi:
     def __init__(self, client: Client) -> None:
@@ -16,6 +37,7 @@ class DefaultApi:
         """Test endpoint."""
         path = "/test"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = TestUnexpected(response.status_code, response.headers, response.content)
+            raise TestError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
         return None

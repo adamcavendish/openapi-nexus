@@ -5,7 +5,7 @@
 // Covers normalized media-type selection for requests and responses.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "media" tag.
 pub struct MediaApi<'a> {
@@ -24,20 +24,33 @@ impl<'a> MediaApi<'a> {
     pub async fn send_json_preferred(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<SendJsonPreferredResponse, Error> {
+    ) -> Result<SendJsonPreferredResponse, SendJsonPreferredError> {
         let path = "/request/json-vs-multipart".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(SendJsonPreferredResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendJsonPreferredResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendJsonPreferredError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /request/parameterized-multipart
     pub async fn send_parameterized_multipart(
         &self,
         body: &crate::models::SendParameterizedMultipartMultipartRequestBody,
-    ) -> Result<SendParameterizedMultipartResponse, Error> {
+    ) -> Result<SendParameterizedMultipartResponse, SendParameterizedMultipartError> {
         let path = "/request/parameterized-multipart".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         let mut multipart = reqwest::multipart::Form::new();
@@ -48,30 +61,57 @@ impl<'a> MediaApi<'a> {
         req = req.multipart(multipart);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(SendParameterizedMultipartResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendParameterizedMultipartResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendParameterizedMultipartError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// PATCH /request/vendor-json
     pub async fn send_vendor_json(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<SendVendorJsonResponse, Error> {
+    ) -> Result<SendVendorJsonResponse, SendVendorJsonError> {
         let path = "/request/vendor-json".to_string();
         let mut req = self.client.request(reqwest::Method::PATCH, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(SendVendorJsonResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendVendorJsonResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendVendorJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// GET /response/octet-before-xml
     pub async fn get_octet_preferred(
         &self,
-    ) -> Result<GetOctetPreferredResponse, Error> {
+    ) -> Result<GetOctetPreferredResponse, GetOctetPreferredError> {
         let path = "/response/octet-before-xml".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetOctetPreferredResponse { status_code, data: None };
         match status_code {
@@ -80,17 +120,26 @@ impl<'a> MediaApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetOctetPreferredError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
     /// GET /response/text-before-xml
     pub async fn get_text_preferred(
         &self,
-    ) -> Result<GetTextPreferredResponse, Error> {
+    ) -> Result<GetTextPreferredResponse, GetTextPreferredError> {
         let path = "/response/text-before-xml".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetTextPreferredResponse { status_code, data: None };
         match status_code {
@@ -99,17 +148,26 @@ impl<'a> MediaApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetTextPreferredError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
     /// GET /response/vendor-json
     pub async fn get_vendor_json(
         &self,
-    ) -> Result<GetVendorJsonResponse, Error> {
+    ) -> Result<GetVendorJsonResponse, GetVendorJsonError> {
         let path = "/response/vendor-json".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetVendorJsonResponse { status_code, data: None };
         match status_code {
@@ -117,6 +175,14 @@ impl<'a> MediaApi<'a> {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetVendorJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -128,16 +194,109 @@ pub struct SendJsonPreferredResponse {
     pub status_code: u16,
 }
 
+/// Error from `send_json_preferred`.
+#[derive(Debug)]
+pub enum SendJsonPreferredError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendJsonPreferredError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendJsonPreferredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendJsonPreferredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `send_parameterized_multipart`.
 #[derive(Debug)]
 pub struct SendParameterizedMultipartResponse {
     pub status_code: u16,
 }
 
+/// Error from `send_parameterized_multipart`.
+#[derive(Debug)]
+pub enum SendParameterizedMultipartError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendParameterizedMultipartError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendParameterizedMultipartError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendParameterizedMultipartError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `send_vendor_json`.
 #[derive(Debug)]
 pub struct SendVendorJsonResponse {
     pub status_code: u16,
+}
+
+/// Error from `send_vendor_json`.
+#[derive(Debug)]
+pub enum SendVendorJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendVendorJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendVendorJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendVendorJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `get_octet_preferred`.
@@ -147,6 +306,37 @@ pub struct GetOctetPreferredResponse {
     pub data: Option<Vec<u8>>,
 }
 
+/// Error from `get_octet_preferred`.
+#[derive(Debug)]
+pub enum GetOctetPreferredError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetOctetPreferredError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetOctetPreferredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetOctetPreferredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_text_preferred`.
 #[derive(Debug)]
 pub struct GetTextPreferredResponse {
@@ -154,9 +344,71 @@ pub struct GetTextPreferredResponse {
     pub data: Option<String>,
 }
 
+/// Error from `get_text_preferred`.
+#[derive(Debug)]
+pub enum GetTextPreferredError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetTextPreferredError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetTextPreferredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetTextPreferredError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_vendor_json`.
 #[derive(Debug)]
 pub struct GetVendorJsonResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Payload>,
+}
+
+/// Error from `get_vendor_json`.
+#[derive(Debug)]
+pub enum GetVendorJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetVendorJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetVendorJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetVendorJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

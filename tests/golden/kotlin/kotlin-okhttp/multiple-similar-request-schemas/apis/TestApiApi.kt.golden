@@ -21,11 +21,67 @@ data class CreateTypeAResponse(val statusCode: Int, val raw: Response,
 val status200: ResourceTypeA? = null) {
 }
 
+sealed interface CreateTypeAExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateTypeAException(
+    val detail: CreateTypeAExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateTypeAUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateTypeAExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * CreateTypeBResponse carries the response from createTypeB.
  */
 data class CreateTypeBResponse(val statusCode: Int, val raw: Response,
 val status200: ResourceTypeB? = null) {
+}
+
+sealed interface CreateTypeBExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateTypeBException(
+    val detail: CreateTypeBExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateTypeBUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateTypeBExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -45,13 +101,25 @@ class TestApiApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateTypeAExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateTypeAUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateTypeAException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: ResourceTypeA? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<ResourceTypeA>(responseText.ifEmpty { "null" }, object : TypeToken<ResourceTypeA>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<ResourceTypeA>(responseText.ifEmpty { "null" }, object : TypeToken<ResourceTypeA>() {}.type)
+        }
         return CreateTypeAResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -66,13 +134,25 @@ class TestApiApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateTypeBExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateTypeBUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateTypeBException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: ResourceTypeB? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<ResourceTypeB>(responseText.ifEmpty { "null" }, object : TypeToken<ResourceTypeB>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<ResourceTypeB>(responseText.ifEmpty { "null" }, object : TypeToken<ResourceTypeB>() {}.type)
+        }
         return CreateTypeBResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

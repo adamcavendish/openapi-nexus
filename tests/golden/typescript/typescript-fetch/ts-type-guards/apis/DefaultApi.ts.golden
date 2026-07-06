@@ -4,8 +4,8 @@
  * TS Type Guard Test — 1.0.0
  */
 import type { AppEvent } from '../models/AppEvent';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiHandleEventRequest {
   body: AppEvent;
@@ -13,7 +13,20 @@ export interface ApiHandleEventRequest {
 
 export type HandleEventRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
+
+
+export type HandleEventErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleEventError extends ResponseError {
+  readonly detail: HandleEventErrorDetail;
+
+  constructor(response: Response, detail: HandleEventErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -58,11 +71,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleEventError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 

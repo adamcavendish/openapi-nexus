@@ -5,7 +5,7 @@
 // Test fixture covering all schema kinds with utoipa enabled
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -24,12 +24,13 @@ impl<'a> DefaultApi<'a> {
     pub async fn create_feed(
         &self,
         body: &crate::models::FeedSource,
-    ) -> Result<CreateFeedResponse, Error> {
+    ) -> Result<CreateFeedResponse, CreateFeedError> {
         let path = "/feeds".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = CreateFeedResponse { status_code, data: None };
         match status_code {
@@ -38,6 +39,14 @@ impl<'a> DefaultApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateFeedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -45,12 +54,13 @@ impl<'a> DefaultApi<'a> {
     pub async fn create_payment(
         &self,
         body: &crate::models::PaymentMethod,
-    ) -> Result<CreatePaymentResponse, Error> {
+    ) -> Result<CreatePaymentResponse, CreatePaymentError> {
         let path = "/payments".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = CreatePaymentResponse { status_code, data: None };
         match status_code {
@@ -59,6 +69,14 @@ impl<'a> DefaultApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreatePaymentError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -66,7 +84,7 @@ impl<'a> DefaultApi<'a> {
     pub async fn list_pets(
         &self,
         status: &Option<crate::models::PetStatus>,
-    ) -> Result<ListPetsResponse, Error> {
+    ) -> Result<ListPetsResponse, ListPetsError> {
         let mut path = "/pets".to_string();
         let mut query_parts: Vec<(&str, String)> = Vec::new();
         if let Some(v) = &status {
@@ -79,6 +97,7 @@ impl<'a> DefaultApi<'a> {
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = ListPetsResponse { status_code, data: None };
         match status_code {
@@ -87,6 +106,14 @@ impl<'a> DefaultApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(ListPetsError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -94,12 +121,13 @@ impl<'a> DefaultApi<'a> {
     pub async fn create_pet(
         &self,
         body: &crate::models::Pet,
-    ) -> Result<CreatePetResponse, Error> {
+    ) -> Result<CreatePetResponse, CreatePetError> {
         let path = "/pets".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = CreatePetResponse { status_code, created: None };
         match status_code {
@@ -107,6 +135,14 @@ impl<'a> DefaultApi<'a> {
                 result.created = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreatePetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -119,11 +155,73 @@ pub struct CreateFeedResponse {
     pub data: Option<crate::models::FeedSource>,
 }
 
+/// Error from `create_feed`.
+#[derive(Debug)]
+pub enum CreateFeedError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateFeedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateFeedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateFeedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `create_payment`.
 #[derive(Debug)]
 pub struct CreatePaymentResponse {
     pub status_code: u16,
     pub data: Option<crate::models::PaymentMethod>,
+}
+
+/// Error from `create_payment`.
+#[derive(Debug)]
+pub enum CreatePaymentError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreatePaymentError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreatePaymentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreatePaymentError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `list_pets`.
@@ -133,9 +231,71 @@ pub struct ListPetsResponse {
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
+/// Error from `list_pets`.
+#[derive(Debug)]
+pub enum ListPetsError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for ListPetsError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for ListPetsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for ListPetsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `create_pet`.
 #[derive(Debug)]
 pub struct CreatePetResponse {
     pub status_code: u16,
     pub created: Option<crate::models::Pet>,
+}
+
+/// Error from `create_pet`.
+#[derive(Debug)]
+pub enum CreatePetError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreatePetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreatePetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreatePetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

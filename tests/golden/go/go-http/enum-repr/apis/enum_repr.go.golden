@@ -34,6 +34,45 @@ type HandleAdjacentlyTaggedResponse struct {
 	Status200 *models.AdjacentlyTaggedEnum
 }
 
+type HandleAdjacentlyTaggedError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HandleAdjacentlyTaggedErrorDetail
+}
+
+func (e *HandleAdjacentlyTaggedError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HandleAdjacentlyTaggedErrorDetail interface {
+	isHandleAdjacentlyTaggedErrorDetail()
+}
+
+type HandleAdjacentlyTaggedBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleAdjacentlyTaggedBadRequest) isHandleAdjacentlyTaggedErrorDetail() {}
+
+func (d *HandleAdjacentlyTaggedBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type HandleAdjacentlyTaggedUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleAdjacentlyTaggedUnexpected) isHandleAdjacentlyTaggedErrorDetail() {}
+
+func (d *HandleAdjacentlyTaggedUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // HandleAdjacentlyTagged — Handle adjacently tagged enum
 func (a *EnumReprAPI) HandleAdjacentlyTagged(ctx context.Context, body *models.AdjacentlyTaggedEnum) (*HandleAdjacentlyTaggedResponse, error) {
 	path := "/adjacently-tagged"
@@ -56,20 +95,34 @@ func (a *EnumReprAPI) HandleAdjacentlyTagged(ctx context.Context, body *models.A
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HandleAdjacentlyTaggedResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &HandleAdjacentlyTaggedBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleAdjacentlyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &HandleAdjacentlyTaggedUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleAdjacentlyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.AdjacentlyTaggedEnum
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -79,6 +132,45 @@ type HandleExternallyTaggedResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.ExternallyTaggedEnum
+}
+
+type HandleExternallyTaggedError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HandleExternallyTaggedErrorDetail
+}
+
+func (e *HandleExternallyTaggedError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HandleExternallyTaggedErrorDetail interface {
+	isHandleExternallyTaggedErrorDetail()
+}
+
+type HandleExternallyTaggedBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleExternallyTaggedBadRequest) isHandleExternallyTaggedErrorDetail() {}
+
+func (d *HandleExternallyTaggedBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type HandleExternallyTaggedUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleExternallyTaggedUnexpected) isHandleExternallyTaggedErrorDetail() {}
+
+func (d *HandleExternallyTaggedUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // HandleExternallyTagged — Handle externally tagged enum
@@ -103,20 +195,34 @@ func (a *EnumReprAPI) HandleExternallyTagged(ctx context.Context, body *models.E
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HandleExternallyTaggedResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &HandleExternallyTaggedBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleExternallyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &HandleExternallyTaggedUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleExternallyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.ExternallyTaggedEnum
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -126,6 +232,45 @@ type HandleInternallyTaggedResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.InternallyTaggedEnum
+}
+
+type HandleInternallyTaggedError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HandleInternallyTaggedErrorDetail
+}
+
+func (e *HandleInternallyTaggedError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HandleInternallyTaggedErrorDetail interface {
+	isHandleInternallyTaggedErrorDetail()
+}
+
+type HandleInternallyTaggedBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleInternallyTaggedBadRequest) isHandleInternallyTaggedErrorDetail() {}
+
+func (d *HandleInternallyTaggedBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type HandleInternallyTaggedUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleInternallyTaggedUnexpected) isHandleInternallyTaggedErrorDetail() {}
+
+func (d *HandleInternallyTaggedUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // HandleInternallyTagged — Handle internally tagged enum
@@ -150,20 +295,34 @@ func (a *EnumReprAPI) HandleInternallyTagged(ctx context.Context, body *models.I
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HandleInternallyTaggedResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &HandleInternallyTaggedBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleInternallyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &HandleInternallyTaggedUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleInternallyTaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.InternallyTaggedEnum
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -173,6 +332,45 @@ type HandleMixedResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.MixedEnum
+}
+
+type HandleMixedError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HandleMixedErrorDetail
+}
+
+func (e *HandleMixedError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HandleMixedErrorDetail interface {
+	isHandleMixedErrorDetail()
+}
+
+type HandleMixedBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleMixedBadRequest) isHandleMixedErrorDetail() {}
+
+func (d *HandleMixedBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type HandleMixedUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleMixedUnexpected) isHandleMixedErrorDetail() {}
+
+func (d *HandleMixedUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // HandleMixed — Handle mixed enum (unit variants SimpleA, SimpleB and tuple variants VariantA(VariantA), VariantB(VariantB))
@@ -197,20 +395,34 @@ func (a *EnumReprAPI) HandleMixed(ctx context.Context, body *models.MixedEnum) (
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HandleMixedResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &HandleMixedBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleMixedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &HandleMixedUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleMixedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.MixedEnum
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -220,6 +432,45 @@ type HandleUntaggedResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.UntaggedEnum
+}
+
+type HandleUntaggedError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HandleUntaggedErrorDetail
+}
+
+func (e *HandleUntaggedError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HandleUntaggedErrorDetail interface {
+	isHandleUntaggedErrorDetail()
+}
+
+type HandleUntaggedBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleUntaggedBadRequest) isHandleUntaggedErrorDetail() {}
+
+func (d *HandleUntaggedBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type HandleUntaggedUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HandleUntaggedUnexpected) isHandleUntaggedErrorDetail() {}
+
+func (d *HandleUntaggedUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // HandleUntagged — Handle untagged enum
@@ -244,20 +495,34 @@ func (a *EnumReprAPI) HandleUntagged(ctx context.Context, body *models.UntaggedE
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HandleUntaggedResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &HandleUntaggedBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleUntaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &HandleUntaggedUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HandleUntaggedError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.UntaggedEnum
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

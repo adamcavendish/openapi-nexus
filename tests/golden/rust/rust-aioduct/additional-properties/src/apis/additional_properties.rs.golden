@@ -5,7 +5,7 @@
 // API demonstrating OpenAPI additionalProperties with multiple levels of structs (RootLevel -> MiddleLevel -> LeafValue), each with HashMap fields.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "additional-properties" tag.
 pub struct AdditionalPropertiesApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -24,19 +24,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> AdditionalPropertie
     pub async fn post_leaf(
         &self,
         body: &crate::models::LeafValue,
-    ) -> Result<PostLeafResponse, Error> {
+    ) -> Result<PostLeafResponse, PostLeafError> {
         let path = "/leaf".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = PostLeafResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(PostLeafError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(PostLeafError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -45,19 +58,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> AdditionalPropertie
     pub async fn post_middle(
         &self,
         body: &crate::models::MiddleLevel,
-    ) -> Result<PostMiddleResponse, Error> {
+    ) -> Result<PostMiddleResponse, PostMiddleError> {
         let path = "/middle".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = PostMiddleResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(PostMiddleError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(PostMiddleError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -66,19 +92,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> AdditionalPropertie
     pub async fn post_root(
         &self,
         body: &crate::models::RootLevel,
-    ) -> Result<PostRootResponse, Error> {
+    ) -> Result<PostRootResponse, PostRootError> {
         let path = "/root".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = PostRootResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(PostRootError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(PostRootError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -91,6 +130,39 @@ pub struct PostLeafResponse {
     pub data: Option<crate::models::LeafValue>,
 }
 
+/// Error from `post_leaf`.
+#[derive(Debug)]
+pub enum PostLeafError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostLeafError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostLeafError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostLeafError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `post_middle`.
 #[derive(Debug)]
 pub struct PostMiddleResponse {
@@ -98,9 +170,75 @@ pub struct PostMiddleResponse {
     pub data: Option<crate::models::MiddleLevel>,
 }
 
+/// Error from `post_middle`.
+#[derive(Debug)]
+pub enum PostMiddleError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostMiddleError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostMiddleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostMiddleError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `post_root`.
 #[derive(Debug)]
 pub struct PostRootResponse {
     pub status_code: u16,
     pub data: Option<crate::models::RootLevel>,
+}
+
+/// Error from `post_root`.
+#[derive(Debug)]
+pub enum PostRootError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostRootError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostRootError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostRootError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

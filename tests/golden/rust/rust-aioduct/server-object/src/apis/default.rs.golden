@@ -5,7 +5,7 @@
 // This is a test API specification that includes various server configurations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -25,18 +25,27 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
     /// Retrieve a list of all users
     pub async fn get_all_users(
         &self,
-    ) -> Result<GetAllUsersResponse, Error> {
+    ) -> Result<GetAllUsersResponse, GetAllUsersError> {
         let path = "/users".to_string();
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = GetAllUsersResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetAllUsersError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -47,22 +56,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
     pub async fn get_user_by_id(
         &self,
         id: i64,
-    ) -> Result<GetUserByIdResponse, Error> {
+    ) -> Result<GetUserByIdResponse, GetUserByIdError> {
         let mut path = "/users/{id}".to_string();
         path = path.replace("{id}", &id.to_string());
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
-        let mut result = GetUserByIdResponse { status_code, data: None, status_404: None };
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
+        let mut result = GetUserByIdResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
-            404 => {
-                result.status_404 = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
-            }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                404 => {
+                    let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
+                    return Err(GetUserByIdError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetUserByIdError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -75,10 +94,73 @@ pub struct GetAllUsersResponse {
     pub data: Option<Vec<crate::models::GetAllUsersResponse200Item>>,
 }
 
+/// Error from `get_all_users`.
+#[derive(Debug)]
+pub enum GetAllUsersError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetAllUsersError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetAllUsersError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetAllUsersError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_user_by_id`.
 #[derive(Debug)]
 pub struct GetUserByIdResponse {
     pub status_code: u16,
     pub data: Option<crate::models::GetUserByIdResponse200>,
-    pub status_404: Option<crate::models::GetUserByIdResponse404>,
+}
+
+/// Error from `get_user_by_id`.
+#[derive(Debug)]
+pub enum GetUserByIdError {
+    NotFound(ApiError<crate::models::GetUserByIdResponse404>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetUserByIdError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetUserByIdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetUserByIdError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

@@ -6,8 +6,8 @@
  */
 import type { Pet } from '../models/Pet';
 import type { UploadResponse } from '../models/UploadResponse';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiUpdatePetRequest {
   body: Pet;
@@ -73,46 +73,143 @@ export interface ApiUploadFileRequest {
 
 export type UpdatePetRawResponse =
   | JSONApiResponse<Pet> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | VoidApiResponse & { status: 404 }
-  | VoidApiResponse & { status: 422 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type AddPetRawResponse =
   | JSONApiResponse<Pet> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | VoidApiResponse & { status: 422 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type FindPetsByStatusRawResponse =
   | JSONApiResponse<Pet[]> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type FindPetsByTagsRawResponse =
   | JSONApiResponse<Pet[]> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type GetPetByIdRawResponse =
   | JSONApiResponse<Pet> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | VoidApiResponse & { status: 404 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type UpdatePetWithFormRawResponse =
   | JSONApiResponse<Pet> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type DeletePetRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type UploadFileRawResponse =
   | JSONApiResponse<UploadResponse> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type UpdatePetErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'notFound'; status: 404; raw: Response; value(): Promise<void> }
+  | { kind: 'validation'; status: 422; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UpdatePetError extends ResponseError {
+  readonly detail: UpdatePetErrorDetail;
+
+  constructor(response: Response, detail: UpdatePetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type AddPetErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'validation'; status: 422; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class AddPetError extends ResponseError {
+  readonly detail: AddPetErrorDetail;
+
+  constructor(response: Response, detail: AddPetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type FindPetsByStatusErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class FindPetsByStatusError extends ResponseError {
+  readonly detail: FindPetsByStatusErrorDetail;
+
+  constructor(response: Response, detail: FindPetsByStatusErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type FindPetsByTagsErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class FindPetsByTagsError extends ResponseError {
+  readonly detail: FindPetsByTagsErrorDetail;
+
+  constructor(response: Response, detail: FindPetsByTagsErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type GetPetByIdErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'notFound'; status: 404; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetPetByIdError extends ResponseError {
+  readonly detail: GetPetByIdErrorDetail;
+
+  constructor(response: Response, detail: GetPetByIdErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type UpdatePetWithFormErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UpdatePetWithFormError extends ResponseError {
+  readonly detail: UpdatePetWithFormErrorDetail;
+
+  constructor(response: Response, detail: UpdatePetWithFormErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type DeletePetErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class DeletePetError extends ResponseError {
+  readonly detail: DeletePetErrorDetail;
+
+  constructor(response: Response, detail: DeletePetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type UploadFileErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UploadFileError extends ResponseError {
+  readonly detail: UploadFileErrorDetail;
+
+  constructor(response: Response, detail: UploadFileErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface PetApiInterface {
@@ -171,20 +268,30 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new UpdatePetError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else if (response.status === 404) {
+        let errorValue: Promise<void> | undefined;
+        throw new UpdatePetError(response, { kind: 'notFound', status: response.status as 404, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else if (response.status === 422) {
+        let errorValue: Promise<void> | undefined;
+        throw new UpdatePetError(response, { kind: 'validation', status: response.status as 422, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UpdatePetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
-    else if (response.status === 404) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 404 };
-    }
-    else if (response.status === 422) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 422 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -223,17 +330,26 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new AddPetError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else if (response.status === 422) {
+        let errorValue: Promise<void> | undefined;
+        throw new AddPetError(response, { kind: 'validation', status: response.status as 422, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new AddPetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
-    else if (response.status === 422) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 422 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -272,14 +388,22 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new FindPetsByStatusError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new FindPetsByStatusError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet[]> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -318,14 +442,22 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new FindPetsByTagsError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new FindPetsByTagsError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet[]> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -362,17 +494,26 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new GetPetByIdError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else if (response.status === 404) {
+        let errorValue: Promise<void> | undefined;
+        throw new GetPetByIdError(response, { kind: 'notFound', status: response.status as 404, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new GetPetByIdError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
-    else if (response.status === 404) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 404 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -415,14 +556,22 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new UpdatePetWithFormError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UpdatePetWithFormError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Pet> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -459,14 +608,22 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new DeletePetError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new DeletePetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -506,11 +663,18 @@ export class PetApi extends BaseAPI implements PetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UploadFileError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<UploadResponse> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

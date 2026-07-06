@@ -3,6 +3,9 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::{
+    response_entry_name as response_variant_name, response_match_rank,
+};
 use crate::ir::types::{
     IrOperation, IrParameter, IrRequestBody, IrResponse, IrSpec, IrTypeExpr, ParameterLocation,
 };
@@ -25,12 +28,22 @@ pub fn generate_api_files(
 ) -> Result<Vec<FileInfo>, String> {
     let by_tag = group_by_tag(&ir.operations);
     let mut files = Vec::with_capacity(by_tag.len());
+    let mut support_files_seen = HashSet::new();
+    let has_models = has_java_models(ir, request_inputs);
     for (tag, ops) in &by_tag {
         let class_name = format!("{}Api", tag.to_pascal_case());
         let filename = format!("{class_name}.java");
-        let body = emit_api_file(tag, ops, ir, package_name, request_inputs);
+        let body = emit_api_file(tag, ops, ir, package_name, request_inputs, has_models);
         let content = format!("{header}{body}");
         files.push(FileInfo::api(filename, content));
+        for op in ops {
+            let plan = plan_operation(op, ir, request_inputs);
+            for file in operation_support_files(&plan, package_name, header, has_models) {
+                if support_files_seen.insert(file.filename.clone()) {
+                    files.push(file);
+                }
+            }
+        }
     }
     Ok(files)
 }
@@ -50,6 +63,10 @@ fn group_by_tag(operations: &[IrOperation]) -> BTreeMap<String, Vec<&IrOperation
     out
 }
 
+fn has_java_models(ir: &IrSpec, request_inputs: &RequestInputPlan) -> bool {
+    !ir.schemas.is_empty() || !request_inputs.models().is_empty()
+}
+
 // ---------------------------------------------------------------------------
 // File assembly
 // ---------------------------------------------------------------------------
@@ -60,6 +77,7 @@ fn emit_api_file(
     ir: &IrSpec,
     package_name: &str,
     request_inputs: &RequestInputPlan,
+    has_models: bool,
 ) -> String {
     let class_name = format!("{}Api", tag.to_pascal_case());
     let plans: Vec<OpPlan> = ops
@@ -70,7 +88,6 @@ fn emit_api_file(
     let filename = format!("{class_name}.java");
     let mut fb = FileSpec::builder_with(&filename, Java::new())
         .header(package_header(package_name))
-        .add_import(ImportSpec::named(&format!("{package_name}.models"), "*"))
         .add_import(ImportSpec::named(
             &format!("{package_name}.runtime"),
             "ApiClient",
@@ -89,6 +106,9 @@ fn emit_api_file(
         .add_import(ImportSpec::named("java.util.stream", "Collectors"))
         .add_import(ImportSpec::named("okhttp3", "Request"))
         .add_import(ImportSpec::named("okhttp3", "Response"));
+    if has_models {
+        fb = fb.add_import(ImportSpec::named(&format!("{package_name}.models"), "*"));
+    }
     let has_supported_multipart_body = plans.iter().any(|plan| {
         plan.body.as_ref().is_some_and(|body| {
             media_type_base(&body.media_type) == "multipart/form-data"
@@ -104,11 +124,6 @@ fn emit_api_file(
     }
     if has_supported_multipart_body || has_raw_request_body {
         fb = fb.add_import(ImportSpec::named("okhttp3", "MediaType"));
-    }
-
-    // Response classes
-    for plan in &plans {
-        fb = fb.add_type(build_response_class(plan));
     }
 
     // API class
@@ -164,6 +179,156 @@ fn package_header(package_name: &str) -> CodeBlock {
         package $L(format!("{package_name}.apis"));
     })
     .expect("package header builds")
+}
+
+fn operation_support_files(
+    plan: &OpPlan<'_>,
+    package_name: &str,
+    header: &str,
+    has_models: bool,
+) -> Vec<FileInfo> {
+    let mut files = Vec::new();
+    let mut response_imports = vec![
+        ImportSpec::named("java.util", "List"),
+        ImportSpec::named("java.util", "Map"),
+        ImportSpec::named("okhttp3", "Response"),
+    ];
+    if has_models {
+        response_imports.push(ImportSpec::named(&format!("{package_name}.models"), "*"));
+    }
+    files.push(java_type_file(
+        &plan.response_type,
+        package_name,
+        header,
+        response_imports,
+        build_response_class(plan),
+    ));
+
+    let detail_interface = format!("{}Detail", plan.error_type);
+    let mut detail_impl_names = Vec::new();
+    let mut detail_seen = HashSet::new();
+    for response in &plan.error_responses {
+        if !detail_seen.insert(response.field_name.clone()) {
+            continue;
+        }
+        detail_impl_names.push(format!(
+            "{}{}",
+            plan.method_name.to_pascal_case(),
+            response.field_name
+        ));
+    }
+    let unexpected = format!("{}Unexpected", plan.method_name.to_pascal_case());
+    detail_impl_names.push(unexpected.clone());
+    files.push(java_code_file(
+        &detail_interface,
+        package_name,
+        header,
+        Vec::new(),
+        java_error_detail_interface(&detail_interface, &detail_impl_names),
+    ));
+
+    files.push(java_code_file(
+        &plan.error_type,
+        package_name,
+        header,
+        vec![
+            ImportSpec::named(&format!("{package_name}.runtime"), "ApiException"),
+            ImportSpec::named("okhttp3", "Headers"),
+        ],
+        java_error_exception_class(&plan.error_type, &detail_interface),
+    ));
+
+    let mut seen = HashSet::new();
+    for response in &plan.error_responses {
+        if !seen.insert(response.field_name.clone()) {
+            continue;
+        }
+        let class_name = format!(
+            "{}{}",
+            plan.method_name.to_pascal_case(),
+            response.field_name
+        );
+        files.push(java_code_file(
+            &class_name,
+            package_name,
+            header,
+            error_detail_imports(package_name, has_models),
+            java_error_detail_class(&class_name, &detail_interface, response),
+        ));
+    }
+
+    files.push(java_code_file(
+        &unexpected,
+        package_name,
+        header,
+        Vec::new(),
+        java_unexpected_detail_class(&unexpected, &detail_interface),
+    ));
+    files
+}
+
+fn java_type_file(
+    class_name: &str,
+    package_name: &str,
+    header: &str,
+    imports: Vec<ImportSpec>,
+    type_spec: TypeSpec,
+) -> FileInfo {
+    let filename = format!("{class_name}.java");
+    let mut fb =
+        FileSpec::builder_with(&filename, Java::new()).header(package_header(package_name));
+    for import in imports {
+        fb = fb.add_import(import);
+    }
+    fb = fb.add_type(type_spec);
+    let file = fb.build().expect("Java support type file builds");
+    FileInfo::api(
+        filename,
+        format!(
+            "{header}{}",
+            file.render(RENDER_WIDTH)
+                .expect("Java support type file renders")
+        ),
+    )
+}
+
+fn java_code_file(
+    class_name: &str,
+    package_name: &str,
+    header: &str,
+    imports: Vec<ImportSpec>,
+    code: CodeBlock,
+) -> FileInfo {
+    let filename = format!("{class_name}.java");
+    let mut fb =
+        FileSpec::builder_with(&filename, Java::new()).header(package_header(package_name));
+    for import in imports {
+        fb = fb.add_import(import);
+    }
+    fb = fb.add_code(code);
+    let file = fb.build().expect("Java support code file builds");
+    FileInfo::api(
+        filename,
+        format!(
+            "{header}{}",
+            file.render(RENDER_WIDTH)
+                .expect("Java support code file renders")
+        ),
+    )
+}
+
+fn error_detail_imports(package_name: &str, has_models: bool) -> Vec<ImportSpec> {
+    let mut imports = vec![
+        ImportSpec::named("com.google.gson", "Gson"),
+        ImportSpec::named("com.google.gson.reflect", "TypeToken"),
+        ImportSpec::named("java.nio.charset", "StandardCharsets"),
+        ImportSpec::named("java.util", "List"),
+        ImportSpec::named("java.util", "Map"),
+    ];
+    if has_models {
+        imports.push(ImportSpec::named(&format!("{package_name}.models"), "*"));
+    }
+    imports
 }
 
 // ---------------------------------------------------------------------------
@@ -267,6 +432,74 @@ fn build_response_class(plan: &OpPlan<'_>) -> TypeSpec {
     tb.build().expect("response class builds")
 }
 
+fn java_error_detail_interface(detail_interface: &str, permits: &[String]) -> CodeBlock {
+    let permits_clause = permits.join(", ");
+    CodeBlock::of(
+        &format!(
+            "public sealed interface {detail_interface} permits {permits_clause} {{\n    int statusCode();\n    okhttp3.Headers headers();\n    byte[] rawBody();\n}}\n"
+        ),
+        (),
+    )
+    .expect("Java error detail interface builds")
+}
+
+fn java_error_exception_class(error_type: &str, detail_interface: &str) -> CodeBlock {
+    CodeBlock::of(
+        &format!(
+            "public final class {error_type} extends ApiException {{\n    private final {detail_interface} detail;\n    private final Headers headers;\n    private final byte[] rawBody;\n\n    public {error_type}(int statusCode, String status, String body, Headers headers, byte[] rawBody, {detail_interface} detail) {{\n        super(statusCode, status, body);\n        this.headers = headers;\n        this.rawBody = rawBody.clone();\n        this.detail = detail;\n    }}\n\n    public {detail_interface} detail() {{\n        return this.detail;\n    }}\n\n    public Headers headers() {{\n        return this.headers;\n    }}\n\n    public byte[] rawBody() {{\n        return this.rawBody.clone();\n    }}\n}}\n"
+        ),
+        (),
+    )
+    .expect("Java error exception class builds")
+}
+
+fn java_unexpected_detail_class(unexpected: &str, detail_interface: &str) -> CodeBlock {
+    CodeBlock::of(
+        &format!(
+            "public final class {unexpected} implements {detail_interface} {{\n    private final int statusCode;\n    private final okhttp3.Headers headers;\n    private final byte[] rawBody;\n\n    public {unexpected}(int statusCode, okhttp3.Headers headers, byte[] rawBody) {{\n        this.statusCode = statusCode;\n        this.headers = headers;\n        this.rawBody = rawBody.clone();\n    }}\n\n    public int statusCode() {{ return this.statusCode; }}\n    public okhttp3.Headers headers() {{ return this.headers; }}\n    public byte[] rawBody() {{ return this.rawBody.clone(); }}\n    public byte[] body() {{ return this.rawBody.clone(); }}\n}}\n"
+        ),
+        (),
+    )
+    .expect("Java unexpected detail class builds")
+}
+
+fn java_error_detail_class(
+    class_name: &str,
+    detail_interface: &str,
+    response: &TypedResponse,
+) -> CodeBlock {
+    let body_method = java_error_body_method(response);
+    let text_helper = java_error_text_helper(response);
+    let block = format!(
+        "public final class {class_name} implements {detail_interface} {{\n    private final int statusCode;\n    private final okhttp3.Headers headers;\n    private final byte[] rawBody;\n\n    public {class_name}(int statusCode, okhttp3.Headers headers, byte[] rawBody) {{\n        this.statusCode = statusCode;\n        this.headers = headers;\n        this.rawBody = rawBody.clone();\n    }}\n\n    public int statusCode() {{ return this.statusCode; }}\n    public okhttp3.Headers headers() {{ return this.headers; }}\n    public byte[] rawBody() {{ return this.rawBody.clone(); }}\n{text_helper}{body_method}\n}}\n"
+    );
+    CodeBlock::of(&block, ()).expect("Java error detail class builds")
+}
+
+fn java_error_text_helper(response: &TypedResponse) -> &'static str {
+    match response.decoding {
+        ResponseDecoding::Json | ResponseDecoding::Text => {
+            "\n    private String textBody() {\n        String contentTypeHeader = this.headers.get(\"Content-Type\");\n        okhttp3.MediaType contentType = contentTypeHeader != null ? okhttp3.MediaType.parse(contentTypeHeader) : null;\n        java.nio.charset.Charset charset = contentType != null ? contentType.charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;\n        return new String(this.rawBody, charset);\n    }\n"
+        }
+        ResponseDecoding::Bytes => "",
+    }
+}
+
+fn java_error_body_method(response: &TypedResponse) -> String {
+    match response.decoding {
+        ResponseDecoding::Json => format!(
+            "    public {} body() {{\n        String text = textBody();\n        return new Gson().fromJson(text.isEmpty() ? \"null\" : text, new TypeToken<{}>() {{}}.getType());\n    }}",
+            response.java_type, response.java_type
+        ),
+        ResponseDecoding::Text => {
+            "    public String body() {\n        return textBody();\n    }".to_string()
+        }
+        ResponseDecoding::Bytes => {
+            "    public byte[] body() {\n        return this.rawBody.clone();\n    }".to_string()
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Operation method
 // ---------------------------------------------------------------------------
@@ -352,6 +585,15 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     // Build request
     let method = plan.op.method.to_uppercase();
     if let Some(body) = &plan.body {
+        if let Some(message) = unsupported_request_body_message(body) {
+            cb.add_code(
+                sigil_quote!(Java {
+                    throw new IllegalArgumentException($S(message));
+                })
+                .expect("unsupported request body builds"),
+            );
+            return cb.build().expect("method body builds");
+        }
         cb.add_statement("Request request", ());
         if body.encoding == BodyEncoding::Multipart {
             if let Some(parts) = &body.multipart_parts {
@@ -393,16 +635,7 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     // Execute
     cb.add_statement("Response response = client.execute(request)", ());
     cb.add_line();
-
-    // Error handling
-    let error_block = sigil_quote!(Java {
-        if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
-        }
-    })
-    .expect("error block");
-    cb.add_code(error_block);
+    cb.add_code(java_error_throw(plan));
 
     // Response parsing
     if !plan.typed_responses.is_empty() {
@@ -422,8 +655,8 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
                 continue;
             }
             cb.add_statement(&format!("{} {} = null", tr.java_type, tr.field_name), ());
-            cb.add_code(java_response_decode_assignment(tr));
         }
+        cb.add_code(java_response_decode_assignments(&plan.typed_responses));
 
         // Return with typed fields
         let args: Vec<String> = std::iter::once("response.code()".to_string())
@@ -455,6 +688,21 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     }
 
     cb.build().expect("method body builds")
+}
+
+fn unsupported_request_body_message(body: &BodyBinding) -> Option<String> {
+    if body.encoding == BodyEncoding::Multipart && body.multipart_parts.is_none() {
+        return Some(
+            "unsupported multipart request body: schema must be object-shaped".to_string(),
+        );
+    }
+    match body.encoding {
+        BodyEncoding::FormUrlEncoded | BodyEncoding::Xml | BodyEncoding::Other => Some(format!(
+            "unsupported request body media type: {}",
+            body.media_type
+        )),
+        _ => None,
+    }
 }
 
 fn java_new_request(method: &str, has_query: bool) -> CodeBlock {
@@ -645,24 +893,110 @@ fn response_decode_expr(tr: &TypedResponse) -> String {
     }
 }
 
-fn java_response_decode_assignment(tr: &TypedResponse) -> CodeBlock {
-    let exact_status = tr.status.parse::<u16>().ok();
-    let has_exact_status = exact_status.is_some();
-    let status_code = exact_status.unwrap_or_default().to_string();
-    let guard = wildcard_status_guard_java(&tr.status);
-    let assignment = format!("{} = {}", tr.field_name, response_decode_expr(tr));
-    sigil_quote!(Java {
-        $if(has_exact_status) {
-            if (response.code() == $L(status_code.as_str())) {
-                $L(assignment.as_str());
-            }
-        } $else {
-            if ($L(guard.as_str())) {
-                $L(assignment.as_str());
-            }
+fn java_response_decode_assignments(typed_responses: &[TypedResponse]) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut emitted_any = false;
+    for tr in typed_responses {
+        if !seen.insert(tr.field_name.clone()) {
+            continue;
         }
-    })
-    .expect("Java response decode assignment builds")
+        let keyword = if emitted_any { "else if" } else { "if" };
+        let guard = response_status_guard_java(&tr.status);
+        let assignment = format!("{} = {}", tr.field_name, response_decode_expr(tr));
+        cb.begin_control_flow(&format!("{keyword} ({guard})"), ());
+        cb.add(&format!("{assignment};\n"), ());
+        cb.end_control_flow();
+        emitted_any = true;
+    }
+    cb.build().expect("Java response decode assignments build")
+}
+
+fn java_error_throw(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    cb.begin_control_flow("if (!response.isSuccessful())", ());
+    cb.add_statement("okhttp3.ResponseBody responseBody = response.body()", ());
+    cb.add_statement(
+        "java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8",
+        (),
+    );
+    cb.add_statement(
+        "byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0]",
+        (),
+    );
+    cb.add_statement(
+        "String responseText = new String(responseBytes, responseCharset)",
+        (),
+    );
+    cb.add(&format!("{}Detail detail;\n", plan.error_type), ());
+    cb.begin_control_flow("switch (response.code())", ());
+    let mut seen = HashSet::new();
+    for response in plan
+        .error_responses
+        .iter()
+        .filter(|response| response.status.parse::<u16>().is_ok())
+    {
+        if !seen.insert(response.field_name.clone()) {
+            continue;
+        }
+        cb.add(&format!("case {}:\n", response.status), ());
+        cb.add("%>", ());
+        cb.add_code(java_error_detail_assign(plan, response));
+        cb.add("break;\n", ());
+        cb.add("%<", ());
+    }
+    cb.add("default:\n", ());
+    cb.add("%>", ());
+    for response in plan
+        .error_responses
+        .iter()
+        .filter(|response| response.status.ends_with("XX"))
+    {
+        cb.begin_control_flow(
+            &format!("if ({})", wildcard_status_guard_java(&response.status)),
+            (),
+        );
+        cb.add_code(java_error_detail_assign(plan, response));
+        cb.add("break;\n", ());
+        cb.end_control_flow();
+    }
+    if let Some(default) = plan
+        .error_responses
+        .iter()
+        .find(|response| response.status.eq_ignore_ascii_case("default"))
+    {
+        cb.add_code(java_error_detail_assign(plan, default));
+    } else {
+        let unexpected = format!("{}Unexpected", plan.method_name.to_pascal_case());
+        cb.add(
+            &format!(
+                "detail = new {unexpected}(response.code(), response.headers(), responseBytes);\n"
+            ),
+            (),
+        );
+    }
+    cb.add("%<", ());
+    cb.end_control_flow();
+    cb.add(
+        &format!(
+            "throw new {}(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);\n",
+            plan.error_type
+        ),
+        (),
+    );
+    cb.end_control_flow();
+    cb.build().expect("Java error throw builds")
+}
+
+fn java_error_detail_assign(plan: &OpPlan<'_>, response: &TypedResponse) -> CodeBlock {
+    let class_name = format!(
+        "{}{}",
+        plan.method_name.to_pascal_case(),
+        response.field_name
+    );
+    let stmt =
+        format!("detail = new {class_name}(response.code(), response.headers(), responseBytes);");
+    CodeBlock::of(&stmt, ()).expect("Java error detail assign builds")
 }
 
 fn emit_required_multipart_part(
@@ -698,11 +1032,13 @@ struct OpPlan<'a> {
     op: &'a IrOperation,
     method_name: String,
     response_type: String,
+    error_type: String,
     path_params: Vec<ParamBinding<'a>>,
     query_params: Vec<ParamBinding<'a>>,
     header_params: Vec<ParamBinding<'a>>,
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
+    error_responses: Vec<TypedResponse>,
 }
 
 struct ParamBinding<'a> {
@@ -762,6 +1098,7 @@ fn plan_operation<'a>(
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_lower_camel_case();
     let response_type = format!("{}Response", op_id.to_pascal_case());
+    let error_type = format!("{}Exception", op_id.to_pascal_case());
 
     let mut used_names: HashSet<String> = HashSet::new();
 
@@ -793,17 +1130,31 @@ fn plan_operation<'a>(
         .as_ref()
         .and_then(|b| plan_body(op, b, ir, request_inputs, &mut used_names));
 
-    let typed_responses = op.responses.iter().filter_map(plan_response).collect();
+    let mut typed_responses: Vec<TypedResponse> = op
+        .responses
+        .iter()
+        .filter(|r| is_success_status(&r.status))
+        .filter_map(plan_response)
+        .collect();
+    typed_responses.sort_by_key(|r| response_match_rank(&r.status));
+    let error_responses = op
+        .responses
+        .iter()
+        .filter(|r| !is_success_status(&r.status))
+        .map(plan_error_response)
+        .collect();
 
     OpPlan {
         op,
         method_name,
         response_type,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
     }
 }
 
@@ -856,6 +1207,38 @@ fn plan_response(r: &IrResponse) -> Option<TypedResponse> {
     })
 }
 
+fn plan_error_response(r: &IrResponse) -> TypedResponse {
+    match pick_response_content(r) {
+        Some((media_type, t)) => {
+            let decoding = response_decoding(&media_type);
+            let java_type = match decoding {
+                ResponseDecoding::Json => java_type_str(&t),
+                ResponseDecoding::Text => "String".to_string(),
+                ResponseDecoding::Bytes => "byte[]".to_string(),
+            };
+            TypedResponse {
+                status: r.status.clone(),
+                field_name: response_variant_name(&r.status),
+                java_type,
+                decoding,
+            }
+        }
+        None => TypedResponse {
+            status: r.status.clone(),
+            field_name: response_variant_name(&r.status),
+            java_type: "byte[]".to_string(),
+            decoding: ResponseDecoding::Bytes,
+        },
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
+}
+
 fn response_field_name(status: &str) -> String {
     if status == "default" {
         "default_".to_string()
@@ -872,10 +1255,19 @@ fn wildcard_status_guard_java(status: &str) -> String {
         "response.code() >= 400 && response.code() < 500".to_string()
     } else if upper == "5XX" {
         "response.code() >= 500 && response.code() < 600".to_string()
+    } else if upper == "2XX" {
+        "response.code() >= 200 && response.code() < 300".to_string()
     } else {
         // "default" or unknown wildcard: match everything (fallback response)
         "true".to_string()
     }
+}
+
+fn response_status_guard_java(status: &str) -> String {
+    status
+        .parse::<u16>()
+        .map(|code| format!("response.code() == {code}"))
+        .unwrap_or_else(|_| wildcard_status_guard_java(status))
 }
 
 fn body_encoding(media_type: &str) -> BodyEncoding {

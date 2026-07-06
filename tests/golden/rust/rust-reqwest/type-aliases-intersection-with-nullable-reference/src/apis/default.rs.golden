@@ -5,7 +5,7 @@
 // Test fixture for allOf intersection types with nullable reference properties
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -24,12 +24,13 @@ impl<'a> DefaultApi<'a> {
     pub async fn create_test(
         &self,
         body: &crate::models::Baz,
-    ) -> Result<CreateTestResponse, Error> {
+    ) -> Result<CreateTestResponse, CreateTestError> {
         let path = "/test".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = CreateTestResponse { status_code, data: None };
         match status_code {
@@ -38,6 +39,14 @@ impl<'a> DefaultApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateTestError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -45,12 +54,13 @@ impl<'a> DefaultApi<'a> {
     pub async fn get_test(
         &self,
         id: &str,
-    ) -> Result<GetTestResponse, Error> {
+    ) -> Result<GetTestResponse, GetTestError> {
         let mut path = "/test/{id}".to_string();
         path = path.replace("{id}", &id.to_string());
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetTestResponse { status_code, data: None };
         match status_code {
@@ -58,6 +68,14 @@ impl<'a> DefaultApi<'a> {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetTestError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -70,9 +88,71 @@ pub struct CreateTestResponse {
     pub data: Option<crate::models::Baz>,
 }
 
+/// Error from `create_test`.
+#[derive(Debug)]
+pub enum CreateTestError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateTestError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateTestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateTestError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_test`.
 #[derive(Debug)]
 pub struct GetTestResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Baz>,
+}
+
+/// Error from `get_test`.
+#[derive(Debug)]
+pub enum GetTestError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetTestError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetTestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetTestError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

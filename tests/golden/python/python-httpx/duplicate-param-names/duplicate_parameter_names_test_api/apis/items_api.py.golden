@@ -5,10 +5,38 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.create_item_with_body_conflict_request import CreateItemWithBodyConflictRequest
 from ..models.create_item_with_body_conflict_response200 import CreateItemWithBodyConflictResponse200
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class CreateItemWithBodyConflictBadRequest:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class CreateItemWithBodyConflictUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type CreateItemWithBodyConflictErrorDetail = (
+    CreateItemWithBodyConflictBadRequest
+    | CreateItemWithBodyConflictUnexpected
+)
+
+class CreateItemWithBodyConflictError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: CreateItemWithBodyConflictErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: CreateItemWithBodyConflictErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class ItemsApi:
     def __init__(self, client: Client) -> None:
@@ -24,6 +52,10 @@ class ItemsApi:
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("POST", path, params=params, json=body2.to_dict(), headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 400:
+                detail = CreateItemWithBodyConflictBadRequest(response.status_code, response.headers, response.content)
+            else:
+                detail = CreateItemWithBodyConflictUnexpected(response.status_code, response.headers, response.content)
+            raise CreateItemWithBodyConflictError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return CreateItemWithBodyConflictResponse200.from_dict(response.json())

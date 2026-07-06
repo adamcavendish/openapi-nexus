@@ -23,90 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * SendOptionalBinaryResponse carries the response from sendOptionalBinary.
- */
-public class SendOptionalBinaryResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendOptionalBinaryResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * SendOptionalJsonResponse carries the response from sendOptionalJson.
- */
-public class SendOptionalJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendOptionalJsonResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * SendOptionalTextResponse carries the response from sendOptionalText.
- */
-public class SendOptionalTextResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendOptionalTextResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * SendRequiredJsonResponse carries the response from sendRequiredJson.
- */
-public class SendRequiredJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendRequiredJsonResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
  * DefaultApi groups operations under the default tag.
  */
 public class DefaultApi {
@@ -131,8 +47,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendOptionalBinaryExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendOptionalBinaryUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendOptionalBinaryException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendOptionalBinaryResponse(response.code(), response);
     }
@@ -152,8 +76,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendOptionalJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendOptionalJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendOptionalJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendOptionalJsonResponse(response.code(), response);
     }
@@ -172,8 +104,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendOptionalTextExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendOptionalTextUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendOptionalTextException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendOptionalTextResponse(response.code(), response);
     }
@@ -190,8 +130,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendRequiredJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendRequiredJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendRequiredJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendRequiredJsonResponse(response.code(), response);
     }

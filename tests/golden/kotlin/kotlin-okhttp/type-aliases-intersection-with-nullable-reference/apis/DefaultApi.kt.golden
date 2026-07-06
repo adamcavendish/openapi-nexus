@@ -20,10 +20,66 @@ import okhttp3.Response
 data class CreateTestResponse(val statusCode: Int, val raw: Response, val status200: Baz? = null) {
 }
 
+sealed interface CreateTestExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateTestException(
+    val detail: CreateTestExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateTestUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateTestExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * GetTestResponse carries the response from getTest.
  */
 data class GetTestResponse(val statusCode: Int, val raw: Response, val status200: Baz? = null) {
+}
+
+sealed interface GetTestExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetTestException(
+    val detail: GetTestExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetTestUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetTestExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -43,13 +99,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateTestExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateTestUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateTestException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Baz? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Baz>(responseText.ifEmpty { "null" }, object : TypeToken<Baz>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Baz>(responseText.ifEmpty { "null" }, object : TypeToken<Baz>() {}.type)
+        }
         return CreateTestResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -62,13 +130,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetTestExceptionDetail = when (response.code)  {
+                else ->  {
+                    GetTestUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetTestException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Baz? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Baz>(responseText.ifEmpty { "null" }, object : TypeToken<Baz>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Baz>(responseText.ifEmpty { "null" }, object : TypeToken<Baz>() {}.type)
+        }
         return GetTestResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

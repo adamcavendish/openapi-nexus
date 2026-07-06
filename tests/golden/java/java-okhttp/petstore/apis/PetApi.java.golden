@@ -23,216 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * UpdatePetResponse carries the response from updatePet.
- */
-public class UpdatePetResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Pet status200;
-
-    public UpdatePetResponse(int statusCode, Response raw, Pet status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Pet getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * AddPetResponse carries the response from addPet.
- */
-public class AddPetResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Pet status200;
-
-    public AddPetResponse(int statusCode, Response raw, Pet status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Pet getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * FindPetsByStatusResponse carries the response from findPetsByStatus.
- */
-public class FindPetsByStatusResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final List<Pet> status200;
-
-    public FindPetsByStatusResponse(int statusCode, Response raw, List<Pet> status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public List<Pet> getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * FindPetsByTagsResponse carries the response from findPetsByTags.
- */
-public class FindPetsByTagsResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final List<Pet> status200;
-
-    public FindPetsByTagsResponse(int statusCode, Response raw, List<Pet> status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public List<Pet> getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * GetPetByIdResponse carries the response from getPetById.
- */
-public class GetPetByIdResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Pet status200;
-
-    public GetPetByIdResponse(int statusCode, Response raw, Pet status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Pet getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * UpdatePetWithFormResponse carries the response from updatePetWithForm.
- */
-public class UpdatePetWithFormResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Pet status200;
-
-    public UpdatePetWithFormResponse(int statusCode, Response raw, Pet status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Pet getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * DeletePetResponse carries the response from deletePet.
- */
-public class DeletePetResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public DeletePetResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * UploadFileResponse carries the response from uploadFile.
- */
-public class UploadFileResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final UploadResponse status200;
-
-    public UploadFileResponse(int statusCode, Response raw, UploadResponse status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public UploadResponse getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * PetApi groups operations under the pet tag.
  */
 public class PetApi {
@@ -255,8 +45,22 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            UpdatePetExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new UpdatePetBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new UpdatePetNotFound(response.code(), response.headers(), responseBytes);break;
+                case 422:
+                    detail = new UpdatePetValidation(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new UpdatePetUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new UpdatePetException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -279,8 +83,20 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            AddPetExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new AddPetBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 422:
+                    detail = new AddPetValidation(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new AddPetUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new AddPetException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -302,8 +118,18 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            FindPetsByStatusExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new FindPetsByStatusBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new FindPetsByStatusUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new FindPetsByStatusException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -325,8 +151,18 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            FindPetsByTagsExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new FindPetsByTagsBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new FindPetsByTagsUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new FindPetsByTagsException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -346,8 +182,20 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetPetByIdExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new GetPetByIdBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new GetPetByIdNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new GetPetByIdUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetPetByIdException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -374,8 +222,18 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            UpdatePetWithFormExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new UpdatePetWithFormBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new UpdatePetWithFormUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new UpdatePetWithFormException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -395,8 +253,18 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            DeletePetExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new DeletePetBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new DeletePetUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new DeletePetException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new DeletePetResponse(response.code(), response);
     }
@@ -414,8 +282,16 @@ public class PetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            UploadFileExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new UploadFileUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new UploadFileException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

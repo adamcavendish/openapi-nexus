@@ -6,8 +6,8 @@
  */
 import type { CreateItemWithBodyConflictRequest } from '../models/CreateItemWithBodyConflictRequest';
 import type { CreateItemWithBodyConflictResponse200 } from '../models/CreateItemWithBodyConflictResponse200';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiCreateItemWithBodyConflictRequest {
   /**
@@ -23,8 +23,21 @@ export interface ApiCreateItemWithBodyConflictRequest {
 
 export type CreateItemWithBodyConflictRawResponse =
   | JSONApiResponse<CreateItemWithBodyConflictResponse200> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type CreateItemWithBodyConflictErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class CreateItemWithBodyConflictError extends ResponseError {
+  readonly detail: CreateItemWithBodyConflictErrorDetail;
+
+  constructor(response: Response, detail: CreateItemWithBodyConflictErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface ItemsApiInterface {
@@ -79,14 +92,22 @@ export class ItemsApi extends BaseAPI implements ItemsApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new CreateItemWithBodyConflictError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new CreateItemWithBodyConflictError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<CreateItemWithBodyConflictResponse200> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

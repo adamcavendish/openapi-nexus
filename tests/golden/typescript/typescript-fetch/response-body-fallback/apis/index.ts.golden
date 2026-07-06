@@ -5,7 +5,9 @@
  */
 export type {
   GetFallbackNoBodyRawResponse,
+  GetFallbackNoBodyErrorDetail,
   GetFallbackWithBodyRawResponse,
+  GetFallbackWithBodyErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, GetFallbackNoBodyError, GetFallbackWithBodyError } from './DefaultApi';

@@ -62,6 +62,7 @@ fn get_golden_test_cases() -> HashMap<&'static str, &'static str> {
         ("response-body-fallback", "valid/response-body/fallback.yaml"),
         ("response-body-multi-status-responses", "valid/response-body/multi-status-responses.yaml"),
         ("response-body-no-response-body", "valid/response-body/no-response-body.yaml"),
+        ("typed-error-responses", "valid/typed-error-responses.yaml"),
 
         ("recursive-json-all-optional-properties", "valid/recursive-json/all-optional-properties.yaml"),
         ("recursive-json-array-of-inline-objects", "valid/recursive-json/array-of-inline-objects.yaml"),
@@ -148,6 +149,7 @@ generate_golden_tests! {
     test_response_body_fallback_golden: "response-body-fallback",
     test_response_body_multi_status_responses_golden: "response-body-multi-status-responses",
     test_response_body_no_response_body_golden: "response-body-no-response-body",
+    test_typed_error_responses_golden: "typed-error-responses",
 
     test_recursive_json_all_optional_properties_golden: "recursive-json-all-optional-properties",
     test_recursive_json_array_of_inline_objects_golden: "recursive-json-array-of-inline-objects",

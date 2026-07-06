@@ -9,8 +9,8 @@
  */
 import type { Setup, Setup$Wire } from '../models/Setup';
 import { setupFromJSON, setupToJSON } from '../models/Setup';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError } from '../runtime/runtime';
 
 export interface ApiCreateSetupRequest {
   body: Setup;
@@ -18,7 +18,20 @@ export interface ApiCreateSetupRequest {
 
 export type CreateSetupRawResponse =
   | JSONApiResponse<Setup> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type CreateSetupErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class CreateSetupError extends ResponseError {
+  readonly detail: CreateSetupErrorDetail;
+
+  constructor(response: Response, detail: CreateSetupErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -63,11 +76,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new CreateSetupError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response, (json) => setupFromJSON(json as Setup$Wire)) as JSONApiResponse<Setup> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

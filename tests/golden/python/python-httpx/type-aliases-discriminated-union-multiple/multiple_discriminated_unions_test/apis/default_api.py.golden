@@ -8,10 +8,49 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.container_kind import ContainerKind
 from ..models.volume_kind import VolumeKind
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class CreateContainerUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type CreateContainerErrorDetail = (
+    CreateContainerUnexpected
+)
+
+class CreateContainerError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: CreateContainerErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: CreateContainerErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
+class CreateVolumeUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type CreateVolumeErrorDetail = (
+    CreateVolumeUnexpected
+)
+
+class CreateVolumeError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: CreateVolumeErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: CreateVolumeErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class DefaultApi:
     def __init__(self, client: Client) -> None:
@@ -23,8 +62,9 @@ class DefaultApi:
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("POST", path, json=body, headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = CreateContainerUnexpected(response.status_code, response.headers, response.content)
+            raise CreateContainerError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return response.json()  # type: ignore[return-value]
 
     def create_volume(self, *, body: VolumeKind) -> VolumeKind:
@@ -33,6 +73,7 @@ class DefaultApi:
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("POST", path, json=body, headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = CreateVolumeUnexpected(response.status_code, response.headers, response.content)
+            raise CreateVolumeError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return response.json()  # type: ignore[return-value]

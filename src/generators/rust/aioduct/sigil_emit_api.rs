@@ -5,9 +5,10 @@ use sigil_stitch::prelude::sigil_quote;
 
 use crate::generators::rust::common::emit_api::{
     BodyEncoding, MultipartPart, MultipartValueEncoding, OpPlan, RustBackendConfig,
-    binary_field_expr, binary_filename_expr, emit_response_match, emit_result_init,
-    optional_binary_field_expr, optional_binary_filename_expr, optional_text_field_expr,
-    render_to_string, response_value_expr, rust_field_name, rust_string_literal, text_field_expr,
+    binary_field_expr, binary_filename_expr, emit_empty_result_init, emit_error_response_match,
+    emit_response_match, emit_result_init, error_response_value_expr, optional_binary_field_expr,
+    optional_binary_filename_expr, optional_text_field_expr, render_to_string, response_value_expr,
+    rust_field_name, rust_string_literal, text_field_expr,
 };
 
 /// Backend configuration for aioduct (async, with generic runtime parameter).
@@ -24,11 +25,13 @@ pub fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     let OpPlan {
         op,
         response_type,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
         ..
     } = plan;
 
@@ -136,15 +139,26 @@ pub fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     // Send
     b.add_code(aioduct_send());
     b.add_code(status_code_init());
+    b.add_code(response_headers_init());
 
-    // Parse response
     if typed_responses.is_empty() {
-        b.add_code(empty_response(response_type));
+        emit_empty_result_init(&mut b, response_type);
+        b.begin_control_flow("if !(200..300).contains(&status_code)", ());
+        b.add_code(aioduct_body_bytes_init());
+        emit_error_response_match(&mut b, error_type, error_responses, &|er| {
+            error_response_value_expr(er, "&body_bytes")
+        });
+        b.end_control_flow();
+        b.add_code(ok_result());
     } else {
+        // Parse response
         b.add_code(aioduct_body_bytes_init());
         emit_result_init(&mut b, response_type, typed_responses);
         emit_response_match(&mut b, typed_responses, &|tr| {
             response_value_expr(tr, "&body_bytes")
+        });
+        emit_error_response_match(&mut b, error_type, error_responses, &|er| {
+            error_response_value_expr(er, "&body_bytes")
         });
         b.add_code(ok_result());
     }
@@ -193,17 +207,17 @@ fn aioduct_header_guarded(
     sigil_quote!(RustLang {
         $if(is_optional) {
             if let Some(v) = &$L(var_name) {
-                req = req.header_str($L(header_name), &$L(value_expr))?;
+                req = req.header_str($L(header_name), &$L(value_expr)).map_err(Error::from)?;
             }
         } $else {
-            req = req.header_str($L(header_name), &$L(value_expr))?;
+            req = req.header_str($L(header_name), &$L(value_expr)).map_err(Error::from)?;
         }
     })
     .expect("guarded aioduct header builds")
 }
 
 fn aioduct_send() -> CodeBlock {
-    let send_stmt = "let resp = req.send().await?;";
+    let send_stmt = "let resp = req.send().await.map_err(Error::from)?;";
     sigil_quote!(RustLang {
         $L(send_stmt)
     })
@@ -217,16 +231,24 @@ fn status_code_init() -> CodeBlock {
     .expect("status code init builds")
 }
 
-fn empty_response(response_type: &str) -> CodeBlock {
-    let response_expr = format!("{response_type} {{ status_code }}");
+fn response_headers_init() -> CodeBlock {
     sigil_quote!(RustLang {
-        Ok($L(response_expr.as_str()))
+        let response_headers: Vec<(String, String)> = resp
+            .headers()
+            .iter()
+            .filter_map(|(name, value)| {
+                value
+                    .to_str()
+                    .ok()
+                    .map(|value| (name.to_string(), value.to_string()))
+            })
+            .collect();
     })
-    .expect("empty response builds")
+    .expect("response headers init builds")
 }
 
 fn aioduct_body_bytes_init() -> CodeBlock {
-    let body_bytes_stmt = "let body_bytes = resp.bytes().await?;";
+    let body_bytes_stmt = "let body_bytes = resp.bytes().await.map_err(Error::from)?;";
     sigil_quote!(RustLang {
         $L(body_bytes_stmt)
     })
@@ -273,7 +295,7 @@ fn unsupported_multipart_body(body_var: &str) -> CodeBlock {
     sigil_quote!(RustLang {
         let _ = self.client;
         let _ = $L(body_var);
-        return Err(Error::Unsupported($S("multipart/form-data request bodies must be object schemas")));
+        return Err(Error::Unsupported($S("multipart/form-data request bodies must be object schemas")).into());
     })
     .expect("unsupported multipart body builds")
 }
@@ -281,29 +303,29 @@ fn unsupported_multipart_body(body_var: &str) -> CodeBlock {
 fn unsupported_media_type_body(media_type: &str) -> CodeBlock {
     let message = format!("unsupported request body media type: {media_type}");
     sigil_quote!(RustLang {
-        return Err(Error::Unsupported($S(&message)));
+        return Err(Error::Unsupported($S(&message)).into());
     })
     .expect("unsupported media type body builds")
 }
 
 fn json_body(body_var: &str) -> CodeBlock {
     sigil_quote!(RustLang {
-        req = req.json(&$L(body_var))?;
+        req = req.json(&$L(body_var)).map_err(Error::from)?;
     })
     .expect("json body builds")
 }
 
 fn form_body(body_var: &str) -> CodeBlock {
     sigil_quote!(RustLang {
-        req = req.form_serde(&$L(body_var))?;
+        req = req.form_serde(&$L(body_var)).map_err(Error::from)?;
     })
     .expect("form body builds")
 }
 
 fn xml_body(body_var: &str, media_type: &str) -> CodeBlock {
     sigil_quote!(RustLang {
-        req = req.header_str("Content-Type", $L(rust_string_literal(media_type)))?;
-        let body_xml = serde_xml_rs::to_string($L(body_var))?;
+        req = req.header_str("Content-Type", $L(rust_string_literal(media_type))).map_err(Error::from)?;
+        let body_xml = serde_xml_rs::to_string($L(body_var)).map_err(Error::Xml)?;
         req = req.body(body_xml.into_bytes());
     })
     .expect("xml body builds")
@@ -311,7 +333,7 @@ fn xml_body(body_var: &str, media_type: &str) -> CodeBlock {
 
 fn text_body(body_var: &str, media_type: &str) -> CodeBlock {
     sigil_quote!(RustLang {
-        req = req.header_str("Content-Type", $L(rust_string_literal(media_type)))?;
+        req = req.header_str("Content-Type", $L(rust_string_literal(media_type))).map_err(Error::from)?;
         req = req.body($L(body_var).clone().into_bytes());
     })
     .expect("text body builds")
@@ -319,7 +341,7 @@ fn text_body(body_var: &str, media_type: &str) -> CodeBlock {
 
 fn octet_stream_body(body_var: &str, media_type: &str) -> CodeBlock {
     sigil_quote!(RustLang {
-        req = req.header_str("Content-Type", $L(rust_string_literal(media_type)))?;
+        req = req.header_str("Content-Type", $L(rust_string_literal(media_type))).map_err(Error::from)?;
         req = req.body($L(body_var).clone());
     })
     .expect("octet-stream body builds")
@@ -413,7 +435,7 @@ fn multipart_init() -> CodeBlock {
 
 fn unsupported_multipart_part() -> CodeBlock {
     sigil_quote!(RustLang {
-        return Err(Error::Unsupported($S("unsupported multipart part content type")));
+        return Err(Error::Unsupported($S("unsupported multipart part content type")).into());
     })
     .expect("unsupported multipart part builds")
 }

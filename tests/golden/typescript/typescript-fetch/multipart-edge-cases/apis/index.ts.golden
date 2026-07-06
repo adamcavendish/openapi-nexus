@@ -7,8 +7,10 @@
 export type {
   ApiSendOptionalPartsRequest,
   SendOptionalPartsRawResponse,
+  SendOptionalPartsErrorDetail,
   ApiSendTextFieldsRequest,
   SendTextFieldsRawResponse,
+  SendTextFieldsErrorDetail,
   MultipartApiInterface,
 } from './MultipartApi';
-export { MultipartApi } from './MultipartApi';
+export { MultipartApi, SendOptionalPartsError, SendTextFieldsError } from './MultipartApi';

@@ -7,6 +7,7 @@
 export type {
   ApiSendNestedObjectPartRequest,
   SendNestedObjectPartRawResponse,
+  SendNestedObjectPartErrorDetail,
   MultipartApiInterface,
 } from './MultipartApi';
-export { MultipartApi } from './MultipartApi';
+export { MultipartApi, SendNestedObjectPartError } from './MultipartApi';

@@ -4,7 +4,7 @@
 // Default And Exact Response API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "Widget" tag.
 pub struct WidgetApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -22,19 +22,26 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> WidgetApi<'a, R, C>
     /// GET /widgets
     pub async fn get_widget(
         &self,
-    ) -> Result<GetWidgetResponse, Error> {
+    ) -> Result<GetWidgetResponse, GetWidgetError> {
         let path = "/widgets".to_string();
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
-        let mut result = GetWidgetResponse { status_code, data: None, error_body: None };
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
+        let mut result = GetWidgetResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
-            _ => {
-                result.error_body = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
+            _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
+                    return Err(GetWidgetError::Default(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
             }
         }
         Ok(result)
@@ -46,5 +53,37 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> WidgetApi<'a, R, C>
 pub struct GetWidgetResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Widget>,
-    pub error_body: Option<crate::models::ErrorResponse>,
+}
+
+/// Error from `get_widget`.
+#[derive(Debug)]
+pub enum GetWidgetError {
+    Default(ApiError<crate::models::ErrorResponse>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetWidgetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetWidgetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Default(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetWidgetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

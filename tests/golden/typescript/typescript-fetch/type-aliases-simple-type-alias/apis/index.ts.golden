@@ -7,6 +7,7 @@
 export type {
   ApiTestSimpleAliasRequest,
   TestSimpleAliasRawResponse,
+  TestSimpleAliasErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, TestSimpleAliasError } from './DefaultApi';

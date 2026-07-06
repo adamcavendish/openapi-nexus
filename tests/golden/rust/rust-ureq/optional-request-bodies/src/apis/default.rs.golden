@@ -5,7 +5,7 @@
 // Covers optional non-multipart request bodies.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -24,68 +24,120 @@ impl<'a> DefaultApi<'a> {
     pub fn send_optional_binary(
         &self,
         body: Option<&Vec<u8>>,
-    ) -> Result<SendOptionalBinaryResponse, Error> {
+    ) -> Result<SendOptionalBinaryResponse, SendOptionalBinaryError> {
         let path = "/optional-binary".to_string();
         let mut req = self.client.post(&path);
         let resp;
         if let Some(body) = body {
             req = req.header("Content-Type", "application/octet-stream");
-            resp = req.send(body.clone())?;
+            resp = req.send(body.clone()).map_err(Error::Http)?;
         }
         else {
-            resp = req.send_empty()?;
+            resp = req.send_empty().map_err(Error::Http)?;
         }
         let status_code = resp.status().as_u16();
-        Ok(SendOptionalBinaryResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendOptionalBinaryResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendOptionalBinaryError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /optional-json
     pub fn send_optional_json(
         &self,
         body: Option<&crate::models::Payload>,
-    ) -> Result<SendOptionalJsonResponse, Error> {
+    ) -> Result<SendOptionalJsonResponse, SendOptionalJsonError> {
         let path = "/optional-json".to_string();
         let req = self.client.post(&path);
         let resp;
         if let Some(body) = body {
-            resp = req.send_json(&body)?;
+            resp = req.send_json(&body).map_err(Error::Http)?;
         }
         else {
-            resp = req.send_empty()?;
+            resp = req.send_empty().map_err(Error::Http)?;
         }
         let status_code = resp.status().as_u16();
-        Ok(SendOptionalJsonResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendOptionalJsonResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendOptionalJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /optional-text
     pub fn send_optional_text(
         &self,
         body: Option<&String>,
-    ) -> Result<SendOptionalTextResponse, Error> {
+    ) -> Result<SendOptionalTextResponse, SendOptionalTextError> {
         let path = "/optional-text".to_string();
         let mut req = self.client.post(&path);
         let resp;
         if let Some(body) = body {
             req = req.header("Content-Type", "text/plain");
-            resp = req.send(body.as_str())?;
+            resp = req.send(body.as_str()).map_err(Error::Http)?;
         }
         else {
-            resp = req.send_empty()?;
+            resp = req.send_empty().map_err(Error::Http)?;
         }
         let status_code = resp.status().as_u16();
-        Ok(SendOptionalTextResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendOptionalTextResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendOptionalTextError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /required-json
     pub fn send_required_json(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<SendRequiredJsonResponse, Error> {
+    ) -> Result<SendRequiredJsonResponse, SendRequiredJsonError> {
         let path = "/required-json".to_string();
         let req = self.client.post(&path);
-        let resp = req.send_json(&body)?;
+        let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(SendRequiredJsonResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendRequiredJsonResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendRequiredJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -95,10 +147,72 @@ pub struct SendOptionalBinaryResponse {
     pub status_code: u16,
 }
 
+/// Error from `send_optional_binary`.
+#[derive(Debug)]
+pub enum SendOptionalBinaryError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendOptionalBinaryError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendOptionalBinaryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendOptionalBinaryError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `send_optional_json`.
 #[derive(Debug)]
 pub struct SendOptionalJsonResponse {
     pub status_code: u16,
+}
+
+/// Error from `send_optional_json`.
+#[derive(Debug)]
+pub enum SendOptionalJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendOptionalJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendOptionalJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendOptionalJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `send_optional_text`.
@@ -107,8 +221,70 @@ pub struct SendOptionalTextResponse {
     pub status_code: u16,
 }
 
+/// Error from `send_optional_text`.
+#[derive(Debug)]
+pub enum SendOptionalTextError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendOptionalTextError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendOptionalTextError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendOptionalTextError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `send_required_json`.
 #[derive(Debug)]
 pub struct SendRequiredJsonResponse {
     pub status_code: u16,
+}
+
+/// Error from `send_required_json`.
+#[derive(Debug)]
+pub enum SendRequiredJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendRequiredJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendRequiredJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendRequiredJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

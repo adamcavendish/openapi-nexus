@@ -116,6 +116,14 @@ dependencies {{
 kotlin {{
     jvmToolchain(17)
 }}
+
+sourceSets {{
+    main {{
+        kotlin {{
+            srcDirs("apis", "models", "runtime")
+        }}
+    }}
+}}
 "#,
         version = info.version,
     );

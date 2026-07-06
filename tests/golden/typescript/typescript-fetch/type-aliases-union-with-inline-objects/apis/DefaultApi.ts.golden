@@ -5,8 +5,8 @@
  * Test fixture for union types (oneOf) with inline object schemas that should generate named interfaces
  */
 import type { Foo } from '../models/Foo';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError } from '../runtime/runtime';
 
 export interface ApiTestUnionWithInlineObjectsRequest {
   body: Foo;
@@ -14,7 +14,20 @@ export interface ApiTestUnionWithInlineObjectsRequest {
 
 export type TestUnionWithInlineObjectsRawResponse =
   | JSONApiResponse<Foo> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type TestUnionWithInlineObjectsErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class TestUnionWithInlineObjectsError extends ResponseError {
+  readonly detail: TestUnionWithInlineObjectsErrorDetail;
+
+  constructor(response: Response, detail: TestUnionWithInlineObjectsErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -59,11 +72,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new TestUnionWithInlineObjectsError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Foo> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

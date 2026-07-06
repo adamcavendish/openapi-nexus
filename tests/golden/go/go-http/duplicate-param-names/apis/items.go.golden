@@ -36,6 +36,45 @@ type CreateItemWithBodyConflictResponse struct {
 	Status200 *models.CreateItemWithBodyConflictResponse200
 }
 
+type CreateItemWithBodyConflictError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateItemWithBodyConflictErrorDetail
+}
+
+func (e *CreateItemWithBodyConflictError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateItemWithBodyConflictErrorDetail interface {
+	isCreateItemWithBodyConflictErrorDetail()
+}
+
+type CreateItemWithBodyConflictBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateItemWithBodyConflictBadRequest) isCreateItemWithBodyConflictErrorDetail() {}
+
+func (d *CreateItemWithBodyConflictBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type CreateItemWithBodyConflictUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateItemWithBodyConflictUnexpected) isCreateItemWithBodyConflictErrorDetail() {}
+
+func (d *CreateItemWithBodyConflictUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateItemWithBodyConflict — Create item with body parameter conflict
 func (a *ItemsAPI) CreateItemWithBodyConflict(ctx context.Context, itemId string, body *string,
 body2 *models.CreateItemWithBodyConflictRequest) (*CreateItemWithBodyConflictResponse, error) {
@@ -64,20 +103,34 @@ body2 *models.CreateItemWithBodyConflictRequest) (*CreateItemWithBodyConflictRes
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateItemWithBodyConflictResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &CreateItemWithBodyConflictBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateItemWithBodyConflictError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &CreateItemWithBodyConflictUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateItemWithBodyConflictError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.CreateItemWithBodyConflictResponse200
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

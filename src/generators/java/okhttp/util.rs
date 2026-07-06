@@ -89,6 +89,15 @@ pub fn java_ident(name: &str) -> String {
     }
 }
 
+pub fn java_getter_name(name: &str) -> String {
+    let getter = format!("get{}", name.to_pascal_case());
+    if getter == "getClass" {
+        "getClass_".to_string()
+    } else {
+        getter
+    }
+}
+
 pub fn is_java_reserved(name: &str) -> bool {
     matches!(
         name,

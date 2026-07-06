@@ -5,8 +5,8 @@
  * Covers non-JSON request body media types to pin Content-Type emission.
  */
 import type { Payload } from '../models/Payload';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, TextApiResponse, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, TextApiResponse, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiPostBinaryRequest {
   body: Blob | File;
@@ -38,35 +38,132 @@ export interface ApiPostXmlRequest {
 
 export type PostBinaryRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PostFormRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PostJsonRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PostJsonOrXmlRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PatchMergeJsonRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PostTextRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type PostXmlRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type GetXmlResponseRawResponse =
   | TextApiResponse & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type PostBinaryErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostBinaryError extends ResponseError {
+  readonly detail: PostBinaryErrorDetail;
+
+  constructor(response: Response, detail: PostBinaryErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostFormErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostFormError extends ResponseError {
+  readonly detail: PostFormErrorDetail;
+
+  constructor(response: Response, detail: PostFormErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostJsonErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostJsonError extends ResponseError {
+  readonly detail: PostJsonErrorDetail;
+
+  constructor(response: Response, detail: PostJsonErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostJsonOrXmlErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostJsonOrXmlError extends ResponseError {
+  readonly detail: PostJsonOrXmlErrorDetail;
+
+  constructor(response: Response, detail: PostJsonOrXmlErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PatchMergeJsonErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PatchMergeJsonError extends ResponseError {
+  readonly detail: PatchMergeJsonErrorDetail;
+
+  constructor(response: Response, detail: PatchMergeJsonErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostTextErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostTextError extends ResponseError {
+  readonly detail: PostTextErrorDetail;
+
+  constructor(response: Response, detail: PostTextErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostXmlErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostXmlError extends ResponseError {
+  readonly detail: PostXmlErrorDetail;
+
+  constructor(response: Response, detail: PostXmlErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type GetXmlResponseErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetXmlResponseError extends ResponseError {
+  readonly detail: GetXmlResponseErrorDetail;
+
+  constructor(response: Response, detail: GetXmlResponseErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -125,11 +222,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostBinaryError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -168,11 +272,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostFormError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -211,11 +322,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostJsonError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -254,11 +372,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostJsonOrXmlError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -297,11 +422,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PatchMergeJsonError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -340,11 +472,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostTextError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -383,11 +522,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostXmlError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -416,11 +562,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new GetXmlResponseError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new TextApiResponse(response) as TextApiResponse & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

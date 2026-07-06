@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::response_entry_name as response_variant_name;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
     ParameterLocation,
@@ -88,7 +89,15 @@ fn emit_api_file(
 
     let mut fb = FileSpec::builder_with(&format!("{}_api.py", tag.to_snake_case()), Python::new())
         .header(future_annotations_header())
+        .add_code(build_error_classes_block(&plans, ir))
         .add_type(cls.build().expect("API TypeSpec builds"));
+    if plans
+        .iter()
+        .flat_map(|plan| &plan.error_responses)
+        .any(|response| response.decoding == Some(ResponseDecoding::Json))
+    {
+        fb = fb.add_import(ImportSpec::side_effect("json"));
+    }
     if plans.iter().any(|plan| {
         plan.body.as_ref().is_some_and(|body| {
             body.multipart_parts.as_ref().is_some_and(|parts| {
@@ -192,7 +201,7 @@ fn build_api_method(plan: &OpPlan<'_>, ir: &IrSpec, error_type: &TypeName) -> Fu
     fun.build().expect("API method FunSpec builds")
 }
 
-fn build_method_body(plan: &OpPlan<'_>, ir: &IrSpec, error_type: &TypeName) -> CodeBlock {
+fn build_method_body(plan: &OpPlan<'_>, ir: &IrSpec, _error_type: &TypeName) -> CodeBlock {
     let mut cb = CodeBlock::builder();
 
     // Path interpolation
@@ -340,11 +349,7 @@ fn build_method_body(plan: &OpPlan<'_>, ir: &IrSpec, error_type: &TypeName) -> C
     );
 
     // Error handling
-    cb.add_statement("if response.status_code >= 400:%>", ());
-    cb.add_statement(
-        "raise %T(response.status_code, response.reason, response.content)%<",
-        (error_type.clone(),),
-    );
+    cb.add_code(emit_error_raise(plan, "response.reason"));
 
     // Response parsing
     if !plan.typed_responses.is_empty() {
@@ -506,6 +511,277 @@ fn render_json_response_parse(type_expr: &IrTypeExpr, ir: &IrSpec) -> String {
     }
 }
 
+fn build_error_classes_block(plans: &[OpPlan<'_>], ir: &IrSpec) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    for plan in plans {
+        let mut seen = HashSet::new();
+        let mut detail_class_names = Vec::new();
+        for response in &plan.error_responses {
+            if !seen.insert(response.class_name.clone()) {
+                continue;
+            }
+            detail_class_names.push(response.class_name.clone());
+            cb.add_statement(&format!("class {}:%>", response.class_name), ());
+            cb.add_statement(
+                "def __init__(self, status_code: int, headers: %T[str, str], raw_body: bytes) -> None:%>",
+                (TypeName::importable("collections.abc", "Mapping"),),
+            );
+            cb.add_statement("self.status_code: int = status_code", ());
+            cb.add_statement(
+                "self.headers: %T[str, str] = headers",
+                (TypeName::importable("collections.abc", "Mapping"),),
+            );
+            if let (Some(type_expr), Some(decoding)) = (&response.type_expr, response.decoding) {
+                let return_ty = error_body_return_type(type_expr, decoding);
+                cb.add_statement("self.raw_body: bytes = raw_body", ());
+                cb.add_statement("self._body_loaded: bool = False", ());
+                cb.add_statement("self._body_value: %T | None = None", (return_ty,));
+                cb.add_statement("self._body_error: Exception | None = None%<", ());
+                cb.add_code(error_body_property(type_expr, decoding, ir));
+            } else {
+                cb.add_statement("self.raw_body: bytes = raw_body%<", ());
+            }
+            cb.add("%<", ());
+            cb.add_line();
+        }
+        let unexpected = format!("{}Unexpected", plan.error_type.trim_end_matches("Error"));
+        detail_class_names.push(unexpected.clone());
+        cb.add_statement(&format!("class {unexpected}:%>"), ());
+        cb.add_statement(
+            "def __init__(self, status_code: int, headers: %T[str, str], raw_body: bytes) -> None:%>",
+            (TypeName::importable("collections.abc", "Mapping"),),
+        );
+        cb.add_statement("self.status_code: int = status_code", ());
+        cb.add_statement(
+            "self.headers: %T[str, str] = headers",
+            (TypeName::importable("collections.abc", "Mapping"),),
+        );
+        cb.add_statement("self.raw_body: bytes = raw_body%<", ());
+        cb.add_statement("@property", ());
+        cb.add_statement("def body(self) -> bytes:%>", ());
+        cb.add_statement("return self.raw_body%<%<", ());
+        cb.add_line();
+
+        let detail_type = format!("{}Detail", plan.error_type);
+        cb.add_statement(&format!("type {detail_type} = (%>"), ());
+        for (index, class_name) in detail_class_names.iter().enumerate() {
+            let prefix = if index == 0 { "" } else { "| " };
+            let suffix = if index + 1 == detail_class_names.len() {
+                "%<"
+            } else {
+                ""
+            };
+            cb.add_statement(&format!("{prefix}{class_name}{suffix}"), ());
+        }
+        cb.add_statement(")", ());
+        cb.add_line();
+
+        cb.add_statement(
+            &format!("class {}(%T):%>", plan.error_type),
+            (TypeName::importable("..runtime.errors", "ApiError"),),
+        );
+        cb.add_statement(
+            &format!(
+                "def __init__(self, status_code: int, status: str, body: bytes, detail: {detail_type}, headers: %T[str, str] | None = None, response: object | None = None) -> None:%>"
+            ),
+            (TypeName::importable("collections.abc", "Mapping"),),
+        );
+        cb.add_statement(&format!("self.detail: {detail_type} = detail"), ());
+        cb.add_statement(
+            "super().__init__(status_code, status, body, headers=headers, response=response)%<%<",
+            (),
+        );
+        cb.add_line();
+    }
+    cb.build().expect("Python error classes block builds")
+}
+
+fn error_body_property(
+    type_expr: &IrTypeExpr,
+    decoding: ResponseDecoding,
+    ir: &IrSpec,
+) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    match decoding {
+        ResponseDecoding::Json => {
+            let return_ty = api_type_name(type_expr);
+            let parse_expr = render_error_json_body_parse(type_expr, ir);
+            cb.add_statement("@property", ());
+            cb.add_statement("def body(self) -> %T:%>", (return_ty.clone(),));
+            cb.add_statement("if not self._body_loaded:%>", ());
+            cb.add_statement("try:%>", ());
+            cb.add_statement(&format!("self._body_value = {parse_expr}%<"), ());
+            cb.add_statement("except Exception as exc:%>", ());
+            cb.add_statement("self._body_error = exc%<", ());
+            cb.add_statement("self._body_loaded = True%<", ());
+            cb.add_statement("if self._body_error is not None:%>", ());
+            cb.add_statement("raise self._body_error%<", ());
+            cb.add_statement("if self._body_value is None:%>", ());
+            cb.add_statement("raise RuntimeError(\"error body was not decoded\")%<", ());
+            cb.add_statement("return self._body_value%<", ());
+        }
+        ResponseDecoding::Text => {
+            cb.add_statement("@property", ());
+            cb.add_statement("def body(self) -> str:%>", ());
+            cb.add_statement("if not self._body_loaded:%>", ());
+            cb.add_statement("try:%>", ());
+            cb.add_statement("self._body_value = self.raw_body.decode(\"utf-8\")%<", ());
+            cb.add_statement("except Exception as exc:%>", ());
+            cb.add_statement("self._body_error = exc%<", ());
+            cb.add_statement("self._body_loaded = True%<", ());
+            cb.add_statement("if self._body_error is not None:%>", ());
+            cb.add_statement("raise self._body_error%<", ());
+            cb.add_statement("if self._body_value is None:%>", ());
+            cb.add_statement("raise RuntimeError(\"error body was not decoded\")%<", ());
+            cb.add_statement("return self._body_value%<", ());
+        }
+        ResponseDecoding::Bytes => {
+            cb.add_statement("@property", ());
+            cb.add_statement("def body(self) -> bytes:%>", ());
+            cb.add_statement("if not self._body_loaded:%>", ());
+            cb.add_statement("self._body_value = self.raw_body", ());
+            cb.add_statement("self._body_loaded = True", ());
+            cb.add_statement("if self._body_value is None:%>", ());
+            cb.add_statement("raise RuntimeError(\"error body was not decoded\")%<", ());
+            cb.add_statement("return self._body_value%<", ());
+        }
+    }
+    cb.build().expect("Python error body property builds")
+}
+
+fn error_body_return_type(type_expr: &IrTypeExpr, decoding: ResponseDecoding) -> TypeName {
+    match decoding {
+        ResponseDecoding::Json => api_type_name(type_expr),
+        ResponseDecoding::Text => TypeName::primitive("str"),
+        ResponseDecoding::Bytes => TypeName::primitive("bytes"),
+    }
+}
+
+fn render_error_json_body_parse(type_expr: &IrTypeExpr, ir: &IrSpec) -> String {
+    match type_expr {
+        IrTypeExpr::Named(name) => {
+            let py_name = name.to_pascal_case();
+            if is_object_schema(name, ir) {
+                format!("{py_name}.from_dict(json.loads(self.raw_body.decode(\"utf-8\")))")
+            } else {
+                "json.loads(self.raw_body.decode(\"utf-8\"))  # type: ignore[return-value]"
+                    .to_string()
+            }
+        }
+        IrTypeExpr::Array(inner) => {
+            if let IrTypeExpr::Named(name) = inner.as_ref()
+                && is_object_schema(name, ir)
+            {
+                let py_name = name.to_pascal_case();
+                return format!(
+                    "[{py_name}.from_dict(item) for item in json.loads(self.raw_body.decode(\"utf-8\"))]"
+                );
+            }
+            "json.loads(self.raw_body.decode(\"utf-8\"))  # type: ignore[return-value]".to_string()
+        }
+        _ => {
+            "json.loads(self.raw_body.decode(\"utf-8\"))  # type: ignore[return-value]".to_string()
+        }
+    }
+}
+
+fn emit_error_raise(plan: &OpPlan<'_>, reason_expr: &str) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    cb.add_statement("if not (200 <= response.status_code < 300):%>", ());
+    cb.add_code(error_detail_assignment(plan));
+    cb.add_statement(
+        &format!(
+            "raise {}(response.status_code, {reason_expr}, response.content, detail, headers=response.headers, response=response)%<",
+            plan.error_type
+        ),
+        (),
+    );
+    cb.build().expect("Python error raise builds")
+}
+
+fn error_detail_assignment(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let mut exact: Vec<&ErrorResponse> = plan
+        .error_responses
+        .iter()
+        .filter(|r| r.status.parse::<u16>().is_ok())
+        .collect();
+    exact.sort_by_key(|r| r.status.parse::<u16>().unwrap());
+    let wildcards: Vec<&ErrorResponse> = plan
+        .error_responses
+        .iter()
+        .filter(|r| r.status.ends_with("XX"))
+        .collect();
+    let default = plan
+        .error_responses
+        .iter()
+        .find(|r| r.status.eq_ignore_ascii_case("default"));
+
+    let mut emitted = false;
+    for response in exact {
+        let keyword = if emitted { "elif" } else { "if" };
+        cb.add_statement(
+            &format!("{keyword} response.status_code == {}:%>", response.status),
+            (),
+        );
+        cb.add_statement(&format!("{}%<", detail_ctor_statement(response)), ());
+        emitted = true;
+    }
+    for response in wildcards {
+        let (low, high) = wildcard_status_range(&response.status);
+        let keyword = if emitted { "elif" } else { "if" };
+        cb.add_statement(
+            &format!("{keyword} {low} <= response.status_code < {high}:%>"),
+            (),
+        );
+        cb.add_statement(&format!("{}%<", detail_ctor_statement(response)), ());
+        emitted = true;
+    }
+    let unexpected = format!("{}Unexpected", plan.error_type.trim_end_matches("Error"));
+    if let Some(default) = default {
+        if emitted {
+            cb.add_statement("else:%>", ());
+            cb.add_statement(&format!("{}%<", detail_ctor_statement(default)), ());
+        } else {
+            cb.add_statement(&detail_ctor_statement(default), ());
+        }
+    } else if emitted {
+        cb.add_statement("else:%>", ());
+        cb.add_statement(
+            &format!(
+                "detail = {unexpected}(response.status_code, response.headers, response.content)%<"
+            ),
+            (),
+        );
+    } else {
+        cb.add_statement(
+            &format!(
+                "detail = {unexpected}(response.status_code, response.headers, response.content)"
+            ),
+            (),
+        );
+    }
+    cb.build().expect("Python error detail assignment builds")
+}
+
+fn detail_ctor_statement(response: &ErrorResponse) -> String {
+    format!(
+        "detail = {}(response.status_code, response.headers, response.content)",
+        response.class_name
+    )
+}
+
+fn wildcard_status_range(status: &str) -> (u16, u16) {
+    match status.to_uppercase().as_str() {
+        "1XX" => (100, 200),
+        "2XX" => (200, 300),
+        "3XX" => (300, 400),
+        "4XX" => (400, 500),
+        "5XX" => (500, 600),
+        _ => (0, 1000),
+    }
+}
+
 fn is_object_type(type_expr: &IrTypeExpr, ir: &IrSpec) -> bool {
     if let IrTypeExpr::Named(name) = type_expr {
         return is_object_schema(name, ir);
@@ -529,11 +805,13 @@ fn is_array_of_objects(type_expr: &IrTypeExpr, ir: &IrSpec) -> bool {
 struct OpPlan<'a> {
     op: &'a IrOperation,
     method_name: String,
+    error_type: String,
     path_params: Vec<ParamBinding<'a>>,
     query_params: Vec<ParamBinding<'a>>,
     header_params: Vec<ParamBinding<'a>>,
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
+    error_responses: Vec<ErrorResponse>,
 }
 
 struct ParamBinding<'a> {
@@ -583,6 +861,14 @@ struct TypedResponse {
     decoding: ResponseDecoding,
 }
 
+#[derive(Clone)]
+struct ErrorResponse {
+    status: String,
+    class_name: String,
+    type_expr: Option<IrTypeExpr>,
+    decoding: Option<ResponseDecoding>,
+}
+
 fn plan_operation<'a>(
     op: &'a IrOperation,
     ir: &IrSpec,
@@ -590,6 +876,7 @@ fn plan_operation<'a>(
 ) -> OpPlan<'a> {
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_snake_case();
+    let error_type = format!("{}Error", op_id.to_pascal_case());
 
     let mut used_names: HashSet<String> = HashSet::new();
     used_names.insert("self".to_string());
@@ -614,16 +901,29 @@ fn plan_operation<'a>(
         .as_ref()
         .and_then(|b| plan_body(op, b, ir, request_inputs, &mut used_names));
 
-    let typed_responses = op.responses.iter().filter_map(plan_response).collect();
+    let typed_responses = op
+        .responses
+        .iter()
+        .filter(|r| is_success_status(&r.status))
+        .filter_map(plan_response)
+        .collect();
+    let error_responses = op
+        .responses
+        .iter()
+        .filter(|r| !is_success_status(&r.status))
+        .map(|r| plan_error_response(&op_id, r))
+        .collect();
 
     OpPlan {
         op,
         method_name,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
     }
 }
 
@@ -664,6 +964,38 @@ fn plan_response(r: &IrResponse) -> Option<TypedResponse> {
         type_expr: t,
         decoding: response_decoding(&media_type),
     })
+}
+
+fn plan_error_response(op_id: &str, r: &IrResponse) -> ErrorResponse {
+    match pick_response_content(r) {
+        Some((media_type, t)) => ErrorResponse {
+            status: r.status.clone(),
+            class_name: format!(
+                "{}{}",
+                op_id.to_pascal_case(),
+                response_variant_name(&r.status)
+            ),
+            type_expr: Some(t),
+            decoding: Some(response_decoding(&media_type)),
+        },
+        None => ErrorResponse {
+            status: r.status.clone(),
+            class_name: format!(
+                "{}{}",
+                op_id.to_pascal_case(),
+                response_variant_name(&r.status)
+            ),
+            type_expr: None,
+            decoding: None,
+        },
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
 }
 
 fn body_encoding(media_type: &str) -> BodyEncoding {

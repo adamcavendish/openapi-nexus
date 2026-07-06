@@ -4,5 +4,10 @@
  * Union Type with Interfaces Test — 1.0.0
  * Test fixture for oneOf/anyOf union types with interface members
  */
-export type { ApiTestUnionRequest, TestUnionRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type {
+  ApiTestUnionRequest,
+  TestUnionRawResponse,
+  TestUnionErrorDetail,
+  DefaultApiInterface,
+} from './DefaultApi';
+export { DefaultApi, TestUnionError } from './DefaultApi';

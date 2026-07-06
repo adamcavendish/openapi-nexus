@@ -5,10 +5,75 @@
 
 from __future__ import annotations
 
+import json
+
+from collections.abc import Mapping
+
 from ..models.get_all_users_response200_item import GetAllUsersResponse200Item
 from ..models.get_user_by_id_response200 import GetUserByIdResponse200
+from ..models.get_user_by_id_response404 import GetUserByIdResponse404
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class GetAllUsersUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetAllUsersErrorDetail = (
+    GetAllUsersUnexpected
+)
+
+class GetAllUsersError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetAllUsersErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetAllUsersErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
+class GetUserByIdNotFound:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+        self._body_loaded: bool = False
+        self._body_value: GetUserByIdResponse404 | None = None
+        self._body_error: Exception | None = None
+    @property
+    def body(self) -> GetUserByIdResponse404:
+        if not self._body_loaded:
+            try:
+                self._body_value = GetUserByIdResponse404.from_dict(json.loads(self.raw_body.decode("utf-8")))
+            except Exception as exc:
+                self._body_error = exc
+            self._body_loaded = True
+        if self._body_error is not None:
+            raise self._body_error
+        if self._body_value is None:
+            raise RuntimeError("error body was not decoded")
+        return self._body_value
+
+class GetUserByIdUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetUserByIdErrorDetail = (
+    GetUserByIdNotFound
+    | GetUserByIdUnexpected
+)
+
+class GetUserByIdError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetUserByIdErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetUserByIdErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class DefaultApi:
     def __init__(self, client: Client) -> None:
@@ -18,14 +83,19 @@ class DefaultApi:
         """Get all users."""
         path = "/users"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = GetAllUsersUnexpected(response.status_code, response.headers, response.content)
+            raise GetAllUsersError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
         return [GetAllUsersResponse200Item.from_dict(item) for item in response.json()]
 
     def get_user_by_id(self, id: int) -> GetUserByIdResponse200:
         """Get user by ID."""
         path = f"/users/{id}"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 404:
+                detail = GetUserByIdNotFound(response.status_code, response.headers, response.content)
+            else:
+                detail = GetUserByIdUnexpected(response.status_code, response.headers, response.content)
+            raise GetUserByIdError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
         return GetUserByIdResponse200.from_dict(response.json())

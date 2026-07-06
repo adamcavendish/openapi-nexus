@@ -4,5 +4,5 @@
  * Inline Object Test — 1.0.0
  * Test case for inline objects (not arrays) with snake_case to camelCase conversion
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

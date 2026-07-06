@@ -5,7 +5,7 @@
 // Covers explicit multipart part content types.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a> {
@@ -24,18 +24,31 @@ impl<'a> TransferApi<'a> {
     pub async fn upload_encoded_asset(
         &self,
         body: &crate::models::UploadEncodedAssetMultipartRequestBody,
-    ) -> Result<UploadEncodedAssetResponse, Error> {
+    ) -> Result<UploadEncodedAssetResponse, UploadEncodedAssetError> {
         let path = "/uploads/encoded".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         let mut multipart = reqwest::multipart::Form::new();
-        multipart = multipart.part("audit", reqwest::multipart::Part::text(serde_json::to_string(&body.audit)?).mime_str("application/json").map_err(Error::Network)?);
+        multipart = multipart.part("audit", reqwest::multipart::Part::text(serde_json::to_string(&body.audit).map_err(Error::Deserialize)?).mime_str("application/json").map_err(Error::Network)?);
         multipart = multipart.part("file", reqwest::multipart::Part::bytes(body.file.data.clone()).file_name(body.file.filename_or_default("file").to_string()).mime_str("application/pdf").map_err(Error::Network)?);
-        multipart = multipart.part("metadata", reqwest::multipart::Part::text(serde_json::to_string(&body.metadata)?).mime_str("application/vnd.openapi-nexus.metadata+json").map_err(Error::Network)?);
+        multipart = multipart.part("metadata", reqwest::multipart::Part::text(serde_json::to_string(&body.metadata).map_err(Error::Deserialize)?).mime_str("application/vnd.openapi-nexus.metadata+json").map_err(Error::Network)?);
         multipart = multipart.part("purpose", reqwest::multipart::Part::text(body.purpose.to_string()).mime_str("text/plain").map_err(Error::Network)?);
         req = req.multipart(multipart);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(UploadEncodedAssetResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = UploadEncodedAssetResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(UploadEncodedAssetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -43,4 +56,35 @@ impl<'a> TransferApi<'a> {
 #[derive(Debug)]
 pub struct UploadEncodedAssetResponse {
     pub status_code: u16,
+}
+
+/// Error from `upload_encoded_asset`.
+#[derive(Debug)]
+pub enum UploadEncodedAssetError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UploadEncodedAssetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UploadEncodedAssetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UploadEncodedAssetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

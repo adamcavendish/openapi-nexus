@@ -18,6 +18,34 @@ import okhttp3.Response
 data class GetItemsResponse(val statusCode: Int, val raw: Response, val status200: Item? = null) {
 }
 
+sealed interface GetItemsExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetItemsException(
+    val detail: GetItemsExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetItemsUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetItemsExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * ItemsApi groups operations under the items tag.
  */
@@ -33,13 +61,25 @@ class ItemsApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetItemsExceptionDetail = when (response.code)  {
+                else ->  {
+                    GetItemsUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetItemsException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Item? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Item>(responseText.ifEmpty { "null" }, object : TypeToken<Item>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Item>(responseText.ifEmpty { "null" }, object : TypeToken<Item>() {}.type)
+        }
         return GetItemsResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

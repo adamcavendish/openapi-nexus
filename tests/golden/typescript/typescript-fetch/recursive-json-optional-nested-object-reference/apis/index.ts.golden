@@ -4,5 +4,5 @@
  * Optional Nested Object Reference Test — 1.0.0
  * Test case for optional nested object reference
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

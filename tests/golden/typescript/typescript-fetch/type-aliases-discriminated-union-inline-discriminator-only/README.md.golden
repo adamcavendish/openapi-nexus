@@ -86,19 +86,19 @@ The `Configuration` class accepts the following options:
 interface ConfigurationParameters {
   /** Base URL for API requests */
   basePath?: string;
-  
+
   /** Custom fetch implementation */
   fetchApi?: typeof fetch;
-  
+
   /** Request/response middleware */
   middleware?: Middleware[];
-  
+
   /** Custom query string serializer */
   queryParamsStringify?: (params: HTTPQuery) => string;
-  
+
   /** Default headers for all requests */
   headers?: Record<string, string>;
-  
+
   /** Credentials mode for requests */
   credentials?: RequestCredentials;
 }

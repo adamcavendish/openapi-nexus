@@ -7,6 +7,7 @@ package apis
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -29,6 +30,34 @@ type TestResponse struct {
 	Raw *http.Response
 }
 
+type TestError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail TestErrorDetail
+}
+
+func (e *TestError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type TestErrorDetail interface {
+	isTestErrorDetail()
+}
+
+type TestUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*TestUnexpected) isTestErrorDetail() {}
+
+func (d *TestUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // Test — Test endpoint
 func (a *DefaultAPI) Test(ctx context.Context) (*TestResponse, error) {
 	path := "/test"
@@ -42,11 +71,17 @@ func (a *DefaultAPI) Test(ctx context.Context) (*TestResponse, error) {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &TestResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &TestUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &TestError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

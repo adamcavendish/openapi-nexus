@@ -5,7 +5,7 @@
 // Covers multipart request bodies that are not object-shaped.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a> {
@@ -24,10 +24,10 @@ impl<'a> TransferApi<'a> {
     pub fn upload_raw_multipart(
         &self,
         body: &Vec<u8>,
-    ) -> Result<UploadRawMultipartResponse, Error> {
+    ) -> Result<UploadRawMultipartResponse, UploadRawMultipartError> {
         let _ = self.client;
         let _ = body;
-        return Err(Error::Unsupported("multipart/form-data request bodies must be object schemas"));
+        return Err(Error::Unsupported("multipart/form-data request bodies must be object schemas").into());
     }
 }
 
@@ -35,4 +35,35 @@ impl<'a> TransferApi<'a> {
 #[derive(Debug)]
 pub struct UploadRawMultipartResponse {
     pub status_code: u16,
+}
+
+/// Error from `upload_raw_multipart`.
+#[derive(Debug)]
+pub enum UploadRawMultipartError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UploadRawMultipartError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UploadRawMultipartError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UploadRawMultipartError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

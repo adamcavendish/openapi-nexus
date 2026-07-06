@@ -3,5 +3,5 @@
  *
  * TS Enum Const Object Test — 1.0.0
  */
-export type { GetItemsRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { GetItemsRawResponse, GetItemsErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, GetItemsError } from './DefaultApi';

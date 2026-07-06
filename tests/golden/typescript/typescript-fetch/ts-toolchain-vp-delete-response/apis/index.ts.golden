@@ -7,8 +7,14 @@
 export type {
   ApiCreateTestResourceRequest,
   CreateTestResourceRawResponse,
+  CreateTestResourceErrorDetail,
   ApiDeleteTestResourceRequest,
   DeleteTestResourceRawResponse,
+  DeleteTestResourceErrorDetail,
   TestResourceApiInterface,
 } from './TestResourceApi';
-export { TestResourceApi } from './TestResourceApi';
+export {
+  TestResourceApi,
+  CreateTestResourceError,
+  DeleteTestResourceError,
+} from './TestResourceApi';

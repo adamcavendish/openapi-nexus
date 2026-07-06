@@ -7,6 +7,7 @@
 export type {
   ApiTestUnionWithAnyRequest,
   TestUnionWithAnyRawResponse,
+  TestUnionWithAnyErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, TestUnionWithAnyError } from './DefaultApi';

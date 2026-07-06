@@ -4,7 +4,7 @@
 // No Response Body API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "Foo" tag.
 pub struct FooApi<'a> {
@@ -24,22 +24,32 @@ impl<'a> FooApi<'a> {
         &self,
         foo_id: &str,
         body: &crate::models::FooRequest,
-    ) -> Result<UpdateFooBarResponse, Error> {
+    ) -> Result<UpdateFooBarResponse, UpdateFooBarError> {
         let mut path = "/foo/bar".to_string();
         path = path.replace("{foo_id}", &foo_id.to_string());
         let req = self.client.patch(&path);
-        let resp = req.send_json(&body)?;
+        let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
-        let mut result = UpdateFooBarResponse { status_code, status_400: None, status_500: None };
-        match status_code {
-            400 => {
-                result.status_400 = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = UpdateFooBarResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize);
+                        return Err(UpdateFooBarError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    500 => {
+                        let body = serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize);
+                        return Err(UpdateFooBarError::InternalServerError(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(UpdateFooBarError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
             }
-            500 => {
-                result.status_500 = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
-            }
-            _ => {}
         }
         Ok(result)
     }
@@ -49,6 +59,39 @@ impl<'a> FooApi<'a> {
 #[derive(Debug)]
 pub struct UpdateFooBarResponse {
     pub status_code: u16,
-    pub status_400: Option<crate::models::ErrorResponse>,
-    pub status_500: Option<crate::models::ErrorResponse>,
+}
+
+/// Error from `update_foo_bar`.
+#[derive(Debug)]
+pub enum UpdateFooBarError {
+    BadRequest(ApiError<crate::models::ErrorResponse>),
+    InternalServerError(ApiError<crate::models::ErrorResponse>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UpdateFooBarError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UpdateFooBarError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::InternalServerError(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UpdateFooBarError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

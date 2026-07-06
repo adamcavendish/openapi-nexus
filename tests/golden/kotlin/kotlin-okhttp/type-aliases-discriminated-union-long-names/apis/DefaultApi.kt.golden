@@ -23,6 +23,34 @@ data class CreateResourceResponse(val statusCode: Int, val raw: Response,
 val status200: VeryLongDiscriminatedUnionTypeNameForTesting20260630? = null) {
 }
 
+sealed interface CreateResourceExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateResourceException(
+    val detail: CreateResourceExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateResourceUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateResourceExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * DefaultApi groups operations under the default tag.
  */
@@ -40,13 +68,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateResourceExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateResourceUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateResourceException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: VeryLongDiscriminatedUnionTypeNameForTesting20260630? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<VeryLongDiscriminatedUnionTypeNameForTesting20260630>(responseText.ifEmpty { "null" }, object : TypeToken<VeryLongDiscriminatedUnionTypeNameForTesting20260630>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<VeryLongDiscriminatedUnionTypeNameForTesting20260630>(responseText.ifEmpty { "null" }, object : TypeToken<VeryLongDiscriminatedUnionTypeNameForTesting20260630>() {}.type)
+        }
         return CreateResourceResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

@@ -5,7 +5,7 @@
 // Covers non-JSON request body media types to pin Content-Type emission.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -24,40 +24,79 @@ impl<'a> DefaultApi<'a> {
     pub async fn post_binary(
         &self,
         body: &Vec<u8>,
-    ) -> Result<PostBinaryResponse, Error> {
+    ) -> Result<PostBinaryResponse, PostBinaryError> {
         let path = "/binary".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.header("Content-Type", "application/octet-stream");
         req = req.body(body.clone());
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostBinaryResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostBinaryResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostBinaryError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /form
     pub async fn post_form(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<PostFormResponse, Error> {
+    ) -> Result<PostFormResponse, PostFormError> {
         let path = "/form".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.form(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostFormResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostFormResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostFormError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /json
     pub async fn post_json(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<PostJsonResponse, Error> {
+    ) -> Result<PostJsonResponse, PostJsonError> {
         let path = "/json".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostJsonResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostJsonResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /json-or-xml
@@ -66,64 +105,117 @@ impl<'a> DefaultApi<'a> {
     pub async fn post_json_or_xml(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<PostJsonOrXmlResponse, Error> {
+    ) -> Result<PostJsonOrXmlResponse, PostJsonOrXmlError> {
         let path = "/json-or-xml".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostJsonOrXmlResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostJsonOrXmlResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostJsonOrXmlError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// PATCH /merge-patch
     pub async fn patch_merge_json(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<PatchMergeJsonResponse, Error> {
+    ) -> Result<PatchMergeJsonResponse, PatchMergeJsonError> {
         let path = "/merge-patch".to_string();
         let mut req = self.client.request(reqwest::Method::PATCH, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PatchMergeJsonResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PatchMergeJsonResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PatchMergeJsonError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /text
     pub async fn post_text(
         &self,
         body: &String,
-    ) -> Result<PostTextResponse, Error> {
+    ) -> Result<PostTextResponse, PostTextError> {
         let path = "/text".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.header("Content-Type", "text/plain");
         req = req.body(body.clone());
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostTextResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostTextResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostTextError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /xml
     pub async fn post_xml(
         &self,
         body: &crate::models::Payload,
-    ) -> Result<PostXmlResponse, Error> {
+    ) -> Result<PostXmlResponse, PostXmlError> {
         let path = "/xml".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
-        let body_xml = serde_xml_rs::to_string(body)?;
+        let body_xml = serde_xml_rs::to_string(body).map_err(Error::Xml)?;
         req = req.header("Content-Type", "application/xml").body(body_xml);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(PostXmlResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = PostXmlResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(PostXmlError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// GET /xml-response
     pub async fn get_xml_response(
         &self,
-    ) -> Result<GetXmlResponseResponse, Error> {
+    ) -> Result<GetXmlResponseResponse, GetXmlResponseError> {
         let path = "/xml-response".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetXmlResponseResponse { status_code, data: None };
         match status_code {
@@ -131,6 +223,14 @@ impl<'a> DefaultApi<'a> {
                 result.data = Some(serde_xml_rs::from_reader(std::io::Cursor::new(&body_bytes)).map_err(Error::Xml)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetXmlResponseError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -142,10 +242,72 @@ pub struct PostBinaryResponse {
     pub status_code: u16,
 }
 
+/// Error from `post_binary`.
+#[derive(Debug)]
+pub enum PostBinaryError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostBinaryError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostBinaryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostBinaryError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `post_form`.
 #[derive(Debug)]
 pub struct PostFormResponse {
     pub status_code: u16,
+}
+
+/// Error from `post_form`.
+#[derive(Debug)]
+pub enum PostFormError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostFormError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostFormError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostFormError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `post_json`.
@@ -154,10 +316,72 @@ pub struct PostJsonResponse {
     pub status_code: u16,
 }
 
+/// Error from `post_json`.
+#[derive(Debug)]
+pub enum PostJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `post_json_or_xml`.
 #[derive(Debug)]
 pub struct PostJsonOrXmlResponse {
     pub status_code: u16,
+}
+
+/// Error from `post_json_or_xml`.
+#[derive(Debug)]
+pub enum PostJsonOrXmlError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostJsonOrXmlError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostJsonOrXmlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostJsonOrXmlError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `patch_merge_json`.
@@ -166,10 +390,72 @@ pub struct PatchMergeJsonResponse {
     pub status_code: u16,
 }
 
+/// Error from `patch_merge_json`.
+#[derive(Debug)]
+pub enum PatchMergeJsonError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PatchMergeJsonError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PatchMergeJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PatchMergeJsonError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `post_text`.
 #[derive(Debug)]
 pub struct PostTextResponse {
     pub status_code: u16,
+}
+
+/// Error from `post_text`.
+#[derive(Debug)]
+pub enum PostTextError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostTextError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostTextError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostTextError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `post_xml`.
@@ -178,9 +464,71 @@ pub struct PostXmlResponse {
     pub status_code: u16,
 }
 
+/// Error from `post_xml`.
+#[derive(Debug)]
+pub enum PostXmlError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PostXmlError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PostXmlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PostXmlError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_xml_response`.
 #[derive(Debug)]
 pub struct GetXmlResponseResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Payload>,
+}
+
+/// Error from `get_xml_response`.
+#[derive(Debug)]
+pub enum GetXmlResponseError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetXmlResponseError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetXmlResponseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetXmlResponseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

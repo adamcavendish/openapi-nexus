@@ -61,3 +61,44 @@ impl From<serde_xml_rs::Error> for Error {
         Error::Xml(e)
     }
 }
+
+/// Typed HTTP error response payload.
+#[derive(Debug)]
+pub struct ApiError<T> {
+    status_code: u16,
+    headers: Vec<(String, String)>,
+    raw_body: Vec<u8>,
+    body: Result<T, Error>,
+}
+
+impl<T> ApiError<T> {
+    pub fn new(
+        status_code: u16,
+        headers: Vec<(String, String)>,
+        raw_body: Vec<u8>,
+        body: Result<T, Error>,
+    ) -> Self {
+        Self {
+            status_code,
+            headers,
+            raw_body,
+            body,
+        }
+    }
+
+    pub fn status_code(&self) -> u16 {
+        self.status_code
+    }
+
+    pub fn headers(&self) -> &[(String, String)] {
+        &self.headers
+    }
+
+    pub fn raw_body(&self) -> &[u8] {
+        &self.raw_body
+    }
+
+    pub fn body(&self) -> Result<&T, &Error> {
+        self.body.as_ref()
+    }
+}

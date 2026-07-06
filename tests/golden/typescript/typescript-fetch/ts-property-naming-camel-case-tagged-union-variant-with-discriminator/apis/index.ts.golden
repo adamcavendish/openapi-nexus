@@ -10,6 +10,7 @@
 export type {
   ApiCreateSetupRequest,
   CreateSetupRawResponse,
+  CreateSetupErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, CreateSetupError } from './DefaultApi';

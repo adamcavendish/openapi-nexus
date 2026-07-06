@@ -21,34 +21,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * GetUserByIdDuplicateResponse carries the response from getUserByIdDuplicate.
- */
-public class GetUserByIdDuplicateResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final GetUserByIdDuplicateResponse200 status200;
-
-    public GetUserByIdDuplicateResponse(int statusCode, Response raw,
-    GetUserByIdDuplicateResponse200 status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public GetUserByIdDuplicateResponse200 getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * UsersApi groups operations under the users tag.
  */
 public class UsersApi {
@@ -75,8 +47,20 @@ public class UsersApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetUserByIdDuplicateExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new GetUserByIdDuplicateBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new GetUserByIdDuplicateNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new GetUserByIdDuplicateUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetUserByIdDuplicateException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

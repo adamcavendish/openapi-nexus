@@ -7,6 +7,7 @@ package apis
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -30,6 +31,34 @@ type HealthCheckResponse struct {
 	Raw *http.Response
 }
 
+type HealthCheckError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail HealthCheckErrorDetail
+}
+
+func (e *HealthCheckError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type HealthCheckErrorDetail interface {
+	isHealthCheckErrorDetail()
+}
+
+type HealthCheckUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*HealthCheckUnexpected) isHealthCheckErrorDetail() {}
+
+func (d *HealthCheckUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // HealthCheck — Health check
 func (a *DefaultAPI) HealthCheck(ctx context.Context) (*HealthCheckResponse, error) {
 	path := "/health"
@@ -43,11 +72,17 @@ func (a *DefaultAPI) HealthCheck(ctx context.Context) (*HealthCheckResponse, err
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &HealthCheckResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &HealthCheckUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &HealthCheckError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -56,6 +91,34 @@ func (a *DefaultAPI) HealthCheck(ctx context.Context) (*HealthCheckResponse, err
 type ListUsersResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type ListUsersError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail ListUsersErrorDetail
+}
+
+func (e *ListUsersError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type ListUsersErrorDetail interface {
+	isListUsersErrorDetail()
+}
+
+type ListUsersUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*ListUsersUnexpected) isListUsersErrorDetail() {}
+
+func (d *ListUsersUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // ListUsers — List users
@@ -71,11 +134,17 @@ func (a *DefaultAPI) ListUsers(ctx context.Context) (*ListUsersResponse, error) 
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &ListUsersResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &ListUsersUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &ListUsersError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -84,6 +153,34 @@ func (a *DefaultAPI) ListUsers(ctx context.Context) (*ListUsersResponse, error) 
 type GetUserResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type GetUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetUserErrorDetail
+}
+
+func (e *GetUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetUserErrorDetail interface {
+	isGetUserErrorDetail()
+}
+
+type GetUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserUnexpected) isGetUserErrorDetail() {}
+
+func (d *GetUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetUser — Get user
@@ -100,11 +197,17 @@ func (a *DefaultAPI) GetUser(ctx context.Context, userId string) (*GetUserRespon
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

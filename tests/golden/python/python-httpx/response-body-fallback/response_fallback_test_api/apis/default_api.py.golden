@@ -4,9 +4,62 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.get_fallback_with_body_response200 import GetFallbackWithBodyResponse200
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class GetFallbackNoBodyBadRequest:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class GetFallbackNoBodyUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetFallbackNoBodyErrorDetail = (
+    GetFallbackNoBodyBadRequest
+    | GetFallbackNoBodyUnexpected
+)
+
+class GetFallbackNoBodyError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetFallbackNoBodyErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetFallbackNoBodyErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
+class GetFallbackWithBodyNotFound:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class GetFallbackWithBodyUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetFallbackWithBodyErrorDetail = (
+    GetFallbackWithBodyNotFound
+    | GetFallbackWithBodyUnexpected
+)
+
+class GetFallbackWithBodyError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetFallbackWithBodyErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetFallbackWithBodyErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class DefaultApi:
     def __init__(self, client: Client) -> None:
@@ -15,13 +68,21 @@ class DefaultApi:
     def get_fallback_no_body(self) -> None:
         path = "/fallback/no-body"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 400:
+                detail = GetFallbackNoBodyBadRequest(response.status_code, response.headers, response.content)
+            else:
+                detail = GetFallbackNoBodyUnexpected(response.status_code, response.headers, response.content)
+            raise GetFallbackNoBodyError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return None
 
     def get_fallback_with_body(self) -> GetFallbackWithBodyResponse200:
         path = "/fallback/with-body"
         response = self._client.request("GET", path)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 404:
+                detail = GetFallbackWithBodyNotFound(response.status_code, response.headers, response.content)
+            else:
+                detail = GetFallbackWithBodyUnexpected(response.status_code, response.headers, response.content)
+            raise GetFallbackWithBodyError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
         return GetFallbackWithBodyResponse200.from_dict(response.json())

@@ -5,7 +5,7 @@
 
 package com.example.sdk.runtime
 
-class ApiException(
+open class ApiException(
     val statusCode: Int,
     val status: String,
     val body: String,

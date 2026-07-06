@@ -7,10 +7,18 @@
 export type {
   ApiPostLeafRequest,
   PostLeafRawResponse,
+  PostLeafErrorDetail,
   ApiPostMiddleRequest,
   PostMiddleRawResponse,
+  PostMiddleErrorDetail,
   ApiPostRootRequest,
   PostRootRawResponse,
+  PostRootErrorDetail,
   AdditionalPropertiesApiInterface,
 } from './AdditionalPropertiesApi';
-export { AdditionalPropertiesApi } from './AdditionalPropertiesApi';
+export {
+  AdditionalPropertiesApi,
+  PostLeafError,
+  PostMiddleError,
+  PostRootError,
+} from './AdditionalPropertiesApi';

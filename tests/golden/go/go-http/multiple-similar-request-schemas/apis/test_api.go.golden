@@ -34,6 +34,34 @@ type CreateTypeAResponse struct {
 	Status200 *models.ResourceTypeA
 }
 
+type CreateTypeAError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateTypeAErrorDetail
+}
+
+func (e *CreateTypeAError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateTypeAErrorDetail interface {
+	isCreateTypeAErrorDetail()
+}
+
+type CreateTypeAUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateTypeAUnexpected) isCreateTypeAErrorDetail() {}
+
+func (d *CreateTypeAUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateTypeA — Create TypeA resource
 func (a *TestApiAPI) CreateTypeA(ctx context.Context, body *models.CreateRequestTypeA) (*CreateTypeAResponse, error) {
 	path := "/api/v1/type-a/resources"
@@ -56,20 +84,31 @@ func (a *TestApiAPI) CreateTypeA(ctx context.Context, body *models.CreateRequest
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateTypeAResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateTypeAUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateTypeAError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.ResourceTypeA
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -79,6 +118,34 @@ type CreateTypeBResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.ResourceTypeB
+}
+
+type CreateTypeBError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateTypeBErrorDetail
+}
+
+func (e *CreateTypeBError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateTypeBErrorDetail interface {
+	isCreateTypeBErrorDetail()
+}
+
+type CreateTypeBUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateTypeBUnexpected) isCreateTypeBErrorDetail() {}
+
+func (d *CreateTypeBUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // CreateTypeB — Create TypeB resource
@@ -103,20 +170,31 @@ func (a *TestApiAPI) CreateTypeB(ctx context.Context, body *models.CreateRequest
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateTypeBResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateTypeBUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateTypeBError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.ResourceTypeB
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

@@ -36,6 +36,34 @@ type UploadEncodedAssetResponse struct {
 	Raw *http.Response
 }
 
+type UploadEncodedAssetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UploadEncodedAssetErrorDetail
+}
+
+func (e *UploadEncodedAssetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UploadEncodedAssetErrorDetail interface {
+	isUploadEncodedAssetErrorDetail()
+}
+
+type UploadEncodedAssetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UploadEncodedAssetUnexpected) isUploadEncodedAssetErrorDetail() {}
+
+func (d *UploadEncodedAssetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // UploadEncodedAsset calls POST /uploads/encoded.
 func (a *TransferAPI) UploadEncodedAsset(ctx context.Context,
 body *models.UploadEncodedAssetMultipartRequestBody) (*UploadEncodedAssetResponse, error) {
@@ -121,11 +149,17 @@ body *models.UploadEncodedAssetMultipartRequestBody) (*UploadEncodedAssetRespons
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UploadEncodedAssetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &UploadEncodedAssetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UploadEncodedAssetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

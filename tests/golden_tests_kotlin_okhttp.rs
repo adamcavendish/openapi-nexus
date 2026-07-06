@@ -78,6 +78,7 @@ fn get_golden_test_cases() -> HashMap<&'static str, &'static str> {
         ("response-body-fallback", "valid/response-body/fallback.yaml"),
         ("response-body-multi-status-responses", "valid/response-body/multi-status-responses.yaml"),
         ("response-body-no-response-body", "valid/response-body/no-response-body.yaml"),
+        ("typed-error-responses", "valid/typed-error-responses.yaml"),
 
         ("additional-properties", "valid/additional-properties/additional-properties.yaml"),
         ("enum-repr", "valid/enum-repr/enum-repr.yaml"),
@@ -165,6 +166,7 @@ generate_golden_tests! {
     test_response_body_fallback_golden: "response-body-fallback",
     test_response_body_multi_status_responses_golden: "response-body-multi-status-responses",
     test_response_body_no_response_body_golden: "response-body-no-response-body",
+    test_typed_error_responses_golden: "typed-error-responses",
 
     test_enum_repr_golden: "enum-repr",
     test_additional_properties_golden: "additional-properties",

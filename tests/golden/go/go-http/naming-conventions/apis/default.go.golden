@@ -36,6 +36,34 @@ type GetWithQueryParamsResponse struct {
 	Raw *http.Response
 }
 
+type GetWithQueryParamsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetWithQueryParamsErrorDetail
+}
+
+func (e *GetWithQueryParamsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetWithQueryParamsErrorDetail interface {
+	isGetWithQueryParamsErrorDetail()
+}
+
+type GetWithQueryParamsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetWithQueryParamsUnexpected) isGetWithQueryParamsErrorDetail() {}
+
+func (d *GetWithQueryParamsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetWithQueryParams — Get with query parameters
 func (a *DefaultAPI) GetWithQueryParams(ctx context.Context, snakeCaseParam string,
 snakeCaseNumber *int, kebabCaseParam *string,
@@ -87,11 +115,17 @@ camelCaseNumber *int, singleword *string, id *int) (*GetWithQueryParamsResponse,
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetWithQueryParamsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetWithQueryParamsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetWithQueryParamsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -101,6 +135,34 @@ type TestNamingConventionsResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.NamingConventionTest
+}
+
+type TestNamingConventionsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail TestNamingConventionsErrorDetail
+}
+
+func (e *TestNamingConventionsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type TestNamingConventionsErrorDetail interface {
+	isTestNamingConventionsErrorDetail()
+}
+
+type TestNamingConventionsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*TestNamingConventionsUnexpected) isTestNamingConventionsErrorDetail() {}
+
+func (d *TestNamingConventionsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // TestNamingConventions — Test endpoint with various parameter naming conventions
@@ -125,20 +187,31 @@ func (a *DefaultAPI) TestNamingConventions(ctx context.Context, body *models.Nam
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &TestNamingConventionsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &TestNamingConventionsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &TestNamingConventionsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.NamingConventionTest
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

@@ -7,8 +7,8 @@
 import type { LeafValue } from '../models/LeafValue';
 import type { MiddleLevel } from '../models/MiddleLevel';
 import type { RootLevel } from '../models/RootLevel';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiPostLeafRequest {
   body: LeafValue;
@@ -24,18 +24,55 @@ export interface ApiPostRootRequest {
 
 export type PostLeafRawResponse =
   | JSONApiResponse<LeafValue> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type PostMiddleRawResponse =
   | JSONApiResponse<MiddleLevel> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type PostRootRawResponse =
   | JSONApiResponse<RootLevel> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type PostLeafErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostLeafError extends ResponseError {
+  readonly detail: PostLeafErrorDetail;
+
+  constructor(response: Response, detail: PostLeafErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostMiddleErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostMiddleError extends ResponseError {
+  readonly detail: PostMiddleErrorDetail;
+
+  constructor(response: Response, detail: PostMiddleErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type PostRootErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class PostRootError extends ResponseError {
+  readonly detail: PostRootErrorDetail;
+
+  constructor(response: Response, detail: PostRootErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface AdditionalPropertiesApiInterface {
@@ -84,14 +121,22 @@ export class AdditionalPropertiesApi extends BaseAPI implements AdditionalProper
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new PostLeafError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostLeafError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<LeafValue> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -130,14 +175,22 @@ export class AdditionalPropertiesApi extends BaseAPI implements AdditionalProper
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new PostMiddleError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostMiddleError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<MiddleLevel> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -176,14 +229,22 @@ export class AdditionalPropertiesApi extends BaseAPI implements AdditionalProper
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new PostRootError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new PostRootError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<RootLevel> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

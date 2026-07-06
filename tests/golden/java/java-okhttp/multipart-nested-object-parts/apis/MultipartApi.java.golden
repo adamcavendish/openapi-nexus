@@ -24,27 +24,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * SendNestedObjectPartResponse carries the response from sendNestedObjectPart.
- */
-public class SendNestedObjectPartResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendNestedObjectPartResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
  * MultipartApi groups operations under the multipart tag.
  */
 public class MultipartApi {
@@ -69,8 +48,16 @@ public class MultipartApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendNestedObjectPartExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendNestedObjectPartUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendNestedObjectPartException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendNestedObjectPartResponse(response.code(), response);
     }

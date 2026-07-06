@@ -23,171 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * CreateUserResponse carries the response from createUser.
- */
-public class CreateUserResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final User status200;
-
-    public CreateUserResponse(int statusCode, Response raw, User status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public User getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * CreateUsersWithListInputResponse carries the response from createUsersWithListInput.
- */
-public class CreateUsersWithListInputResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final User status200;
-
-    public CreateUsersWithListInputResponse(int statusCode, Response raw, User status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public User getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * LoginUserResponse carries the response from loginUser.
- */
-public class LoginUserResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public LoginUserResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * LogoutUserResponse carries the response from logoutUser.
- */
-public class LogoutUserResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public LogoutUserResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * GetUserByNameResponse carries the response from getUserByName.
- */
-public class GetUserByNameResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final User status200;
-
-    public GetUserByNameResponse(int statusCode, Response raw, User status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public User getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * UpdateUserResponse carries the response from updateUser.
- */
-public class UpdateUserResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public UpdateUserResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * DeleteUserResponse carries the response from deleteUser.
- */
-public class DeleteUserResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public DeleteUserResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
  * UserApi groups operations under the user tag.
  */
 public class UserApi {
@@ -210,8 +45,16 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            CreateUserExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new CreateUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new CreateUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -234,8 +77,16 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            CreateUsersWithListInputExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new CreateUsersWithListInputUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new CreateUsersWithListInputException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -262,8 +113,18 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            LoginUserExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new LoginUserBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new LoginUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new LoginUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new LoginUserResponse(response.code(), response);
     }
@@ -277,8 +138,16 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            LogoutUserExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new LogoutUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new LogoutUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new LogoutUserResponse(response.code(), response);
     }
@@ -292,8 +161,20 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetUserByNameExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new GetUserByNameBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new GetUserByNameNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new GetUserByNameUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetUserByNameException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -316,8 +197,20 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            UpdateUserExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new UpdateUserBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new UpdateUserNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new UpdateUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new UpdateUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new UpdateUserResponse(response.code(), response);
     }
@@ -331,8 +224,20 @@ public class UserApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            DeleteUserExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new DeleteUserBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 404:
+                    detail = new DeleteUserNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new DeleteUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new DeleteUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new DeleteUserResponse(response.code(), response);
     }

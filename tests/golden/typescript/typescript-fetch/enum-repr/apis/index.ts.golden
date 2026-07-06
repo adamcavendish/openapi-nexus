@@ -7,14 +7,26 @@
 export type {
   ApiHandleAdjacentlyTaggedRequest,
   HandleAdjacentlyTaggedRawResponse,
+  HandleAdjacentlyTaggedErrorDetail,
   ApiHandleExternallyTaggedRequest,
   HandleExternallyTaggedRawResponse,
+  HandleExternallyTaggedErrorDetail,
   ApiHandleInternallyTaggedRequest,
   HandleInternallyTaggedRawResponse,
+  HandleInternallyTaggedErrorDetail,
   ApiHandleMixedRequest,
   HandleMixedRawResponse,
+  HandleMixedErrorDetail,
   ApiHandleUntaggedRequest,
   HandleUntaggedRawResponse,
+  HandleUntaggedErrorDetail,
   EnumReprApiInterface,
 } from './EnumReprApi';
-export { EnumReprApi } from './EnumReprApi';
+export {
+  EnumReprApi,
+  HandleAdjacentlyTaggedError,
+  HandleExternallyTaggedError,
+  HandleInternallyTaggedError,
+  HandleMixedError,
+  HandleUntaggedError,
+} from './EnumReprApi';

@@ -23,75 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * CreateTestResourceResponse carries the response from createTestResource.
- */
-public class CreateTestResourceResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final CreateTestResourceResponse status200;
-
-    public CreateTestResourceResponse(int statusCode, Response raw,
-    CreateTestResourceResponse status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public CreateTestResourceResponse getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * DeleteTestResourceResponse carries the response from deleteTestResource.
- */
-public class DeleteTestResourceResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final DeleteTestResourceResponse status200;
-    private final HttpErrorResponse status4xx;
-    private final HttpErrorResponse status5xx;
-
-    public DeleteTestResourceResponse(int statusCode, Response raw,
-    DeleteTestResourceResponse status200,
-    HttpErrorResponse status4xx, HttpErrorResponse status5xx) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-        this.status4xx = status4xx;
-        this.status5xx = status5xx;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public DeleteTestResourceResponse getStatus200() {
-        return this.status200;
-    }
-
-    public HttpErrorResponse getStatus4xx() {
-        return this.status4xx;
-    }
-
-    public HttpErrorResponse getStatus5xx() {
-        return this.status5xx;
-    }
-}
-
-/**
  * TestResourceApi groups operations under the test-resource tag.
  */
 public class TestResourceApi {
@@ -114,8 +45,16 @@ public class TestResourceApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            CreateTestResourceExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new CreateTestResourceUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new CreateTestResourceException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -135,8 +74,22 @@ public class TestResourceApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            DeleteTestResourceExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    if (response.code() >= 400 && response.code() < 500) {
+                        detail = new DeleteTestResourceClientError(response.code(), response.headers(), responseBytes);break;
+                    }
+                    if (response.code() >= 500 && response.code() < 600) {
+                        detail = new DeleteTestResourceServerError(response.code(), response.headers(), responseBytes);break;
+                    }
+                    detail = new DeleteTestResourceUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new DeleteTestResourceException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -144,14 +97,6 @@ public class TestResourceApi {
         if (response.code() == 200) {
             status200 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<DeleteTestResourceResponse>() {}.getType());
         }
-        HttpErrorResponse status4xx = null;
-        if (response.code() >= 400 && response.code() < 500) {
-            status4xx = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<HttpErrorResponse>() {}.getType());
-        }
-        HttpErrorResponse status5xx = null;
-        if (response.code() >= 500 && response.code() < 600) {
-            status5xx = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<HttpErrorResponse>() {}.getType());
-        }
-        return new DeleteTestResourceResponse(response.code(), response, status200, status4xx, status5xx);
+        return new DeleteTestResourceResponse(response.code(), response, status200);
     }
 }

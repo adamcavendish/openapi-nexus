@@ -23,144 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * HandleAdjacentlyTaggedResponse carries the response from handleAdjacentlyTagged.
- */
-public class HandleAdjacentlyTaggedResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final AdjacentlyTaggedEnum status200;
-
-    public HandleAdjacentlyTaggedResponse(int statusCode, Response raw,
-    AdjacentlyTaggedEnum status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public AdjacentlyTaggedEnum getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * HandleExternallyTaggedResponse carries the response from handleExternallyTagged.
- */
-public class HandleExternallyTaggedResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final ExternallyTaggedEnum status200;
-
-    public HandleExternallyTaggedResponse(int statusCode, Response raw,
-    ExternallyTaggedEnum status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public ExternallyTaggedEnum getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * HandleInternallyTaggedResponse carries the response from handleInternallyTagged.
- */
-public class HandleInternallyTaggedResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final InternallyTaggedEnum status200;
-
-    public HandleInternallyTaggedResponse(int statusCode, Response raw,
-    InternallyTaggedEnum status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public InternallyTaggedEnum getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * HandleMixedResponse carries the response from handleMixed.
- */
-public class HandleMixedResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final MixedEnum status200;
-
-    public HandleMixedResponse(int statusCode, Response raw, MixedEnum status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public MixedEnum getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * HandleUntaggedResponse carries the response from handleUntagged.
- */
-public class HandleUntaggedResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final UntaggedEnum status200;
-
-    public HandleUntaggedResponse(int statusCode, Response raw, UntaggedEnum status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public UntaggedEnum getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * EnumReprApi groups operations under the enum-repr tag.
  */
 public class EnumReprApi {
@@ -183,8 +45,18 @@ public class EnumReprApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HandleAdjacentlyTaggedExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new HandleAdjacentlyTaggedBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new HandleAdjacentlyTaggedUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HandleAdjacentlyTaggedException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -207,8 +79,18 @@ public class EnumReprApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HandleExternallyTaggedExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new HandleExternallyTaggedBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new HandleExternallyTaggedUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HandleExternallyTaggedException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -231,8 +113,18 @@ public class EnumReprApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HandleInternallyTaggedExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new HandleInternallyTaggedBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new HandleInternallyTaggedUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HandleInternallyTaggedException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -255,8 +147,18 @@ public class EnumReprApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HandleMixedExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new HandleMixedBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new HandleMixedUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HandleMixedException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -279,8 +181,18 @@ public class EnumReprApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HandleUntaggedExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new HandleUntaggedBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new HandleUntaggedUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HandleUntaggedException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

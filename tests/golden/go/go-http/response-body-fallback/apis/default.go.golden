@@ -31,6 +31,45 @@ type GetFallbackNoBodyResponse struct {
 	Raw *http.Response
 }
 
+type GetFallbackNoBodyError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetFallbackNoBodyErrorDetail
+}
+
+func (e *GetFallbackNoBodyError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetFallbackNoBodyErrorDetail interface {
+	isGetFallbackNoBodyErrorDetail()
+}
+
+type GetFallbackNoBodyBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetFallbackNoBodyBadRequest) isGetFallbackNoBodyErrorDetail() {}
+
+func (d *GetFallbackNoBodyBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetFallbackNoBodyUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetFallbackNoBodyUnexpected) isGetFallbackNoBodyErrorDetail() {}
+
+func (d *GetFallbackNoBodyUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetFallbackNoBody calls GET /fallback/no-body.
 func (a *DefaultAPI) GetFallbackNoBody(ctx context.Context) (*GetFallbackNoBodyResponse, error) {
 	path := "/fallback/no-body"
@@ -44,11 +83,20 @@ func (a *DefaultAPI) GetFallbackNoBody(ctx context.Context) (*GetFallbackNoBodyR
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetFallbackNoBodyResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &GetFallbackNoBodyBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetFallbackNoBodyError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetFallbackNoBodyUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetFallbackNoBodyError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -58,6 +106,45 @@ type GetFallbackWithBodyResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.GetFallbackWithBodyResponse200
+}
+
+type GetFallbackWithBodyError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetFallbackWithBodyErrorDetail
+}
+
+func (e *GetFallbackWithBodyError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetFallbackWithBodyErrorDetail interface {
+	isGetFallbackWithBodyErrorDetail()
+}
+
+type GetFallbackWithBodyNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetFallbackWithBodyNotFound) isGetFallbackWithBodyErrorDetail() {}
+
+func (d *GetFallbackWithBodyNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetFallbackWithBodyUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetFallbackWithBodyUnexpected) isGetFallbackWithBodyErrorDetail() {}
+
+func (d *GetFallbackWithBodyUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetFallbackWithBody calls GET /fallback/with-body.
@@ -73,20 +160,34 @@ func (a *DefaultAPI) GetFallbackWithBody(ctx context.Context) (*GetFallbackWithB
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetFallbackWithBodyResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 404:
+				detail := &GetFallbackWithBodyNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetFallbackWithBodyError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetFallbackWithBodyUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetFallbackWithBodyError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.GetFallbackWithBodyResponse200
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

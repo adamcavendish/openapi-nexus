@@ -36,6 +36,34 @@ type CreateUserResponse struct {
 	Status200 *models.User
 }
 
+type CreateUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateUserErrorDetail
+}
+
+func (e *CreateUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateUserErrorDetail interface {
+	isCreateUserErrorDetail()
+}
+
+type CreateUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateUserUnexpected) isCreateUserErrorDetail() {}
+
+func (d *CreateUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateUser — Create user
 func (a *UserAPI) CreateUser(ctx context.Context, body *models.User) (*CreateUserResponse, error) {
 	path := "/user"
@@ -58,20 +86,31 @@ func (a *UserAPI) CreateUser(ctx context.Context, body *models.User) (*CreateUse
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.User
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -81,6 +120,34 @@ type CreateUsersWithListInputResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.User
+}
+
+type CreateUsersWithListInputError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateUsersWithListInputErrorDetail
+}
+
+func (e *CreateUsersWithListInputError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateUsersWithListInputErrorDetail interface {
+	isCreateUsersWithListInputErrorDetail()
+}
+
+type CreateUsersWithListInputUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateUsersWithListInputUnexpected) isCreateUsersWithListInputErrorDetail() {}
+
+func (d *CreateUsersWithListInputUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // CreateUsersWithListInput — Creates list of users with given input array
@@ -105,20 +172,31 @@ func (a *UserAPI) CreateUsersWithListInput(ctx context.Context, body []models.Us
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateUsersWithListInputResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateUsersWithListInputUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateUsersWithListInputError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.User
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -127,6 +205,45 @@ func (a *UserAPI) CreateUsersWithListInput(ctx context.Context, body []models.Us
 type LoginUserResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type LoginUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail LoginUserErrorDetail
+}
+
+func (e *LoginUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type LoginUserErrorDetail interface {
+	isLoginUserErrorDetail()
+}
+
+type LoginUserBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*LoginUserBadRequest) isLoginUserErrorDetail() {}
+
+func (d *LoginUserBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type LoginUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*LoginUserUnexpected) isLoginUserErrorDetail() {}
+
+func (d *LoginUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // LoginUser — Logs user into the system
@@ -149,11 +266,20 @@ func (a *UserAPI) LoginUser(ctx context.Context, username *string, password *str
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &LoginUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &LoginUserBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &LoginUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &LoginUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &LoginUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -162,6 +288,34 @@ func (a *UserAPI) LoginUser(ctx context.Context, username *string, password *str
 type LogoutUserResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type LogoutUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail LogoutUserErrorDetail
+}
+
+func (e *LogoutUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type LogoutUserErrorDetail interface {
+	isLogoutUserErrorDetail()
+}
+
+type LogoutUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*LogoutUserUnexpected) isLogoutUserErrorDetail() {}
+
+func (d *LogoutUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // LogoutUser — Logs out current logged in user session
@@ -177,11 +331,17 @@ func (a *UserAPI) LogoutUser(ctx context.Context) (*LogoutUserResponse, error) {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &LogoutUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &LogoutUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &LogoutUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -191,6 +351,56 @@ type GetUserByNameResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.User
+}
+
+type GetUserByNameError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetUserByNameErrorDetail
+}
+
+func (e *GetUserByNameError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetUserByNameErrorDetail interface {
+	isGetUserByNameErrorDetail()
+}
+
+type GetUserByNameBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByNameBadRequest) isGetUserByNameErrorDetail() {}
+
+func (d *GetUserByNameBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetUserByNameNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByNameNotFound) isGetUserByNameErrorDetail() {}
+
+func (d *GetUserByNameNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetUserByNameUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByNameUnexpected) isGetUserByNameErrorDetail() {}
+
+func (d *GetUserByNameUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetUserByName — Get user by user name
@@ -207,20 +417,37 @@ func (a *UserAPI) GetUserByName(ctx context.Context, username string) (*GetUserB
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetUserByNameResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &GetUserByNameBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByNameError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &GetUserByNameNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByNameError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetUserByNameUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByNameError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.User
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -229,6 +456,56 @@ func (a *UserAPI) GetUserByName(ctx context.Context, username string) (*GetUserB
 type UpdateUserResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type UpdateUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UpdateUserErrorDetail
+}
+
+func (e *UpdateUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UpdateUserErrorDetail interface {
+	isUpdateUserErrorDetail()
+}
+
+type UpdateUserBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdateUserBadRequest) isUpdateUserErrorDetail() {}
+
+func (d *UpdateUserBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdateUserNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdateUserNotFound) isUpdateUserErrorDetail() {}
+
+func (d *UpdateUserNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdateUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdateUserUnexpected) isUpdateUserErrorDetail() {}
+
+func (d *UpdateUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // UpdateUser — Update user
@@ -254,11 +531,23 @@ func (a *UserAPI) UpdateUser(ctx context.Context, username string, body *models.
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UpdateUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &UpdateUserBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdateUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &UpdateUserNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdateUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &UpdateUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdateUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -267,6 +556,56 @@ func (a *UserAPI) UpdateUser(ctx context.Context, username string, body *models.
 type DeleteUserResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type DeleteUserError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail DeleteUserErrorDetail
+}
+
+func (e *DeleteUserError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type DeleteUserErrorDetail interface {
+	isDeleteUserErrorDetail()
+}
+
+type DeleteUserBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteUserBadRequest) isDeleteUserErrorDetail() {}
+
+func (d *DeleteUserBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DeleteUserNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteUserNotFound) isDeleteUserErrorDetail() {}
+
+func (d *DeleteUserNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DeleteUserUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteUserUnexpected) isDeleteUserErrorDetail() {}
+
+func (d *DeleteUserUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // DeleteUser — Delete user
@@ -283,11 +622,23 @@ func (a *UserAPI) DeleteUser(ctx context.Context, username string) (*DeleteUserR
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &DeleteUserResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &DeleteUserBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &DeleteUserNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &DeleteUserUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteUserError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

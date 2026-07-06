@@ -20,10 +20,116 @@ import okhttp3.Response
 data class UpdatePetResponse(val statusCode: Int, val raw: Response, val status200: Pet? = null) {
 }
 
+sealed interface UpdatePetExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class UpdatePetException(
+    val detail: UpdatePetExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class UpdatePetBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class UpdatePetNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class UpdatePetValidation(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class UpdatePetUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * AddPetResponse carries the response from addPet.
  */
 data class AddPetResponse(val statusCode: Int, val raw: Response, val status200: Pet? = null) {
+}
+
+sealed interface AddPetExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class AddPetException(
+    val detail: AddPetExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class AddPetBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : AddPetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class AddPetValidation(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : AddPetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class AddPetUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : AddPetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -33,6 +139,44 @@ data class FindPetsByStatusResponse(val statusCode: Int, val raw: Response,
 val status200: List<Pet>? = null) {
 }
 
+sealed interface FindPetsByStatusExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class FindPetsByStatusException(
+    val detail: FindPetsByStatusExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class FindPetsByStatusBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : FindPetsByStatusExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class FindPetsByStatusUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : FindPetsByStatusExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * FindPetsByTagsResponse carries the response from findPetsByTags.
  */
@@ -40,10 +184,96 @@ data class FindPetsByTagsResponse(val statusCode: Int, val raw: Response,
 val status200: List<Pet>? = null) {
 }
 
+sealed interface FindPetsByTagsExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class FindPetsByTagsException(
+    val detail: FindPetsByTagsExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class FindPetsByTagsBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : FindPetsByTagsExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class FindPetsByTagsUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : FindPetsByTagsExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * GetPetByIdResponse carries the response from getPetById.
  */
 data class GetPetByIdResponse(val statusCode: Int, val raw: Response, val status200: Pet? = null) {
+}
+
+sealed interface GetPetByIdExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetPetByIdException(
+    val detail: GetPetByIdExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetPetByIdBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetPetByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class GetPetByIdNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetPetByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class GetPetByIdUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetPetByIdExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -53,10 +283,86 @@ data class UpdatePetWithFormResponse(val statusCode: Int, val raw: Response,
 val status200: Pet? = null) {
 }
 
+sealed interface UpdatePetWithFormExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class UpdatePetWithFormException(
+    val detail: UpdatePetWithFormExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class UpdatePetWithFormBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetWithFormExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class UpdatePetWithFormUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdatePetWithFormExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * DeletePetResponse carries the response from deletePet.
  */
 data class DeletePetResponse(val statusCode: Int, val raw: Response) {
+}
+
+sealed interface DeletePetExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class DeletePetException(
+    val detail: DeletePetExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class DeletePetBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : DeletePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class DeletePetUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : DeletePetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -64,6 +370,34 @@ data class DeletePetResponse(val statusCode: Int, val raw: Response) {
  */
 data class UploadFileResponse(val statusCode: Int, val raw: Response,
 val status200: UploadResponse? = null) {
+}
+
+sealed interface UploadFileExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class UploadFileException(
+    val detail: UploadFileExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class UploadFileUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UploadFileExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -83,13 +417,28 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: UpdatePetExceptionDetail = when (response.code)  {
+                400 -> UpdatePetBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                404 -> UpdatePetNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                422 -> UpdatePetValidation(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    UpdatePetUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw UpdatePetException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Pet? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type)
+        }
         return UpdatePetResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -104,13 +453,27 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: AddPetExceptionDetail = when (response.code)  {
+                400 -> AddPetBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                422 -> AddPetValidation(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    AddPetUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw AddPetException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Pet? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type)
+        }
         return AddPetResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -125,13 +488,26 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: FindPetsByStatusExceptionDetail = when (response.code)  {
+                400 -> FindPetsByStatusBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    FindPetsByStatusUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw FindPetsByStatusException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: List<Pet>? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<List<Pet>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Pet>>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<List<Pet>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Pet>>() {}.type)
+        }
         return FindPetsByStatusResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -146,13 +522,26 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: FindPetsByTagsExceptionDetail = when (response.code)  {
+                400 -> FindPetsByTagsBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    FindPetsByTagsUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw FindPetsByTagsException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: List<Pet>? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<List<Pet>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Pet>>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<List<Pet>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Pet>>() {}.type)
+        }
         return FindPetsByTagsResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -165,13 +554,27 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetPetByIdExceptionDetail = when (response.code)  {
+                400 -> GetPetByIdBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                404 -> GetPetByIdNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    GetPetByIdUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetPetByIdException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Pet? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type)
+        }
         return GetPetByIdResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -191,13 +594,26 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: UpdatePetWithFormExceptionDetail = when (response.code)  {
+                400 -> UpdatePetWithFormBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    UpdatePetWithFormUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw UpdatePetWithFormException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Pet? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Pet>(responseText.ifEmpty { "null" }, object : TypeToken<Pet>() {}.type)
+        }
         return UpdatePetWithFormResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -210,8 +626,17 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: DeletePetExceptionDetail = when (response.code)  {
+                400 -> DeletePetBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    DeletePetUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw DeletePetException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
         return DeletePetResponse(statusCode = response.code, raw = response)
     }
@@ -229,13 +654,25 @@ class PetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: UploadFileExceptionDetail = when (response.code)  {
+                else ->  {
+                    UploadFileUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw UploadFileException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: UploadResponse? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<UploadResponse>(responseText.ifEmpty { "null" }, object : TypeToken<UploadResponse>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<UploadResponse>(responseText.ifEmpty { "null" }, object : TypeToken<UploadResponse>() {}.type)
+        }
         return UploadFileResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

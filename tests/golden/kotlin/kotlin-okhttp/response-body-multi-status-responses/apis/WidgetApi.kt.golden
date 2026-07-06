@@ -9,6 +9,7 @@ import com.example.sdk.runtime.ApiClient
 import com.example.sdk.runtime.ApiException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response
 
 /**
@@ -16,8 +17,49 @@ import okhttp3.Response
  */
 data class ListWidgetsResponse(val statusCode: Int, val raw: Response,
 val status200: List<Widget>? = null,
-val status206: WidgetListPartial? = null,
-val status404: ErrorResponse? = null) {
+val status206: WidgetListPartial? = null) {
+}
+
+sealed interface ListWidgetsExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class ListWidgetsException(
+    val detail: ListWidgetsExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class ListWidgetsNotFound(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ListWidgetsExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): ErrorResponse = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type)
+}
+
+class ListWidgetsUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ListWidgetsExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -35,17 +77,31 @@ class WidgetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: ListWidgetsExceptionDetail = when (response.code)  {
+                404 -> ListWidgetsNotFound(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    ListWidgetsUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw ListWidgetsException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: List<Widget>? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<List<Widget>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Widget>>() {}.type) else null
+        var status206: WidgetListPartial? = null
 
-        val status206 = if (response.code == 206) gson.fromJson<WidgetListPartial>(responseText.ifEmpty { "null" }, object : TypeToken<WidgetListPartial>() {}.type) else null
-
-        val status404 = if (response.code == 404) gson.fromJson<ErrorResponse>(responseText.ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type) else null
-        return ListWidgetsResponse(statusCode = response.code, raw = response, status200 = status200, status206 = status206, status404 = status404)
+        if (response.code == 200) {
+            status200 = gson.fromJson<List<Widget>>(responseText.ifEmpty { "null" }, object : TypeToken<List<Widget>>() {}.type)
+        }
+        else if (response.code == 206) {
+            status206 = gson.fromJson<WidgetListPartial>(responseText.ifEmpty { "null" }, object : TypeToken<WidgetListPartial>() {}.type)
+        }
+        return ListWidgetsResponse(statusCode = response.code, raw = response, status200 = status200, status206 = status206)
     }
 }

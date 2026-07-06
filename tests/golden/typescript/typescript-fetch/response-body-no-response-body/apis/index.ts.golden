@@ -3,5 +3,10 @@
  *
  * No Response Body API — 1.0.0
  */
-export type { ApiUpdateFooBarRequest, UpdateFooBarRawResponse, FooApiInterface } from './FooApi';
-export { FooApi } from './FooApi';
+export type {
+  ApiUpdateFooBarRequest,
+  UpdateFooBarRawResponse,
+  UpdateFooBarErrorDetail,
+  FooApiInterface,
+} from './FooApi';
+export { FooApi, UpdateFooBarError } from './FooApi';

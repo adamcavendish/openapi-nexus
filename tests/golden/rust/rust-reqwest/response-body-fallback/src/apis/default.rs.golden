@@ -4,7 +4,7 @@
 // Response Fallback Test API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -22,22 +22,40 @@ impl<'a> DefaultApi<'a> {
     /// GET /fallback/no-body
     pub async fn get_fallback_no_body(
         &self,
-    ) -> Result<GetFallbackNoBodyResponse, Error> {
+    ) -> Result<GetFallbackNoBodyResponse, GetFallbackNoBodyError> {
         let path = "/fallback/no-body".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(GetFallbackNoBodyResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = GetFallbackNoBodyResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(GetFallbackNoBodyError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(GetFallbackNoBodyError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// GET /fallback/with-body
     pub async fn get_fallback_with_body(
         &self,
-    ) -> Result<GetFallbackWithBodyResponse, Error> {
+    ) -> Result<GetFallbackWithBodyResponse, GetFallbackWithBodyError> {
         let path = "/fallback/with-body".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetFallbackWithBodyResponse { status_code, data: None };
         match status_code {
@@ -45,6 +63,18 @@ impl<'a> DefaultApi<'a> {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetFallbackWithBodyError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetFallbackWithBodyError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -56,9 +86,75 @@ pub struct GetFallbackNoBodyResponse {
     pub status_code: u16,
 }
 
+/// Error from `get_fallback_no_body`.
+#[derive(Debug)]
+pub enum GetFallbackNoBodyError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetFallbackNoBodyError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetFallbackNoBodyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetFallbackNoBodyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_fallback_with_body`.
 #[derive(Debug)]
 pub struct GetFallbackWithBodyResponse {
     pub status_code: u16,
     pub data: Option<crate::models::GetFallbackWithBodyResponse200>,
+}
+
+/// Error from `get_fallback_with_body`.
+#[derive(Debug)]
+pub enum GetFallbackWithBodyError {
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetFallbackWithBodyError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetFallbackWithBodyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetFallbackWithBodyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

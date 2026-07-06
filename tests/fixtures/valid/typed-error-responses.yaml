@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: Typed Error Responses API
+  version: 1.0.0
+paths:
+  /resources:
+    post:
+      tags:
+        - Resources
+      operationId: createResource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResourceRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedResource'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+        '409':
+          description: Conflict.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+        '422':
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '423':
+          description: Locked with the same schema as 409.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+        '424':
+          description: Same shape as validation but a distinct schema name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SameShapeValidationError'
+        5XX:
+          description: Server failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+        default:
+          description: Fallback error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultError'
+  /resources-with-wildcard-success:
+    post:
+      tags:
+        - Resources
+      operationId: createResourceWithWildcardSuccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResourceRequest'
+      responses:
+        2XX:
+          description: Generic success listed before the exact success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedResource'
+        '201':
+          description: Created exact success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedResource'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+  /no-success-body:
+    get:
+      tags:
+        - Resources
+      operationId: checkNoSuccessBody
+      responses:
+        '200':
+          description: Successful response with no documented body.
+        '503':
+          description: Server failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+components:
+  schemas:
+    CreateResourceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    CreatedResource:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    BadRequestError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ConflictError:
+      type: object
+      required:
+        - resourceId
+        - message
+      properties:
+        resourceId:
+          type: string
+        message:
+          type: string
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    SameShapeValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    ServerError:
+      type: object
+      required:
+        - retryable
+        - message
+      properties:
+        retryable:
+          type: boolean
+        message:
+          type: string
+    DefaultError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string

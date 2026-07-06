@@ -4,20 +4,95 @@
 
 from __future__ import annotations
 
+import json
+
+from collections.abc import Mapping
+
 from ..models.error_response import ErrorResponse
 from ..models.foo_request import FooRequest
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
 
+class UpdateFooBarBadRequest:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+        self._body_loaded: bool = False
+        self._body_value: ErrorResponse | None = None
+        self._body_error: Exception | None = None
+    @property
+    def body(self) -> ErrorResponse:
+        if not self._body_loaded:
+            try:
+                self._body_value = ErrorResponse.from_dict(json.loads(self.raw_body.decode("utf-8")))
+            except Exception as exc:
+                self._body_error = exc
+            self._body_loaded = True
+        if self._body_error is not None:
+            raise self._body_error
+        if self._body_value is None:
+            raise RuntimeError("error body was not decoded")
+        return self._body_value
+
+class UpdateFooBarInternalServerError:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+        self._body_loaded: bool = False
+        self._body_value: ErrorResponse | None = None
+        self._body_error: Exception | None = None
+    @property
+    def body(self) -> ErrorResponse:
+        if not self._body_loaded:
+            try:
+                self._body_value = ErrorResponse.from_dict(json.loads(self.raw_body.decode("utf-8")))
+            except Exception as exc:
+                self._body_error = exc
+            self._body_loaded = True
+        if self._body_error is not None:
+            raise self._body_error
+        if self._body_value is None:
+            raise RuntimeError("error body was not decoded")
+        return self._body_value
+
+class UpdateFooBarUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type UpdateFooBarErrorDetail = (
+    UpdateFooBarBadRequest
+    | UpdateFooBarInternalServerError
+    | UpdateFooBarUnexpected
+)
+
+class UpdateFooBarError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: UpdateFooBarErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: UpdateFooBarErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
+
 class FooApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def update_foo_bar(self, foo_id: str, *, body: FooRequest) -> ErrorResponse:
+    def update_foo_bar(self, foo_id: str, *, body: FooRequest) -> None:
         path = f"/foo/bar"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
         response = self._client.request("PATCH", path, json=body.to_dict(), headers=headers)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason_phrase, response.content)
-        return ErrorResponse.from_dict(response.json())
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 400:
+                detail = UpdateFooBarBadRequest(response.status_code, response.headers, response.content)
+            elif response.status_code == 500:
+                detail = UpdateFooBarInternalServerError(response.status_code, response.headers, response.content)
+            else:
+                detail = UpdateFooBarUnexpected(response.status_code, response.headers, response.content)
+            raise UpdateFooBarError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
+        return None

@@ -37,6 +37,34 @@ type SendOptionalPartsResponse struct {
 	Raw *http.Response
 }
 
+type SendOptionalPartsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendOptionalPartsErrorDetail
+}
+
+func (e *SendOptionalPartsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendOptionalPartsErrorDetail interface {
+	isSendOptionalPartsErrorDetail()
+}
+
+type SendOptionalPartsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendOptionalPartsUnexpected) isSendOptionalPartsErrorDetail() {}
+
+func (d *SendOptionalPartsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // SendOptionalParts calls POST /multipart/optional.
 func (a *MultipartAPI) SendOptionalParts(ctx context.Context,
 body *models.SendOptionalPartsMultipartRequestBody) (*SendOptionalPartsResponse, error) {
@@ -145,11 +173,17 @@ body *models.SendOptionalPartsMultipartRequestBody) (*SendOptionalPartsResponse,
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendOptionalPartsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendOptionalPartsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendOptionalPartsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -158,6 +192,34 @@ body *models.SendOptionalPartsMultipartRequestBody) (*SendOptionalPartsResponse,
 type SendTextFieldsResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendTextFieldsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendTextFieldsErrorDetail
+}
+
+func (e *SendTextFieldsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendTextFieldsErrorDetail interface {
+	isSendTextFieldsErrorDetail()
+}
+
+type SendTextFieldsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendTextFieldsUnexpected) isSendTextFieldsErrorDetail() {}
+
+func (d *SendTextFieldsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendTextFields calls POST /multipart/text-only.
@@ -224,11 +286,17 @@ body *models.SendTextFieldsMultipartRequestBody) (*SendTextFieldsResponse, error
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendTextFieldsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendTextFieldsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendTextFieldsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

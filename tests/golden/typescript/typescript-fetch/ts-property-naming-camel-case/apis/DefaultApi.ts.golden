@@ -6,8 +6,8 @@
  */
 import type { NamingConventionTest, NamingConventionTest$Wire } from '../models/NamingConventionTest';
 import { namingConventionTestFromJSON, namingConventionTestToJSON } from '../models/NamingConventionTest';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiGetWithQueryParamsRequest {
   snakeCaseParam: string;
@@ -30,11 +30,36 @@ export interface ApiTestNamingConventionsRequest {
 
 export type GetWithQueryParamsRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type TestNamingConventionsRawResponse =
   | JSONApiResponse<NamingConventionTest> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type GetWithQueryParamsErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetWithQueryParamsError extends ResponseError {
+  readonly detail: GetWithQueryParamsErrorDetail;
+
+  constructor(response: Response, detail: GetWithQueryParamsErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type TestNamingConventionsErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class TestNamingConventionsError extends ResponseError {
+  readonly detail: TestNamingConventionsErrorDetail;
+
+  constructor(response: Response, detail: TestNamingConventionsErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -114,11 +139,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new GetWithQueryParamsError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -157,11 +189,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new TestNamingConventionsError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response, (json) => namingConventionTestFromJSON(json as NamingConventionTest$Wire)) as JSONApiResponse<NamingConventionTest> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

@@ -5,8 +5,8 @@
  * Covers explicit multipart part content types.
  */
 import type { UploadEncodedAssetMultipartRequestBody } from '../models/UploadEncodedAssetMultipartRequestBody';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, RequiredError, VoidApiResponse, multipartHeaderValue, uploadFileData, uploadFileFilename } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, RequiredError, ResponseError, VoidApiResponse, multipartHeaderValue, uploadFileData, uploadFileFilename } from '../runtime/runtime';
 
 export interface ApiUploadEncodedAssetRequest {
   body: UploadEncodedAssetMultipartRequestBody;
@@ -14,7 +14,20 @@ export interface ApiUploadEncodedAssetRequest {
 
 export type UploadEncodedAssetRawResponse =
   | VoidApiResponse & { status: 204 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
+
+
+export type UploadEncodedAssetErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UploadEncodedAssetError extends ResponseError {
+  readonly detail: UploadEncodedAssetErrorDetail;
+
+  constructor(response: Response, detail: UploadEncodedAssetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface TransferApiInterface {
@@ -77,11 +90,18 @@ export class TransferApi extends BaseAPI implements TransferApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UploadEncodedAssetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 

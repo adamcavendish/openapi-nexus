@@ -6,6 +6,7 @@ package apis
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -28,6 +29,34 @@ type GetTestResponse struct {
 	Raw *http.Response
 }
 
+type GetTestError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetTestErrorDetail
+}
+
+func (e *GetTestError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetTestErrorDetail interface {
+	isGetTestErrorDetail()
+}
+
+type GetTestUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetTestUnexpected) isGetTestErrorDetail() {}
+
+func (d *GetTestUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetTest calls GET /test.
 func (a *DefaultAPI) GetTest(ctx context.Context) (*GetTestResponse, error) {
 	path := "/test"
@@ -41,11 +70,17 @@ func (a *DefaultAPI) GetTest(ctx context.Context) (*GetTestResponse, error) {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetTestResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetTestUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetTestError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

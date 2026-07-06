@@ -7,12 +7,14 @@
 export type {
   ApiCreateItemWithBodyConflictRequest,
   CreateItemWithBodyConflictRawResponse,
+  CreateItemWithBodyConflictErrorDetail,
   ItemsApiInterface,
 } from './ItemsApi';
-export { ItemsApi } from './ItemsApi';
+export { ItemsApi, CreateItemWithBodyConflictError } from './ItemsApi';
 export type {
   ApiGetUserByIdDuplicateRequest,
   GetUserByIdDuplicateRawResponse,
+  GetUserByIdDuplicateErrorDetail,
   UsersApiInterface,
 } from './UsersApi';
-export { UsersApi } from './UsersApi';
+export { UsersApi, GetUserByIdDuplicateError } from './UsersApi';

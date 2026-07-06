@@ -16,6 +16,7 @@
 export type {
   ApiCreateEventRequest,
   CreateEventRawResponse,
+  CreateEventErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, CreateEventError } from './DefaultApi';

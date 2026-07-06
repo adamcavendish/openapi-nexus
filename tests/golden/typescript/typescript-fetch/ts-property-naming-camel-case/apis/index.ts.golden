@@ -7,8 +7,10 @@
 export type {
   ApiGetWithQueryParamsRequest,
   GetWithQueryParamsRawResponse,
+  GetWithQueryParamsErrorDetail,
   ApiTestNamingConventionsRequest,
   TestNamingConventionsRawResponse,
+  TestNamingConventionsErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, GetWithQueryParamsError, TestNamingConventionsError } from './DefaultApi';

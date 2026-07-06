@@ -36,6 +36,34 @@ type SendJsonPreferredResponse struct {
 	Raw *http.Response
 }
 
+type SendJsonPreferredError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendJsonPreferredErrorDetail
+}
+
+func (e *SendJsonPreferredError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendJsonPreferredErrorDetail interface {
+	isSendJsonPreferredErrorDetail()
+}
+
+type SendJsonPreferredUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendJsonPreferredUnexpected) isSendJsonPreferredErrorDetail() {}
+
+func (d *SendJsonPreferredUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // SendJsonPreferred calls POST /request/json-vs-multipart.
 func (a *MediaAPI) SendJsonPreferred(ctx context.Context, body *models.Payload) (*SendJsonPreferredResponse, error) {
 	path := "/request/json-vs-multipart"
@@ -58,11 +86,17 @@ func (a *MediaAPI) SendJsonPreferred(ctx context.Context, body *models.Payload) 
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendJsonPreferredResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendJsonPreferredUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendJsonPreferredError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -71,6 +105,34 @@ func (a *MediaAPI) SendJsonPreferred(ctx context.Context, body *models.Payload) 
 type SendParameterizedMultipartResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendParameterizedMultipartError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendParameterizedMultipartErrorDetail
+}
+
+func (e *SendParameterizedMultipartError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendParameterizedMultipartErrorDetail interface {
+	isSendParameterizedMultipartErrorDetail()
+}
+
+type SendParameterizedMultipartUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendParameterizedMultipartUnexpected) isSendParameterizedMultipartErrorDetail() {}
+
+func (d *SendParameterizedMultipartUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendParameterizedMultipart calls POST /request/parameterized-multipart.
@@ -129,11 +191,17 @@ body *models.SendParameterizedMultipartMultipartRequestBody) (*SendParameterized
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendParameterizedMultipartResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendParameterizedMultipartUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendParameterizedMultipartError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -142,6 +210,34 @@ body *models.SendParameterizedMultipartMultipartRequestBody) (*SendParameterized
 type SendVendorJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendVendorJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendVendorJsonErrorDetail
+}
+
+func (e *SendVendorJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendVendorJsonErrorDetail interface {
+	isSendVendorJsonErrorDetail()
+}
+
+type SendVendorJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendVendorJsonUnexpected) isSendVendorJsonErrorDetail() {}
+
+func (d *SendVendorJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendVendorJson calls PATCH /request/vendor-json.
@@ -166,11 +262,17 @@ func (a *MediaAPI) SendVendorJson(ctx context.Context, body *models.Payload) (*S
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendVendorJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendVendorJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendVendorJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -180,6 +282,34 @@ type GetOctetPreferredResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 []byte
+}
+
+type GetOctetPreferredError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetOctetPreferredErrorDetail
+}
+
+func (e *GetOctetPreferredError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetOctetPreferredErrorDetail interface {
+	isGetOctetPreferredErrorDetail()
+}
+
+type GetOctetPreferredUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetOctetPreferredUnexpected) isGetOctetPreferredErrorDetail() {}
+
+func (d *GetOctetPreferredUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetOctetPreferred calls GET /response/octet-before-xml.
@@ -195,20 +325,28 @@ func (a *MediaAPI) GetOctetPreferred(ctx context.Context) (*GetOctetPreferredRes
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetOctetPreferredResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetOctetPreferredUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetOctetPreferredError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
-			payload, err := io.ReadAll(httpResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("read response: %w", err)
-			}
+			payload := append([]byte(nil), responseBody...)
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -218,6 +356,34 @@ type GetTextPreferredResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *string
+}
+
+type GetTextPreferredError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetTextPreferredErrorDetail
+}
+
+func (e *GetTextPreferredError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetTextPreferredErrorDetail interface {
+	isGetTextPreferredErrorDetail()
+}
+
+type GetTextPreferredUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetTextPreferredUnexpected) isGetTextPreferredErrorDetail() {}
+
+func (d *GetTextPreferredUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetTextPreferred calls GET /response/text-before-xml.
@@ -233,21 +399,28 @@ func (a *MediaAPI) GetTextPreferred(ctx context.Context) (*GetTextPreferredRespo
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetTextPreferredResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetTextPreferredUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetTextPreferredError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
-			bodyBytes, err := io.ReadAll(httpResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("read response: %w", err)
-			}
-			payload := string(bodyBytes)
+			payload := string(responseBody)
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -257,6 +430,34 @@ type GetVendorJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Payload
+}
+
+type GetVendorJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetVendorJsonErrorDetail
+}
+
+func (e *GetVendorJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetVendorJsonErrorDetail interface {
+	isGetVendorJsonErrorDetail()
+}
+
+type GetVendorJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetVendorJsonUnexpected) isGetVendorJsonErrorDetail() {}
+
+func (d *GetVendorJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetVendorJson calls GET /response/vendor-json.
@@ -272,20 +473,31 @@ func (a *MediaAPI) GetVendorJson(ctx context.Context) (*GetVendorJsonResponse, e
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetVendorJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetVendorJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetVendorJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Payload
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

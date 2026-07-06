@@ -6,8 +6,8 @@
  */
 import type { UploadAssetMultipartRequestBody } from '../models/UploadAssetMultipartRequestBody';
 import type { UploadMetadata } from '../models/UploadMetadata';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, BlobApiResponse, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse, multipartHeaderValue, uploadFileData, uploadFileFilename } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, BlobApiResponse, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse, multipartHeaderValue, uploadFileData, uploadFileFilename } from '../runtime/runtime';
 
 export interface ApiDownloadAssetRequest {
   assetId: string;
@@ -19,13 +19,38 @@ export interface ApiUploadAssetRequest {
 
 export type DownloadAssetRawResponse =
   | BlobApiResponse & { status: 200 }
-  | VoidApiResponse & { status: 404 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type UploadAssetRawResponse =
   | JSONApiResponse<UploadMetadata> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type DownloadAssetErrorDetail =
+  { kind: 'notFound'; status: 404; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class DownloadAssetError extends ResponseError {
+  readonly detail: DownloadAssetErrorDetail;
+
+  constructor(response: Response, detail: DownloadAssetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type UploadAssetErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UploadAssetError extends ResponseError {
+  readonly detail: UploadAssetErrorDetail;
+
+  constructor(response: Response, detail: UploadAssetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface TransferApiInterface {
@@ -70,14 +95,22 @@ export class TransferApi extends BaseAPI implements TransferApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 404) {
+        let errorValue: Promise<void> | undefined;
+        throw new DownloadAssetError(response, { kind: 'notFound', status: response.status as 404, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new DownloadAssetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new BlobApiResponse(response) as BlobApiResponse & { status: 200 };
     }
-    else if (response.status === 404) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 404 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -131,14 +164,22 @@ export class TransferApi extends BaseAPI implements TransferApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new UploadAssetError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UploadAssetError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<UploadMetadata> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

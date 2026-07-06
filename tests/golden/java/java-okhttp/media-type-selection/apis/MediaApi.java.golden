@@ -24,150 +24,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * SendJsonPreferredResponse carries the response from sendJsonPreferred.
- */
-public class SendJsonPreferredResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendJsonPreferredResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * SendParameterizedMultipartResponse carries the response from sendParameterizedMultipart.
- */
-public class SendParameterizedMultipartResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendParameterizedMultipartResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * SendVendorJsonResponse carries the response from sendVendorJson.
- */
-public class SendVendorJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public SendVendorJsonResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * GetOctetPreferredResponse carries the response from getOctetPreferred.
- */
-public class GetOctetPreferredResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final byte[] status200;
-
-    public GetOctetPreferredResponse(int statusCode, Response raw, byte[] status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public byte[] getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * GetTextPreferredResponse carries the response from getTextPreferred.
- */
-public class GetTextPreferredResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final String status200;
-
-    public GetTextPreferredResponse(int statusCode, Response raw, String status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public String getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * GetVendorJsonResponse carries the response from getVendorJson.
- */
-public class GetVendorJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Payload status200;
-
-    public GetVendorJsonResponse(int statusCode, Response raw, Payload status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Payload getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * MediaApi groups operations under the media tag.
  */
 public class MediaApi {
@@ -190,8 +46,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendJsonPreferredExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendJsonPreferredUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendJsonPreferredException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendJsonPreferredResponse(response.code(), response);
     }
@@ -212,8 +76,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendParameterizedMultipartExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendParameterizedMultipartUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendParameterizedMultipartException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendParameterizedMultipartResponse(response.code(), response);
     }
@@ -230,8 +102,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            SendVendorJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new SendVendorJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new SendVendorJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new SendVendorJsonResponse(response.code(), response);
     }
@@ -245,8 +125,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetOctetPreferredExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetOctetPreferredUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetOctetPreferredException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -266,8 +154,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetTextPreferredExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetTextPreferredUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetTextPreferredException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -287,8 +183,16 @@ public class MediaApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetVendorJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetVendorJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetVendorJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

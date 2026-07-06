@@ -13,8 +13,8 @@ use sigil_stitch::lang::java::Java;
 use sigil_stitch::prelude::*;
 
 use super::util::{
-    build_java_getter, escape_java_string, java_boxed_type_str, java_field_name, java_type_str,
-    type_uses_list, type_uses_map, unique_name,
+    build_java_getter, escape_java_string, java_boxed_type_str, java_field_name, java_getter_name,
+    java_type_str, type_uses_list, type_uses_map, unique_name,
 };
 
 const RENDER_WIDTH: usize = 100;
@@ -59,6 +59,23 @@ fn request_input_model_file(
     if needs_upload {
         content.push_str(&format!("import {package_name}.runtime.UploadFile;\n\n"));
     }
+    let needs_list = model
+        .fields
+        .iter()
+        .any(|field| type_uses_list(&field.type_expr));
+    if needs_list {
+        content.push_str("import java.util.List;\n");
+    }
+    let needs_map = model
+        .fields
+        .iter()
+        .any(|field| type_uses_map(&field.type_expr));
+    if needs_map {
+        content.push_str("import java.util.Map;\n");
+    }
+    if needs_list || needs_map {
+        content.push('\n');
+    }
     content.push_str(&format!("public final class {class_name} {{\n"));
     for field in &model.fields {
         content.push_str(&format!(
@@ -90,7 +107,7 @@ fn request_input_model_file(
     content.push_str("    }\n\n");
     for field in &model.fields {
         let field_name = java_field_name(&field.wire_name);
-        let getter = format!("get{}", field.wire_name.to_pascal_case());
+        let getter = java_getter_name(&field.wire_name);
         content.push_str(&format!(
             "    public {} {}() {{\n        return {};\n    }}\n\n",
             request_input_java_type(field),
@@ -237,7 +254,7 @@ fn emit_object(schema: &IrSchema, obj: &IrObject, package_name: &str) -> Option<
         } else {
             java_boxed_type_str(&prop.type_expr)
         };
-        let getter_name = format!("get{}", prop.name.to_pascal_case());
+        let getter_name = java_getter_name(&prop.name);
         tb = tb.add_method(build_java_getter(&getter_name, &type_str, &field_name));
     }
 
@@ -386,6 +403,18 @@ fn emit_intersection(
             (member_type, field_name)
         })
         .collect();
+    if member_bindings
+        .iter()
+        .any(|(member_type, _)| member_type.contains("List<"))
+    {
+        file = file.add_import(ImportSpec::named("java.util", "List"));
+    }
+    if member_bindings
+        .iter()
+        .any(|(member_type, _)| member_type.contains("Map<"))
+    {
+        file = file.add_import(ImportSpec::named("java.util", "Map"));
+    }
 
     for (member_type, field_name) in &member_bindings {
         tb = tb.add_field(
@@ -476,6 +505,12 @@ fn emit_comment_class(
 ) -> Option<FileSpec> {
     let mut file =
         FileSpec::builder_with("model.java", Java::new()).header(package_header(package_name));
+    if underlying_type.contains("List<") {
+        file = file.add_import(ImportSpec::named("java.util", "List"));
+    }
+    if underlying_type.contains("Map<") {
+        file = file.add_import(ImportSpec::named("java.util", "Map"));
+    }
 
     let mut tb = TypeSpec::builder(name, TypeKind::Struct).visibility(Visibility::Public);
     if let Some(d) = doc {

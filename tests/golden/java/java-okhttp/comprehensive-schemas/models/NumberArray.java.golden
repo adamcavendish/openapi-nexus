@@ -5,6 +5,8 @@
 
 package com.example.sdk.models;
 
+import java.util.List;
+
 /**
  * Array of numbers
  */

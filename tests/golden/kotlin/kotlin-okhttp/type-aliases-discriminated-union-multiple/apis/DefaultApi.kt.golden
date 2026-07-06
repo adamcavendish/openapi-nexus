@@ -24,11 +24,67 @@ data class CreateContainerResponse(val statusCode: Int, val raw: Response,
 val status200: ContainerKind? = null) {
 }
 
+sealed interface CreateContainerExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateContainerException(
+    val detail: CreateContainerExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateContainerUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateContainerExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * CreateVolumeResponse carries the response from createVolume.
  */
 data class CreateVolumeResponse(val statusCode: Int, val raw: Response,
 val status200: VolumeKind? = null) {
+}
+
+sealed interface CreateVolumeExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateVolumeException(
+    val detail: CreateVolumeExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateVolumeUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateVolumeExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -48,13 +104,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateContainerExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateContainerUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateContainerException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: ContainerKind? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<ContainerKind>(responseText.ifEmpty { "null" }, object : TypeToken<ContainerKind>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<ContainerKind>(responseText.ifEmpty { "null" }, object : TypeToken<ContainerKind>() {}.type)
+        }
         return CreateContainerResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -69,13 +137,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateVolumeExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateVolumeUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateVolumeException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: VolumeKind? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<VolumeKind>(responseText.ifEmpty { "null" }, object : TypeToken<VolumeKind>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<VolumeKind>(responseText.ifEmpty { "null" }, object : TypeToken<VolumeKind>() {}.type)
+        }
         return CreateVolumeResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

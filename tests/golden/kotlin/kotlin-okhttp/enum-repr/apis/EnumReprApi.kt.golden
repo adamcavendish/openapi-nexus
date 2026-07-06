@@ -21,11 +21,87 @@ data class HandleAdjacentlyTaggedResponse(val statusCode: Int, val raw: Response
 val status200: AdjacentlyTaggedEnum? = null) {
 }
 
+sealed interface HandleAdjacentlyTaggedExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class HandleAdjacentlyTaggedException(
+    val detail: HandleAdjacentlyTaggedExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class HandleAdjacentlyTaggedBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleAdjacentlyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class HandleAdjacentlyTaggedUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleAdjacentlyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * HandleExternallyTaggedResponse carries the response from handleExternallyTagged.
  */
 data class HandleExternallyTaggedResponse(val statusCode: Int, val raw: Response,
 val status200: ExternallyTaggedEnum? = null) {
+}
+
+sealed interface HandleExternallyTaggedExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class HandleExternallyTaggedException(
+    val detail: HandleExternallyTaggedExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class HandleExternallyTaggedBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleExternallyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class HandleExternallyTaggedUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleExternallyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -35,6 +111,44 @@ data class HandleInternallyTaggedResponse(val statusCode: Int, val raw: Response
 val status200: InternallyTaggedEnum? = null) {
 }
 
+sealed interface HandleInternallyTaggedExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class HandleInternallyTaggedException(
+    val detail: HandleInternallyTaggedExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class HandleInternallyTaggedBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleInternallyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class HandleInternallyTaggedUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleInternallyTaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * HandleMixedResponse carries the response from handleMixed.
  */
@@ -42,11 +156,87 @@ data class HandleMixedResponse(val statusCode: Int, val raw: Response,
 val status200: MixedEnum? = null) {
 }
 
+sealed interface HandleMixedExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class HandleMixedException(
+    val detail: HandleMixedExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class HandleMixedBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleMixedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class HandleMixedUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleMixedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * HandleUntaggedResponse carries the response from handleUntagged.
  */
 data class HandleUntaggedResponse(val statusCode: Int, val raw: Response,
 val status200: UntaggedEnum? = null) {
+}
+
+sealed interface HandleUntaggedExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class HandleUntaggedException(
+    val detail: HandleUntaggedExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class HandleUntaggedBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleUntaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
+class HandleUntaggedUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : HandleUntaggedExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -66,13 +256,26 @@ class EnumReprApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: HandleAdjacentlyTaggedExceptionDetail = when (response.code)  {
+                400 -> HandleAdjacentlyTaggedBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    HandleAdjacentlyTaggedUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw HandleAdjacentlyTaggedException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: AdjacentlyTaggedEnum? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<AdjacentlyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<AdjacentlyTaggedEnum>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<AdjacentlyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<AdjacentlyTaggedEnum>() {}.type)
+        }
         return HandleAdjacentlyTaggedResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -87,13 +290,26 @@ class EnumReprApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: HandleExternallyTaggedExceptionDetail = when (response.code)  {
+                400 -> HandleExternallyTaggedBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    HandleExternallyTaggedUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw HandleExternallyTaggedException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: ExternallyTaggedEnum? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<ExternallyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<ExternallyTaggedEnum>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<ExternallyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<ExternallyTaggedEnum>() {}.type)
+        }
         return HandleExternallyTaggedResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -108,13 +324,26 @@ class EnumReprApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: HandleInternallyTaggedExceptionDetail = when (response.code)  {
+                400 -> HandleInternallyTaggedBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    HandleInternallyTaggedUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw HandleInternallyTaggedException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: InternallyTaggedEnum? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<InternallyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<InternallyTaggedEnum>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<InternallyTaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<InternallyTaggedEnum>() {}.type)
+        }
         return HandleInternallyTaggedResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -129,13 +358,26 @@ class EnumReprApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: HandleMixedExceptionDetail = when (response.code)  {
+                400 -> HandleMixedBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    HandleMixedUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw HandleMixedException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: MixedEnum? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<MixedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<MixedEnum>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<MixedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<MixedEnum>() {}.type)
+        }
         return HandleMixedResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 
@@ -150,13 +392,26 @@ class EnumReprApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: HandleUntaggedExceptionDetail = when (response.code)  {
+                400 -> HandleUntaggedBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    HandleUntaggedUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw HandleUntaggedException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: UntaggedEnum? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<UntaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<UntaggedEnum>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<UntaggedEnum>(responseText.ifEmpty { "null" }, object : TypeToken<UntaggedEnum>() {}.type)
+        }
         return HandleUntaggedResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }
