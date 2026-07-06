@@ -23,7 +23,7 @@ public class Item {
         this.return_ = return_;
     }
 
-    public String getClass() {
+    public String getClass_() {
         return this.class_;
     }
 

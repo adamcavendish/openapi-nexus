@@ -9,6 +9,7 @@
 export type {
   ApiCreateResourceRequest,
   CreateResourceRawResponse,
+  CreateResourceErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, CreateResourceError } from './DefaultApi';

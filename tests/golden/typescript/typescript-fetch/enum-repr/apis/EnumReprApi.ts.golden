@@ -9,8 +9,8 @@ import type { ExternallyTaggedEnum } from '../models/ExternallyTaggedEnum';
 import type { InternallyTaggedEnum } from '../models/InternallyTaggedEnum';
 import type { MixedEnum } from '../models/MixedEnum';
 import type { UntaggedEnum } from '../models/UntaggedEnum';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiHandleAdjacentlyTaggedRequest {
   body: AdjacentlyTaggedEnum;
@@ -34,28 +34,89 @@ export interface ApiHandleUntaggedRequest {
 
 export type HandleAdjacentlyTaggedRawResponse =
   | JSONApiResponse<AdjacentlyTaggedEnum> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type HandleExternallyTaggedRawResponse =
   | JSONApiResponse<ExternallyTaggedEnum> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type HandleInternallyTaggedRawResponse =
   | JSONApiResponse<InternallyTaggedEnum> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type HandleMixedRawResponse =
   | JSONApiResponse<MixedEnum> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type HandleUntaggedRawResponse =
   | JSONApiResponse<UntaggedEnum> & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type HandleAdjacentlyTaggedErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleAdjacentlyTaggedError extends ResponseError {
+  readonly detail: HandleAdjacentlyTaggedErrorDetail;
+
+  constructor(response: Response, detail: HandleAdjacentlyTaggedErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type HandleExternallyTaggedErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleExternallyTaggedError extends ResponseError {
+  readonly detail: HandleExternallyTaggedErrorDetail;
+
+  constructor(response: Response, detail: HandleExternallyTaggedErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type HandleInternallyTaggedErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleInternallyTaggedError extends ResponseError {
+  readonly detail: HandleInternallyTaggedErrorDetail;
+
+  constructor(response: Response, detail: HandleInternallyTaggedErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type HandleMixedErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleMixedError extends ResponseError {
+  readonly detail: HandleMixedErrorDetail;
+
+  constructor(response: Response, detail: HandleMixedErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type HandleUntaggedErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class HandleUntaggedError extends ResponseError {
+  readonly detail: HandleUntaggedErrorDetail;
+
+  constructor(response: Response, detail: HandleUntaggedErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface EnumReprApiInterface {
@@ -108,14 +169,22 @@ export class EnumReprApi extends BaseAPI implements EnumReprApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new HandleAdjacentlyTaggedError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleAdjacentlyTaggedError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<AdjacentlyTaggedEnum> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -154,14 +223,22 @@ export class EnumReprApi extends BaseAPI implements EnumReprApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new HandleExternallyTaggedError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleExternallyTaggedError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<ExternallyTaggedEnum> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -200,14 +277,22 @@ export class EnumReprApi extends BaseAPI implements EnumReprApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new HandleInternallyTaggedError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleInternallyTaggedError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<InternallyTaggedEnum> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -246,14 +331,22 @@ export class EnumReprApi extends BaseAPI implements EnumReprApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new HandleMixedError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleMixedError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<MixedEnum> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -292,14 +385,22 @@ export class EnumReprApi extends BaseAPI implements EnumReprApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new HandleUntaggedError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new HandleUntaggedError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<UntaggedEnum> & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

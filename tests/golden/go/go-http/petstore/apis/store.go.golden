@@ -36,6 +36,34 @@ type GetInventoryResponse struct {
 	Status200 map[string]int32
 }
 
+type GetInventoryError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetInventoryErrorDetail
+}
+
+func (e *GetInventoryError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetInventoryErrorDetail interface {
+	isGetInventoryErrorDetail()
+}
+
+type GetInventoryUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetInventoryUnexpected) isGetInventoryErrorDetail() {}
+
+func (d *GetInventoryUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetInventory — Returns pet inventories by status
 func (a *StoreAPI) GetInventory(ctx context.Context) (*GetInventoryResponse, error) {
 	path := "/store/inventory"
@@ -49,20 +77,31 @@ func (a *StoreAPI) GetInventory(ctx context.Context) (*GetInventoryResponse, err
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetInventoryResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetInventoryUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetInventoryError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload map[string]int32
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -72,6 +111,45 @@ type PlaceOrderResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Order
+}
+
+type PlaceOrderError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PlaceOrderErrorDetail
+}
+
+func (e *PlaceOrderError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PlaceOrderErrorDetail interface {
+	isPlaceOrderErrorDetail()
+}
+
+type PlaceOrderBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PlaceOrderBadRequest) isPlaceOrderErrorDetail() {}
+
+func (d *PlaceOrderBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type PlaceOrderUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PlaceOrderUnexpected) isPlaceOrderErrorDetail() {}
+
+func (d *PlaceOrderUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PlaceOrder — Place an order for a pet
@@ -96,20 +174,34 @@ func (a *StoreAPI) PlaceOrder(ctx context.Context, body *models.Order) (*PlaceOr
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PlaceOrderResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &PlaceOrderBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PlaceOrderError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &PlaceOrderUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PlaceOrderError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Order
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -119,6 +211,56 @@ type GetOrderByIdResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Order
+}
+
+type GetOrderByIdError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetOrderByIdErrorDetail
+}
+
+func (e *GetOrderByIdError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetOrderByIdErrorDetail interface {
+	isGetOrderByIdErrorDetail()
+}
+
+type GetOrderByIdBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetOrderByIdBadRequest) isGetOrderByIdErrorDetail() {}
+
+func (d *GetOrderByIdBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetOrderByIdNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetOrderByIdNotFound) isGetOrderByIdErrorDetail() {}
+
+func (d *GetOrderByIdNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetOrderByIdUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetOrderByIdUnexpected) isGetOrderByIdErrorDetail() {}
+
+func (d *GetOrderByIdUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetOrderById — Find purchase order by ID
@@ -135,20 +277,37 @@ func (a *StoreAPI) GetOrderById(ctx context.Context, orderId int64) (*GetOrderBy
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetOrderByIdResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &GetOrderByIdBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetOrderByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &GetOrderByIdNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetOrderByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetOrderByIdUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetOrderByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Order
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -157,6 +316,56 @@ func (a *StoreAPI) GetOrderById(ctx context.Context, orderId int64) (*GetOrderBy
 type DeleteOrderResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type DeleteOrderError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail DeleteOrderErrorDetail
+}
+
+func (e *DeleteOrderError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type DeleteOrderErrorDetail interface {
+	isDeleteOrderErrorDetail()
+}
+
+type DeleteOrderBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteOrderBadRequest) isDeleteOrderErrorDetail() {}
+
+func (d *DeleteOrderBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DeleteOrderNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteOrderNotFound) isDeleteOrderErrorDetail() {}
+
+func (d *DeleteOrderNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DeleteOrderUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteOrderUnexpected) isDeleteOrderErrorDetail() {}
+
+func (d *DeleteOrderUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // DeleteOrder — Delete purchase order by ID
@@ -173,11 +382,23 @@ func (a *StoreAPI) DeleteOrder(ctx context.Context, orderId int64) (*DeleteOrder
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &DeleteOrderResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &DeleteOrderBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteOrderError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &DeleteOrderNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteOrderError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &DeleteOrderUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteOrderError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

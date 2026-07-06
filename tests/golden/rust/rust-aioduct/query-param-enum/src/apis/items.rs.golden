@@ -5,7 +5,7 @@
 // Test case for query parameters that reference enum schemas
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "items" tag.
 pub struct ItemsApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -24,7 +24,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> ItemsApi<'a, R, C> 
     pub async fn get_items(
         &self,
         status: &Option<crate::models::FooStatus>,
-    ) -> Result<GetItemsResponse, Error> {
+    ) -> Result<GetItemsResponse, GetItemsError> {
         let mut path = "/items".to_string();
         let mut query_parts: Vec<(&str, String)> = Vec::new();
         if let Some(v) = &status {
@@ -35,15 +35,28 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> ItemsApi<'a, R, C> 
             path = format!("{}?{}", path, qs);
         }
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = GetItemsResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetItemsError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetItemsError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -54,4 +67,37 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> ItemsApi<'a, R, C> 
 pub struct GetItemsResponse {
     pub status_code: u16,
     pub data: Option<crate::models::GetItemsResponse200>,
+}
+
+/// Error from `get_items`.
+#[derive(Debug)]
+pub enum GetItemsError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetItemsError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetItemsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetItemsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

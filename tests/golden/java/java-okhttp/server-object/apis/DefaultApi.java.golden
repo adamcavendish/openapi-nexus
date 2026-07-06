@@ -21,68 +21,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * GetAllUsersResponse carries the response from getAllUsers.
- */
-public class GetAllUsersResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final List<GetAllUsersResponse200Item> status200;
-
-    public GetAllUsersResponse(int statusCode, Response raw,
-    List<GetAllUsersResponse200Item> status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public List<GetAllUsersResponse200Item> getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * GetUserByIdResponse carries the response from getUserById.
- */
-public class GetUserByIdResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final GetUserByIdResponse200 status200;
-    private final GetUserByIdResponse404 status404;
-
-    public GetUserByIdResponse(int statusCode, Response raw, GetUserByIdResponse200 status200,
-    GetUserByIdResponse404 status404) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-        this.status404 = status404;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public GetUserByIdResponse200 getStatus200() {
-        return this.status200;
-    }
-
-    public GetUserByIdResponse404 getStatus404() {
-        return this.status404;
-    }
-}
-
-/**
  * DefaultApi groups operations under the default tag.
  */
 public class DefaultApi {
@@ -102,8 +40,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetAllUsersExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetAllUsersUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetAllUsersException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -123,8 +69,18 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetUserByIdExceptionDetail detail;
+            switch (response.code()) {
+                case 404:
+                    detail = new GetUserByIdNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new GetUserByIdUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetUserByIdException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -132,10 +88,6 @@ public class DefaultApi {
         if (response.code() == 200) {
             status200 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<GetUserByIdResponse200>() {}.getType());
         }
-        GetUserByIdResponse404 status404 = null;
-        if (response.code() == 404) {
-            status404 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<GetUserByIdResponse404>() {}.getType());
-        }
-        return new GetUserByIdResponse(response.code(), response, status200, status404);
+        return new GetUserByIdResponse(response.code(), response, status200);
     }
 }

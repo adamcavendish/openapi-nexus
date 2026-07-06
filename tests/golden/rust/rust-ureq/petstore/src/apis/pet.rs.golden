@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "pet" tag.
 pub struct PetApi<'a> {
@@ -24,18 +24,39 @@ impl<'a> PetApi<'a> {
     pub fn update_pet(
         &self,
         body: &crate::models::Pet,
-    ) -> Result<UpdatePetResponse, Error> {
+    ) -> Result<UpdatePetResponse, UpdatePetError> {
         let path = "/pet".to_string();
         let req = self.client.put(&path);
-        let resp = req.send_json(&body)?;
+        let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = UpdatePetResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(UpdatePetError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(UpdatePetError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                422 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(UpdatePetError::Validation(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(UpdatePetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -44,18 +65,35 @@ impl<'a> PetApi<'a> {
     pub fn add_pet(
         &self,
         body: &crate::models::Pet,
-    ) -> Result<AddPetResponse, Error> {
+    ) -> Result<AddPetResponse, AddPetError> {
         let path = "/pet".to_string();
         let req = self.client.post(&path);
-        let resp = req.send_json(&body)?;
+        let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = AddPetResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(AddPetError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                422 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(AddPetError::Validation(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(AddPetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -64,19 +102,32 @@ impl<'a> PetApi<'a> {
     pub fn find_pets_by_status(
         &self,
         status: &str,
-    ) -> Result<FindPetsByStatusResponse, Error> {
+    ) -> Result<FindPetsByStatusResponse, FindPetsByStatusError> {
         let path = "/pet/findByStatus".to_string();
         let mut req = self.client.get(&path);
         req = req.query("status", &status.to_string());
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = FindPetsByStatusResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(FindPetsByStatusError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(FindPetsByStatusError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -85,21 +136,34 @@ impl<'a> PetApi<'a> {
     pub fn find_pets_by_tags(
         &self,
         tags: &[String],
-    ) -> Result<FindPetsByTagsResponse, Error> {
+    ) -> Result<FindPetsByTagsResponse, FindPetsByTagsError> {
         let path = "/pet/findByTags".to_string();
         let mut req = self.client.get(&path);
         for v in tags {
             req = req.query("tags", &v.to_string());
         }
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = FindPetsByTagsResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(FindPetsByTagsError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(FindPetsByTagsError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -108,19 +172,36 @@ impl<'a> PetApi<'a> {
     pub fn get_pet_by_id(
         &self,
         pet_id: i64,
-    ) -> Result<GetPetByIdResponse, Error> {
+    ) -> Result<GetPetByIdResponse, GetPetByIdError> {
         let mut path = "/pet/{petId}".to_string();
         path = path.replace("{petId}", &pet_id.to_string());
         let req = self.client.get(&path);
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = GetPetByIdResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetPetByIdError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetPetByIdError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetPetByIdError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -131,7 +212,7 @@ impl<'a> PetApi<'a> {
         pet_id: i64,
         name: &Option<String>,
         status: &Option<String>,
-    ) -> Result<UpdatePetWithFormResponse, Error> {
+    ) -> Result<UpdatePetWithFormResponse, UpdatePetWithFormError> {
         let mut path = "/pet/{petId}".to_string();
         path = path.replace("{petId}", &pet_id.to_string());
         let mut req = self.client.post(&path);
@@ -141,15 +222,28 @@ impl<'a> PetApi<'a> {
         if let Some(v) = &status {
             req = req.query("status", &v.to_string());
         }
-        let resp = req.send_empty()?;
+        let resp = req.send_empty().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = UpdatePetWithFormResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(UpdatePetWithFormError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(UpdatePetWithFormError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -158,13 +252,30 @@ impl<'a> PetApi<'a> {
     pub fn delete_pet(
         &self,
         pet_id: i64,
-    ) -> Result<DeletePetResponse, Error> {
+    ) -> Result<DeletePetResponse, DeletePetError> {
         let mut path = "/pet/{petId}".to_string();
         path = path.replace("{petId}", &pet_id.to_string());
         let req = self.client.delete(&path);
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(DeletePetResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = DeletePetResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(DeletePetError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(DeletePetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Upload an image
@@ -172,22 +283,31 @@ impl<'a> PetApi<'a> {
         &self,
         pet_id: i64,
         additional_metadata: &Option<String>,
-    ) -> Result<UploadFileResponse, Error> {
+    ) -> Result<UploadFileResponse, UploadFileError> {
         let mut path = "/pet/{petId}/uploadImage".to_string();
         path = path.replace("{petId}", &pet_id.to_string());
         let mut req = self.client.post(&path);
         if let Some(v) = &additional_metadata {
             req = req.query("additionalMetadata", &v.to_string());
         }
-        let resp = req.send_empty()?;
+        let resp = req.send_empty().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = UploadFileResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(UploadFileError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -200,11 +320,83 @@ pub struct UpdatePetResponse {
     pub data: Option<crate::models::Pet>,
 }
 
+/// Error from `update_pet`.
+#[derive(Debug)]
+pub enum UpdatePetError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Validation(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UpdatePetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UpdatePetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Validation(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UpdatePetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `add_pet`.
 #[derive(Debug)]
 pub struct AddPetResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Pet>,
+}
+
+/// Error from `add_pet`.
+#[derive(Debug)]
+pub enum AddPetError {
+    BadRequest(ApiError<()>),
+    Validation(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for AddPetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for AddPetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Validation(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for AddPetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `find_pets_by_status`.
@@ -214,11 +406,77 @@ pub struct FindPetsByStatusResponse {
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
+/// Error from `find_pets_by_status`.
+#[derive(Debug)]
+pub enum FindPetsByStatusError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for FindPetsByStatusError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for FindPetsByStatusError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for FindPetsByStatusError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `find_pets_by_tags`.
 #[derive(Debug)]
 pub struct FindPetsByTagsResponse {
     pub status_code: u16,
     pub data: Option<Vec<crate::models::Pet>>,
+}
+
+/// Error from `find_pets_by_tags`.
+#[derive(Debug)]
+pub enum FindPetsByTagsError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for FindPetsByTagsError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for FindPetsByTagsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for FindPetsByTagsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `get_pet_by_id`.
@@ -228,11 +486,79 @@ pub struct GetPetByIdResponse {
     pub data: Option<crate::models::Pet>,
 }
 
+/// Error from `get_pet_by_id`.
+#[derive(Debug)]
+pub enum GetPetByIdError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetPetByIdError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetPetByIdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetPetByIdError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `update_pet_with_form`.
 #[derive(Debug)]
 pub struct UpdatePetWithFormResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Pet>,
+}
+
+/// Error from `update_pet_with_form`.
+#[derive(Debug)]
+pub enum UpdatePetWithFormError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UpdatePetWithFormError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UpdatePetWithFormError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UpdatePetWithFormError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `delete_pet`.
@@ -241,9 +567,73 @@ pub struct DeletePetResponse {
     pub status_code: u16,
 }
 
+/// Error from `delete_pet`.
+#[derive(Debug)]
+pub enum DeletePetError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for DeletePetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for DeletePetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for DeletePetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `upload_file`.
 #[derive(Debug)]
 pub struct UploadFileResponse {
     pub status_code: u16,
     pub data: Option<crate::models::UploadResponse>,
+}
+
+/// Error from `upload_file`.
+#[derive(Debug)]
+pub enum UploadFileError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UploadFileError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UploadFileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UploadFileError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

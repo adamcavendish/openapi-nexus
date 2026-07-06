@@ -19,3 +19,11 @@ java {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
+
+sourceSets {
+    main {
+        java {
+            srcDirs("apis", "models", "runtime")
+        }
+    }
+}

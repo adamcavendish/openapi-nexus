@@ -34,6 +34,34 @@ type TestUnionResponse struct {
 	Status200 *models.Foo
 }
 
+type TestUnionError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail TestUnionErrorDetail
+}
+
+func (e *TestUnionError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type TestUnionErrorDetail interface {
+	isTestUnionErrorDetail()
+}
+
+type TestUnionUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*TestUnionUnexpected) isTestUnionErrorDetail() {}
+
+func (d *TestUnionUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // TestUnion — Test endpoint with union type
 func (a *DefaultAPI) TestUnion(ctx context.Context, body *models.Foo) (*TestUnionResponse, error) {
 	path := "/test"
@@ -56,20 +84,31 @@ func (a *DefaultAPI) TestUnion(ctx context.Context, body *models.Foo) (*TestUnio
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &TestUnionResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &TestUnionUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &TestUnionError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Foo
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

@@ -34,6 +34,34 @@ type PostBinaryResponse struct {
 	Raw *http.Response
 }
 
+type PostBinaryError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostBinaryErrorDetail
+}
+
+func (e *PostBinaryError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostBinaryErrorDetail interface {
+	isPostBinaryErrorDetail()
+}
+
+type PostBinaryUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostBinaryUnexpected) isPostBinaryErrorDetail() {}
+
+func (d *PostBinaryUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // PostBinary calls POST /binary.
 func (a *DefaultAPI) PostBinary(ctx context.Context, body []byte) (*PostBinaryResponse, error) {
 	path := "/binary"
@@ -52,11 +80,17 @@ func (a *DefaultAPI) PostBinary(ctx context.Context, body []byte) (*PostBinaryRe
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostBinaryResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostBinaryUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostBinaryError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -65,6 +99,34 @@ func (a *DefaultAPI) PostBinary(ctx context.Context, body []byte) (*PostBinaryRe
 type PostFormResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PostFormError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostFormErrorDetail
+}
+
+func (e *PostFormError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostFormErrorDetail interface {
+	isPostFormErrorDetail()
+}
+
+type PostFormUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostFormUnexpected) isPostFormErrorDetail() {}
+
+func (d *PostFormUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PostForm calls POST /form.
@@ -83,11 +145,17 @@ func (a *DefaultAPI) PostForm(ctx context.Context, body *models.Payload) (*PostF
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostFormResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostFormUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostFormError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -96,6 +164,34 @@ func (a *DefaultAPI) PostForm(ctx context.Context, body *models.Payload) (*PostF
 type PostJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PostJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostJsonErrorDetail
+}
+
+func (e *PostJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostJsonErrorDetail interface {
+	isPostJsonErrorDetail()
+}
+
+type PostJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostJsonUnexpected) isPostJsonErrorDetail() {}
+
+func (d *PostJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PostJson calls POST /json.
@@ -120,11 +216,17 @@ func (a *DefaultAPI) PostJson(ctx context.Context, body *models.Payload) (*PostJ
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -133,6 +235,34 @@ func (a *DefaultAPI) PostJson(ctx context.Context, body *models.Payload) (*PostJ
 type PostJsonOrXmlResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PostJsonOrXmlError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostJsonOrXmlErrorDetail
+}
+
+func (e *PostJsonOrXmlError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostJsonOrXmlErrorDetail interface {
+	isPostJsonOrXmlErrorDetail()
+}
+
+type PostJsonOrXmlUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostJsonOrXmlUnexpected) isPostJsonOrXmlErrorDetail() {}
+
+func (d *PostJsonOrXmlUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PostJsonOrXml calls POST /json-or-xml.
@@ -159,11 +289,17 @@ func (a *DefaultAPI) PostJsonOrXml(ctx context.Context, body *models.Payload) (*
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostJsonOrXmlResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostJsonOrXmlUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostJsonOrXmlError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -172,6 +308,34 @@ func (a *DefaultAPI) PostJsonOrXml(ctx context.Context, body *models.Payload) (*
 type PatchMergeJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PatchMergeJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PatchMergeJsonErrorDetail
+}
+
+func (e *PatchMergeJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PatchMergeJsonErrorDetail interface {
+	isPatchMergeJsonErrorDetail()
+}
+
+type PatchMergeJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PatchMergeJsonUnexpected) isPatchMergeJsonErrorDetail() {}
+
+func (d *PatchMergeJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PatchMergeJson calls PATCH /merge-patch.
@@ -196,11 +360,17 @@ func (a *DefaultAPI) PatchMergeJson(ctx context.Context, body *models.Payload) (
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PatchMergeJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PatchMergeJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PatchMergeJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -209,6 +379,34 @@ func (a *DefaultAPI) PatchMergeJson(ctx context.Context, body *models.Payload) (
 type PostTextResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PostTextError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostTextErrorDetail
+}
+
+func (e *PostTextError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostTextErrorDetail interface {
+	isPostTextErrorDetail()
+}
+
+type PostTextUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostTextUnexpected) isPostTextErrorDetail() {}
+
+func (d *PostTextUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PostText calls POST /text.
@@ -229,11 +427,17 @@ func (a *DefaultAPI) PostText(ctx context.Context, body *string) (*PostTextRespo
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostTextResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostTextUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostTextError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -242,6 +446,34 @@ func (a *DefaultAPI) PostText(ctx context.Context, body *string) (*PostTextRespo
 type PostXmlResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type PostXmlError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail PostXmlErrorDetail
+}
+
+func (e *PostXmlError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type PostXmlErrorDetail interface {
+	isPostXmlErrorDetail()
+}
+
+type PostXmlUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*PostXmlUnexpected) isPostXmlErrorDetail() {}
+
+func (d *PostXmlUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // PostXml calls POST /xml.
@@ -260,11 +492,17 @@ func (a *DefaultAPI) PostXml(ctx context.Context, body *models.Payload) (*PostXm
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &PostXmlResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &PostXmlUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &PostXmlError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -274,6 +512,34 @@ type GetXmlResponseResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *string
+}
+
+type GetXmlResponseError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetXmlResponseErrorDetail
+}
+
+func (e *GetXmlResponseError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetXmlResponseErrorDetail interface {
+	isGetXmlResponseErrorDetail()
+}
+
+type GetXmlResponseUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetXmlResponseUnexpected) isGetXmlResponseErrorDetail() {}
+
+func (d *GetXmlResponseUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetXmlResponse calls GET /xml-response.
@@ -289,21 +555,28 @@ func (a *DefaultAPI) GetXmlResponse(ctx context.Context) (*GetXmlResponseRespons
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetXmlResponseResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetXmlResponseUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetXmlResponseError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
-			bodyBytes, err := io.ReadAll(httpResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("read response: %w", err)
-			}
-			payload := string(bodyBytes)
+			payload := string(responseBody)
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

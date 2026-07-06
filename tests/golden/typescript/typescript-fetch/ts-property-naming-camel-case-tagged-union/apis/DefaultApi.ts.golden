@@ -7,8 +7,8 @@
  */
 import type { ContainerImage, ContainerImage$Wire } from '../models/ContainerImage';
 import { containerImageFromJSON, containerImageToJSON } from '../models/ContainerImage';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError } from '../runtime/runtime';
 
 export interface ApiCreateContainerRequest {
   body: ContainerImage;
@@ -16,7 +16,20 @@ export interface ApiCreateContainerRequest {
 
 export type CreateContainerRawResponse =
   | JSONApiResponse<ContainerImage> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type CreateContainerErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class CreateContainerError extends ResponseError {
+  readonly detail: CreateContainerErrorDetail;
+
+  constructor(response: Response, detail: CreateContainerErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -61,11 +74,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new CreateContainerError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response, (json) => containerImageFromJSON(json as ContainerImage$Wire)) as JSONApiResponse<ContainerImage> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

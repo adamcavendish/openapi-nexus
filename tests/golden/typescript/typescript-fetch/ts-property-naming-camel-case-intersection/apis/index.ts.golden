@@ -7,6 +7,7 @@
 export type {
   ApiTestIntersectionRequest,
   TestIntersectionRawResponse,
+  TestIntersectionErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, TestIntersectionError } from './DefaultApi';

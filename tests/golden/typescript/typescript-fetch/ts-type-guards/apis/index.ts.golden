@@ -6,6 +6,7 @@
 export type {
   ApiHandleEventRequest,
   HandleEventRawResponse,
+  HandleEventErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, HandleEventError } from './DefaultApi';

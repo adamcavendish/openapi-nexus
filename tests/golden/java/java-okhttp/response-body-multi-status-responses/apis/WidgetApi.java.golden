@@ -20,46 +20,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * ListWidgetsResponse carries the response from listWidgets.
- */
-public class ListWidgetsResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final List<Widget> status200;
-    private final WidgetListPartial status206;
-    private final ErrorResponse status404;
-
-    public ListWidgetsResponse(int statusCode, Response raw, List<Widget> status200,
-    WidgetListPartial status206, ErrorResponse status404) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-        this.status206 = status206;
-        this.status404 = status404;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public List<Widget> getStatus200() {
-        return this.status200;
-    }
-
-    public WidgetListPartial getStatus206() {
-        return this.status206;
-    }
-
-    public ErrorResponse getStatus404() {
-        return this.status404;
-    }
-}
-
-/**
  * WidgetApi groups operations under the Widget tag.
  */
 public class WidgetApi {
@@ -79,23 +39,29 @@ public class WidgetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            ListWidgetsExceptionDetail detail;
+            switch (response.code()) {
+                case 404:
+                    detail = new ListWidgetsNotFound(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new ListWidgetsUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new ListWidgetsException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
         List<Widget> status200 = null;
+        WidgetListPartial status206 = null;
         if (response.code() == 200) {
             status200 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<List<Widget>>() {}.getType());
         }
-        WidgetListPartial status206 = null;
-        if (response.code() == 206) {
+        else if (response.code() == 206) {
             status206 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<WidgetListPartial>() {}.getType());
         }
-        ErrorResponse status404 = null;
-        if (response.code() == 404) {
-            status404 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<ErrorResponse>() {}.getType());
-        }
-        return new ListWidgetsResponse(response.code(), response, status200, status206, status404);
+        return new ListWidgetsResponse(response.code(), response, status200, status206);
     }
 }

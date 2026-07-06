@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "user" tag.
 pub struct UserApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -24,19 +24,28 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UserApi<'a, R, C> {
     pub async fn create_user(
         &self,
         body: &crate::models::User,
-    ) -> Result<CreateUserResponse, Error> {
+    ) -> Result<CreateUserResponse, CreateUserError> {
         let path = "/user".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = CreateUserResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -45,19 +54,28 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UserApi<'a, R, C> {
     pub async fn create_users_with_list_input(
         &self,
         body: &Vec<crate::models::User>,
-    ) -> Result<CreateUsersWithListInputResponse, Error> {
+    ) -> Result<CreateUsersWithListInputResponse, CreateUsersWithListInputError> {
         let path = "/user/createWithList".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = CreateUsersWithListInputResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateUsersWithListInputError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -67,7 +85,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UserApi<'a, R, C> {
         &self,
         username: &Option<String>,
         password: &Option<String>,
-    ) -> Result<LoginUserResponse, Error> {
+    ) -> Result<LoginUserResponse, LoginUserError> {
         let mut path = "/user/login".to_string();
         let mut query_parts: Vec<(&str, String)> = Vec::new();
         if let Some(v) = &username {
@@ -81,39 +99,86 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UserApi<'a, R, C> {
             path = format!("{}?{}", path, qs);
         }
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        Ok(LoginUserResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = LoginUserResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::from)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(LoginUserError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(LoginUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Logs out current logged in user session
     pub async fn logout_user(
         &self,
-    ) -> Result<LogoutUserResponse, Error> {
+    ) -> Result<LogoutUserResponse, LogoutUserError> {
         let path = "/user/logout".to_string();
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        Ok(LogoutUserResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = LogoutUserResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::from)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(LogoutUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Get user by user name
     pub async fn get_user_by_name(
         &self,
         username: &str,
-    ) -> Result<GetUserByNameResponse, Error> {
+    ) -> Result<GetUserByNameResponse, GetUserByNameError> {
         let mut path = "/user/{username}".to_string();
         path = path.replace("{username}", &username.to_string());
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = GetUserByNameResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetUserByNameError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetUserByNameError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetUserByNameError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -123,27 +188,69 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UserApi<'a, R, C> {
         &self,
         username: &str,
         body: &crate::models::User,
-    ) -> Result<UpdateUserResponse, Error> {
+    ) -> Result<UpdateUserResponse, UpdateUserError> {
         let mut path = "/user/{username}".to_string();
         path = path.replace("{username}", &username.to_string());
         let mut req = self.client.put(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        Ok(UpdateUserResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = UpdateUserResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::from)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(UpdateUserError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    404 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(UpdateUserError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(UpdateUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Delete user
     pub async fn delete_user(
         &self,
         username: &str,
-    ) -> Result<DeleteUserResponse, Error> {
+    ) -> Result<DeleteUserResponse, DeleteUserError> {
         let mut path = "/user/{username}".to_string();
         path = path.replace("{username}", &username.to_string());
         let req = self.client.delete(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        Ok(DeleteUserResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = DeleteUserResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::from)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(DeleteUserError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    404 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(DeleteUserError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(DeleteUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -154,11 +261,73 @@ pub struct CreateUserResponse {
     pub data: Option<crate::models::User>,
 }
 
+/// Error from `create_user`.
+#[derive(Debug)]
+pub enum CreateUserError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `create_users_with_list_input`.
 #[derive(Debug)]
 pub struct CreateUsersWithListInputResponse {
     pub status_code: u16,
     pub data: Option<crate::models::User>,
+}
+
+/// Error from `create_users_with_list_input`.
+#[derive(Debug)]
+pub enum CreateUsersWithListInputError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateUsersWithListInputError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateUsersWithListInputError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateUsersWithListInputError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `login_user`.
@@ -167,10 +336,74 @@ pub struct LoginUserResponse {
     pub status_code: u16,
 }
 
+/// Error from `login_user`.
+#[derive(Debug)]
+pub enum LoginUserError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for LoginUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for LoginUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for LoginUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `logout_user`.
 #[derive(Debug)]
 pub struct LogoutUserResponse {
     pub status_code: u16,
+}
+
+/// Error from `logout_user`.
+#[derive(Debug)]
+pub enum LogoutUserError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for LogoutUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for LogoutUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for LogoutUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `get_user_by_name`.
@@ -180,14 +413,119 @@ pub struct GetUserByNameResponse {
     pub data: Option<crate::models::User>,
 }
 
+/// Error from `get_user_by_name`.
+#[derive(Debug)]
+pub enum GetUserByNameError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetUserByNameError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetUserByNameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetUserByNameError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `update_user`.
 #[derive(Debug)]
 pub struct UpdateUserResponse {
     pub status_code: u16,
 }
 
+/// Error from `update_user`.
+#[derive(Debug)]
+pub enum UpdateUserError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UpdateUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UpdateUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UpdateUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `delete_user`.
 #[derive(Debug)]
 pub struct DeleteUserResponse {
     pub status_code: u16,
+}
+
+/// Error from `delete_user`.
+#[derive(Debug)]
+pub enum DeleteUserError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for DeleteUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for DeleteUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for DeleteUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

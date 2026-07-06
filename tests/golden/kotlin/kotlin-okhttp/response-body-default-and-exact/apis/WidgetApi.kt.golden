@@ -9,13 +9,55 @@ import com.example.sdk.runtime.ApiClient
 import com.example.sdk.runtime.ApiException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response
 
 /**
  * GetWidgetResponse carries the response from getWidget.
  */
-data class GetWidgetResponse(val statusCode: Int, val raw: Response, val status200: Widget? = null,
-val default: ErrorResponse? = null) {
+data class GetWidgetResponse(val statusCode: Int, val raw: Response, val status200: Widget? = null) {
+}
+
+sealed interface GetWidgetExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class GetWidgetException(
+    val detail: GetWidgetExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class GetWidgetDefault(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetWidgetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): ErrorResponse = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type)
+}
+
+class GetWidgetUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : GetWidgetExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -33,15 +75,25 @@ class WidgetApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: GetWidgetExceptionDetail = when (response.code)  {
+                else ->  {
+                    GetWidgetDefault(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw GetWidgetException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Widget? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Widget>(responseText.ifEmpty { "null" }, object : TypeToken<Widget>() {}.type) else null
-
-        val default = if (true) gson.fromJson<ErrorResponse>(responseText.ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type) else null
-        return GetWidgetResponse(statusCode = response.code, raw = response, status200 = status200, default = default)
+        if (response.code == 200) {
+            status200 = gson.fromJson<Widget>(responseText.ifEmpty { "null" }, object : TypeToken<Widget>() {}.type)
+        }
+        return GetWidgetResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

@@ -191,8 +191,10 @@ fn selected_media_types_drive_request_and_response_wire_code() {
     assert!(go_api.contains(
         "req.Header.Set(\"Content-Type\", \"application/vnd.example+json; charset=utf-8\")"
     ));
-    assert!(go_api.contains("payload, err := io.ReadAll(httpResp.Body)"));
-    assert!(go_api.contains("bodyBytes, err := io.ReadAll(httpResp.Body)"));
+    assert!(go_api.contains("responseBody, err := io.ReadAll(httpResp.Body)"));
+    assert!(go_api.contains("if err := json.Unmarshal(responseBody, &payload); err != nil"));
+    assert!(go_api.contains("payload := append([]byte(nil), responseBody...)"));
+    assert!(go_api.contains("payload := string(responseBody)"));
 
     let java_files = generate_files(
         &JavaOkhttpCodeGenerator::new(empty_config()),
@@ -217,8 +219,12 @@ fn selected_media_types_drive_request_and_response_wire_code() {
         "jsonBody.toRequestBody(\"application/vnd.example+json; charset=utf-8\".toMediaType())"
     ));
     assert!(kotlin_api.contains("val responseBytes = response.body?.bytes() ?: ByteArray(0)"));
-    assert!(kotlin_api.contains("if (response.code == 200) responseBytes else null"));
-    assert!(kotlin_api.contains("if (response.code == 200) responseText else null"));
+    assert!(
+        kotlin_api.contains("if (response.code == 200) {\n            status200 = responseBytes")
+    );
+    assert!(
+        kotlin_api.contains("if (response.code == 200) {\n            status200 = responseText")
+    );
 
     let httpx_files = generate_files(
         &PythonHttpxCodeGenerator::new(empty_config()),

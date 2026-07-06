@@ -11,8 +11,8 @@ import type { DeleteTestResourceResponse, DeleteTestResourceResponse$Wire } from
 import { deleteTestResourceResponseFromJSON } from '../models/DeleteTestResourceResponse';
 import type { HttpErrorResponse, HttpErrorResponse$Wire } from '../models/HttpErrorResponse';
 import { httpErrorResponseFromJSON } from '../models/HttpErrorResponse';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError } from '../runtime/runtime';
 
 export interface ApiCreateTestResourceRequest {
   body: CreateTestResourceRequest;
@@ -27,20 +27,45 @@ export interface ApiDeleteTestResourceRequest {
 
 export type CreateTestResourceRawResponse =
   | JSONApiResponse<CreateTestResourceResponse> & { status: 200 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 export type DeleteTestResourceRawResponse =
   | JSONApiResponse<DeleteTestResourceResponse> & { status: 200 }
-  | JSONApiResponse<HttpErrorResponse> & { status: number }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type CreateTestResourceErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class CreateTestResourceError extends ResponseError {
+  readonly detail: CreateTestResourceErrorDetail;
+
+  constructor(response: Response, detail: CreateTestResourceErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type DeleteTestResourceErrorDetail =
+  { kind: 'clientError'; status: number; raw: Response; value(): Promise<HttpErrorResponse> }
+  | { kind: 'serverError'; status: number; raw: Response; value(): Promise<HttpErrorResponse> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class DeleteTestResourceError extends ResponseError {
+  readonly detail: DeleteTestResourceErrorDetail;
+
+  constructor(response: Response, detail: DeleteTestResourceErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface TestResourceApiInterface {
   createTestResourceRaw: (requestParameters: ApiCreateTestResourceRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<CreateTestResourceRawResponse>;
   createTestResource: (requestParameters: ApiCreateTestResourceRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<CreateTestResourceResponse>;
   deleteTestResourceRaw: (requestParameters: ApiDeleteTestResourceRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<DeleteTestResourceRawResponse>;
-  deleteTestResource: (requestParameters: ApiDeleteTestResourceRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<DeleteTestResourceResponse
-  | HttpErrorResponse>;
+  deleteTestResource: (requestParameters: ApiDeleteTestResourceRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<DeleteTestResourceResponse>;
 }
 
 export class TestResourceApi extends BaseAPI implements TestResourceApiInterface {
@@ -80,11 +105,18 @@ export class TestResourceApi extends BaseAPI implements TestResourceApiInterface
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new CreateTestResourceError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response, (json) => createTestResourceResponseFromJSON(json as CreateTestResourceResponse$Wire)) as JSONApiResponse<CreateTestResourceResponse> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
@@ -121,24 +153,32 @@ export class TestResourceApi extends BaseAPI implements TestResourceApiInterface
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status >= 400 && response.status < 500) {
+        let errorValue: Promise<HttpErrorResponse> | undefined;
+        throw new DeleteTestResourceError(response, { kind: 'clientError', status: response.status, raw: response, value: () => errorValue ??= new JSONApiResponse<HttpErrorResponse>(errorRaw.clone(), (json) => httpErrorResponseFromJSON(json as HttpErrorResponse$Wire)).value() });
+      }
+      else if (response.status >= 500 && response.status < 600) {
+        let errorValue: Promise<HttpErrorResponse> | undefined;
+        throw new DeleteTestResourceError(response, { kind: 'serverError', status: response.status, raw: response, value: () => errorValue ??= new JSONApiResponse<HttpErrorResponse>(errorRaw.clone(), (json) => httpErrorResponseFromJSON(json as HttpErrorResponse$Wire)).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new DeleteTestResourceError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response, (json) => deleteTestResourceResponseFromJSON(json as DeleteTestResourceResponse$Wire)) as JSONApiResponse<DeleteTestResourceResponse> & { status: 200 };
     }
-    else if (response.status >= 400 && response.status < 500) {
-      return new JSONApiResponse(response, (json) => httpErrorResponseFromJSON(json as HttpErrorResponse$Wire)) as JSONApiResponse<HttpErrorResponse> & { status: number };
-    }
-    else if (response.status >= 500 && response.status < 600) {
-      return new JSONApiResponse(response, (json) => httpErrorResponseFromJSON(json as HttpErrorResponse$Wire)) as JSONApiResponse<HttpErrorResponse> & { status: number };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
   async deleteTestResource(requestParameters: ApiDeleteTestResourceRequest,
-  initOverrides?: RequestInit | InitOverrideFunction): Promise<DeleteTestResourceResponse
-      | HttpErrorResponse> {
+  initOverrides?: RequestInit | InitOverrideFunction): Promise<DeleteTestResourceResponse> {
     const response = await this.deleteTestResourceRaw(requestParameters, initOverrides);
-    return await response.value() as DeleteTestResourceResponse | HttpErrorResponse;
+    return await response.value() as DeleteTestResourceResponse;
   }
 }

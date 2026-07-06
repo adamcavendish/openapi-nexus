@@ -21,33 +21,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * GetItemsResponse carries the response from getItems.
- */
-public class GetItemsResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final GetItemsResponse200 status200;
-
-    public GetItemsResponse(int statusCode, Response raw, GetItemsResponse200 status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public GetItemsResponse200 getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * ItemsApi groups operations under the items tag.
  */
 public class ItemsApi {
@@ -71,8 +44,18 @@ public class ItemsApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetItemsExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new GetItemsBadRequest(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new GetItemsUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetItemsException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

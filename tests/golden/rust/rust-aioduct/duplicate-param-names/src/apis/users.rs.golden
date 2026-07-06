@@ -5,7 +5,7 @@
 // Test API with duplicate parameter names across different locations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "users" tag.
 pub struct UsersApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -26,7 +26,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UsersApi<'a, R, C> 
         id: i64,
         id_2: Option<i64>,
         id_3: &Option<String>,
-    ) -> Result<GetUserByIdDuplicateResponse, Error> {
+    ) -> Result<GetUserByIdDuplicateResponse, GetUserByIdDuplicateError> {
         let mut path = "/users/{id}".to_string();
         path = path.replace("{id}", &id.to_string());
         let mut query_parts: Vec<(&str, String)> = Vec::new();
@@ -39,17 +39,34 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UsersApi<'a, R, C> 
         }
         let mut req = self.client.get(&path)?;
         if let Some(v) = &id_3 {
-            req = req.header_str("id", &v.to_string())?;
+            req = req.header_str("id", &v.to_string()).map_err(Error::from)?;
         }
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = GetUserByIdDuplicateResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetUserByIdDuplicateError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetUserByIdDuplicateError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetUserByIdDuplicateError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -60,4 +77,39 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> UsersApi<'a, R, C> 
 pub struct GetUserByIdDuplicateResponse {
     pub status_code: u16,
     pub data: Option<crate::models::GetUserByIdDuplicateResponse200>,
+}
+
+/// Error from `get_user_by_id_duplicate`.
+#[derive(Debug)]
+pub enum GetUserByIdDuplicateError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetUserByIdDuplicateError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetUserByIdDuplicateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetUserByIdDuplicateError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

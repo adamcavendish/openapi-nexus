@@ -5,17 +5,31 @@
  */
 import type { ErrorResponse } from '../models/ErrorResponse';
 import type { Widget } from '../models/Widget';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, ResponseError } from '../runtime/runtime';
 
 export type GetWidgetRawResponse =
   | JSONApiResponse<Widget> & { status: 200 }
-  | JSONApiResponse<ErrorResponse> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type GetWidgetErrorDetail =
+  { kind: 'default'; status: number; raw: Response; value(): Promise<ErrorResponse> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetWidgetError extends ResponseError {
+  readonly detail: GetWidgetErrorDetail;
+
+  constructor(response: Response, detail: GetWidgetErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface WidgetApiInterface {
   getWidgetRaw: (initOverrides?: RequestInit | InitOverrideFunction) => Promise<GetWidgetRawResponse>;
-  getWidget: (initOverrides?: RequestInit | InitOverrideFunction) => Promise<Widget | ErrorResponse>;
+  getWidget: (initOverrides?: RequestInit | InitOverrideFunction) => Promise<Widget>;
 }
 
 export class WidgetApi extends BaseAPI implements WidgetApiInterface {
@@ -45,17 +59,23 @@ export class WidgetApi extends BaseAPI implements WidgetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<ErrorResponse> | undefined;
+        throw new GetWidgetError(response, { kind: 'default', status: response.status, raw: response, value: () => errorValue ??= new JSONApiResponse<ErrorResponse>(errorRaw.clone()).value() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Widget> & { status: 200 };
     }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<ErrorResponse> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
-  async getWidget(initOverrides?: RequestInit | InitOverrideFunction): Promise<Widget
-      | ErrorResponse> {
+  async getWidget(initOverrides?: RequestInit | InitOverrideFunction): Promise<Widget> {
     const response = await this.getWidgetRaw(initOverrides);
-    return await response.value() as Widget | ErrorResponse;
+    return await response.value() as Widget;
   }
 }

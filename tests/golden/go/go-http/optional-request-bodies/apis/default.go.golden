@@ -34,6 +34,34 @@ type SendOptionalBinaryResponse struct {
 	Raw *http.Response
 }
 
+type SendOptionalBinaryError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendOptionalBinaryErrorDetail
+}
+
+func (e *SendOptionalBinaryError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendOptionalBinaryErrorDetail interface {
+	isSendOptionalBinaryErrorDetail()
+}
+
+type SendOptionalBinaryUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendOptionalBinaryUnexpected) isSendOptionalBinaryErrorDetail() {}
+
+func (d *SendOptionalBinaryUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // SendOptionalBinary calls POST /optional-binary.
 func (a *DefaultAPI) SendOptionalBinary(ctx context.Context, body []byte) (*SendOptionalBinaryResponse, error) {
 	path := "/optional-binary"
@@ -52,11 +80,17 @@ func (a *DefaultAPI) SendOptionalBinary(ctx context.Context, body []byte) (*Send
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendOptionalBinaryResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendOptionalBinaryUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendOptionalBinaryError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -65,6 +99,34 @@ func (a *DefaultAPI) SendOptionalBinary(ctx context.Context, body []byte) (*Send
 type SendOptionalJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendOptionalJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendOptionalJsonErrorDetail
+}
+
+func (e *SendOptionalJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendOptionalJsonErrorDetail interface {
+	isSendOptionalJsonErrorDetail()
+}
+
+type SendOptionalJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendOptionalJsonUnexpected) isSendOptionalJsonErrorDetail() {}
+
+func (d *SendOptionalJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendOptionalJson calls POST /optional-json.
@@ -89,11 +151,17 @@ func (a *DefaultAPI) SendOptionalJson(ctx context.Context, body *models.Payload)
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendOptionalJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendOptionalJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendOptionalJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -102,6 +170,34 @@ func (a *DefaultAPI) SendOptionalJson(ctx context.Context, body *models.Payload)
 type SendOptionalTextResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendOptionalTextError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendOptionalTextErrorDetail
+}
+
+func (e *SendOptionalTextError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendOptionalTextErrorDetail interface {
+	isSendOptionalTextErrorDetail()
+}
+
+type SendOptionalTextUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendOptionalTextUnexpected) isSendOptionalTextErrorDetail() {}
+
+func (d *SendOptionalTextUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendOptionalText calls POST /optional-text.
@@ -122,11 +218,17 @@ func (a *DefaultAPI) SendOptionalText(ctx context.Context, body *string) (*SendO
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendOptionalTextResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendOptionalTextUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendOptionalTextError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -135,6 +237,34 @@ func (a *DefaultAPI) SendOptionalText(ctx context.Context, body *string) (*SendO
 type SendRequiredJsonResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type SendRequiredJsonError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail SendRequiredJsonErrorDetail
+}
+
+func (e *SendRequiredJsonError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type SendRequiredJsonErrorDetail interface {
+	isSendRequiredJsonErrorDetail()
+}
+
+type SendRequiredJsonUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*SendRequiredJsonUnexpected) isSendRequiredJsonErrorDetail() {}
+
+func (d *SendRequiredJsonUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // SendRequiredJson calls POST /required-json.
@@ -159,11 +289,17 @@ func (a *DefaultAPI) SendRequiredJson(ctx context.Context, body *models.Payload)
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &SendRequiredJsonResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &SendRequiredJsonUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &SendRequiredJsonError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

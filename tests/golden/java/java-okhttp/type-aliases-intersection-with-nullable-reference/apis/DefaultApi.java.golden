@@ -23,60 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * CreateTestResponse carries the response from createTest.
- */
-public class CreateTestResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Baz status200;
-
-    public CreateTestResponse(int statusCode, Response raw, Baz status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Baz getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
- * GetTestResponse carries the response from getTest.
- */
-public class GetTestResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Baz status200;
-
-    public GetTestResponse(int statusCode, Response raw, Baz status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Baz getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * DefaultApi groups operations under the default tag.
  */
 public class DefaultApi {
@@ -99,8 +45,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            CreateTestExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new CreateTestUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new CreateTestException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -120,8 +74,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetTestExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetTestUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetTestException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

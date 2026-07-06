@@ -12,76 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.example.sdk.models.*;
 import com.example.sdk.runtime.ApiClient;
 import com.example.sdk.runtime.ApiException;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import okhttp3.Request;
 import okhttp3.Response;
-
-/**
- * HealthCheckResponse carries the response from healthCheck.
- */
-public class HealthCheckResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public HealthCheckResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * ListUsersResponse carries the response from listUsers.
- */
-public class ListUsersResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public ListUsersResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * GetUserResponse carries the response from getUser.
- */
-public class GetUserResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public GetUserResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
 
 /**
  * DefaultApi groups operations under the default tag.
@@ -103,8 +39,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            HealthCheckExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new HealthCheckUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new HealthCheckException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new HealthCheckResponse(response.code(), response);
     }
@@ -118,8 +62,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            ListUsersExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new ListUsersUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new ListUsersException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new ListUsersResponse(response.code(), response);
     }
@@ -133,8 +85,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetUserExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetUserUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetUserException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new GetUserResponse(response.code(), response);
     }

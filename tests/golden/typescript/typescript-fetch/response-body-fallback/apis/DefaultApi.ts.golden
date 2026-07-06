@@ -4,18 +4,43 @@
  * Response Fallback Test API — 1.0.0
  */
 import type { GetFallbackWithBodyResponse200 } from '../models/GetFallbackWithBodyResponse200';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export type GetFallbackNoBodyRawResponse =
   | VoidApiResponse & { status: 200 }
-  | VoidApiResponse & { status: 400 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type GetFallbackWithBodyRawResponse =
   | JSONApiResponse<GetFallbackWithBodyResponse200> & { status: 200 }
-  | VoidApiResponse & { status: 404 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type GetFallbackNoBodyErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetFallbackNoBodyError extends ResponseError {
+  readonly detail: GetFallbackNoBodyErrorDetail;
+
+  constructor(response: Response, detail: GetFallbackNoBodyErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type GetFallbackWithBodyErrorDetail =
+  { kind: 'notFound'; status: 404; raw: Response; value(): Promise<void> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class GetFallbackWithBodyError extends ResponseError {
+  readonly detail: GetFallbackWithBodyErrorDetail;
+
+  constructor(response: Response, detail: GetFallbackWithBodyErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -52,14 +77,22 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<void> | undefined;
+        throw new GetFallbackNoBodyError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new GetFallbackNoBodyError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 200 };
     }
-    else if (response.status === 400) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 400 };
-    }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -87,14 +120,22 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 404) {
+        let errorValue: Promise<void> | undefined;
+        throw new GetFallbackWithBodyError(response, { kind: 'notFound', status: response.status as 404, raw: response, value: () => errorValue ??= new VoidApiResponse(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new GetFallbackWithBodyError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<GetFallbackWithBodyResponse200> & { status: 200 };
     }
-    else if (response.status === 404) {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: 404 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 

@@ -7,6 +7,7 @@
 export type {
   ApiUploadRawMultipartRequest,
   UploadRawMultipartRawResponse,
+  UploadRawMultipartErrorDetail,
   TransferApiInterface,
 } from './TransferApi';
-export { TransferApi } from './TransferApi';
+export { TransferApi, UploadRawMultipartError } from './TransferApi';

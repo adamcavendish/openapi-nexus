@@ -7,13 +7,27 @@
 export type {
   ApiSendJsonPreferredRequest,
   SendJsonPreferredRawResponse,
+  SendJsonPreferredErrorDetail,
   ApiSendParameterizedMultipartRequest,
   SendParameterizedMultipartRawResponse,
+  SendParameterizedMultipartErrorDetail,
   ApiSendVendorJsonRequest,
   SendVendorJsonRawResponse,
+  SendVendorJsonErrorDetail,
   GetOctetPreferredRawResponse,
+  GetOctetPreferredErrorDetail,
   GetTextPreferredRawResponse,
+  GetTextPreferredErrorDetail,
   GetVendorJsonRawResponse,
+  GetVendorJsonErrorDetail,
   MediaApiInterface,
 } from './MediaApi';
-export { MediaApi } from './MediaApi';
+export {
+  MediaApi,
+  SendJsonPreferredError,
+  SendParameterizedMultipartError,
+  SendVendorJsonError,
+  GetOctetPreferredError,
+  GetTextPreferredError,
+  GetVendorJsonError,
+} from './MediaApi';

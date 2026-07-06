@@ -20,39 +20,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * GetWidgetResponse carries the response from getWidget.
- */
-public class GetWidgetResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Widget status200;
-    private final ErrorResponse default_;
-
-    public GetWidgetResponse(int statusCode, Response raw, Widget status200, ErrorResponse default_) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-        this.default_ = default_;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Widget getStatus200() {
-        return this.status200;
-    }
-
-    public ErrorResponse getDefault() {
-        return this.default_;
-    }
-}
-
-/**
  * WidgetApi groups operations under the Widget tag.
  */
 public class WidgetApi {
@@ -72,8 +39,15 @@ public class WidgetApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetWidgetExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetWidgetDefault(response.code(), response.headers(), responseBytes);}
+            throw new GetWidgetException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);
@@ -81,10 +55,6 @@ public class WidgetApi {
         if (response.code() == 200) {
             status200 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<Widget>() {}.getType());
         }
-        ErrorResponse default_ = null;
-        if (true) {
-            default_ = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<ErrorResponse>() {}.getType());
-        }
-        return new GetWidgetResponse(response.code(), response, status200, default_);
+        return new GetWidgetResponse(response.code(), response, status200);
     }
 }

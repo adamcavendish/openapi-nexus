@@ -22,40 +22,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * UpdateFooBarResponse carries the response from updateFooBar.
- */
-public class UpdateFooBarResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final ErrorResponse status400;
-    private final ErrorResponse status500;
-
-    public UpdateFooBarResponse(int statusCode, Response raw, ErrorResponse status400,
-    ErrorResponse status500) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status400 = status400;
-        this.status500 = status500;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public ErrorResponse getStatus400() {
-        return this.status400;
-    }
-
-    public ErrorResponse getStatus500() {
-        return this.status500;
-    }
-}
-
-/**
  * FooApi groups operations under the Foo tag.
  */
 public class FooApi {
@@ -78,19 +44,21 @@ public class FooApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            UpdateFooBarExceptionDetail detail;
+            switch (response.code()) {
+                case 400:
+                    detail = new UpdateFooBarBadRequest(response.code(), response.headers(), responseBytes);break;
+                case 500:
+                    detail = new UpdateFooBarInternalServerError(response.code(), response.headers(), responseBytes);break;
+                default:
+                    detail = new UpdateFooBarUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new UpdateFooBarException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
-        byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
-        String responseText = new String(responseBytes, StandardCharsets.UTF_8);
-        ErrorResponse status400 = null;
-        if (response.code() == 400) {
-            status400 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<ErrorResponse>() {}.getType());
-        }
-        ErrorResponse status500 = null;
-        if (response.code() == 500) {
-            status500 = gson.fromJson(responseText.isEmpty() ? "null" : responseText, new TypeToken<ErrorResponse>() {}.getType());
-        }
-        return new UpdateFooBarResponse(response.code(), response, status400, status500);
+        return new UpdateFooBarResponse(response.code(), response);
     }
 }

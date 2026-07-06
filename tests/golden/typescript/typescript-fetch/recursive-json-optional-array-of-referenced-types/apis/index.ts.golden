@@ -4,5 +4,5 @@
  * Optional Array of Referenced Types Test — 1.0.0
  * Test case for optional array of referenced model types
  */
-export type { TestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { TestRawResponse, TestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, TestError } from './DefaultApi';

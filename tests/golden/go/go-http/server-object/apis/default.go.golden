@@ -35,6 +35,34 @@ type GetAllUsersResponse struct {
 	Status200 []models.GetAllUsersResponse200Item
 }
 
+type GetAllUsersError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetAllUsersErrorDetail
+}
+
+func (e *GetAllUsersError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetAllUsersErrorDetail interface {
+	isGetAllUsersErrorDetail()
+}
+
+type GetAllUsersUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetAllUsersUnexpected) isGetAllUsersErrorDetail() {}
+
+func (d *GetAllUsersUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetAllUsers — Get all users
 //
 // Retrieve a list of all users
@@ -50,20 +78,31 @@ func (a *DefaultAPI) GetAllUsers(ctx context.Context) (*GetAllUsersResponse, err
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetAllUsersResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &GetAllUsersUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetAllUsersError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload []models.GetAllUsersResponse200Item
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -73,7 +112,49 @@ type GetUserByIdResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.GetUserByIdResponse200
-	Status404 *models.GetUserByIdResponse404
+}
+
+type GetUserByIdError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetUserByIdErrorDetail
+}
+
+func (e *GetUserByIdError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetUserByIdErrorDetail interface {
+	isGetUserByIdErrorDetail()
+}
+
+type GetUserByIdNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByIdNotFound) isGetUserByIdErrorDetail() {}
+
+func (d *GetUserByIdNotFound) Body() (*models.GetUserByIdResponse404, error) {
+	var value models.GetUserByIdResponse404
+	if err := json.Unmarshal(d.RawBody, &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+type GetUserByIdUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByIdUnexpected) isGetUserByIdErrorDetail() {}
+
+func (d *GetUserByIdUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetUserById — Get user by ID
@@ -92,26 +173,34 @@ func (a *DefaultAPI) GetUserById(ctx context.Context, id int64) (*GetUserByIdRes
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetUserByIdResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 404:
+				detail := &GetUserByIdNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetUserByIdUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.GetUserByIdResponse200
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
-		case 404:
-			var payload models.GetUserByIdResponse404
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
-				return nil, fmt.Errorf("decode response: %w", err)
-			}
-			resp.Status404 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

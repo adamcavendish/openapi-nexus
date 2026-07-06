@@ -3,5 +3,5 @@
  *
  * Default And Exact Response API — 1.0.0
  */
-export type { GetWidgetRawResponse, WidgetApiInterface } from './WidgetApi';
-export { WidgetApi } from './WidgetApi';
+export type { GetWidgetRawResponse, GetWidgetErrorDetail, WidgetApiInterface } from './WidgetApi';
+export { WidgetApi, GetWidgetError } from './WidgetApi';

@@ -5,8 +5,8 @@
  * Covers optional non-multipart request bodies.
  */
 import type { Payload } from '../models/Payload';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiSendOptionalBinaryRequest {
   body?: Blob | File;
@@ -26,19 +26,68 @@ export interface ApiSendRequiredJsonRequest {
 
 export type SendOptionalBinaryRawResponse =
   | VoidApiResponse & { status: 204 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type SendOptionalJsonRawResponse =
   | VoidApiResponse & { status: 204 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type SendOptionalTextRawResponse =
   | VoidApiResponse & { status: 204 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
 
 export type SendRequiredJsonRawResponse =
   | VoidApiResponse & { status: 204 }
-  | VoidApiResponse & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
+
+
+export type SendOptionalBinaryErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class SendOptionalBinaryError extends ResponseError {
+  readonly detail: SendOptionalBinaryErrorDetail;
+
+  constructor(response: Response, detail: SendOptionalBinaryErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type SendOptionalJsonErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class SendOptionalJsonError extends ResponseError {
+  readonly detail: SendOptionalJsonErrorDetail;
+
+  constructor(response: Response, detail: SendOptionalJsonErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type SendOptionalTextErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class SendOptionalTextError extends ResponseError {
+  readonly detail: SendOptionalTextErrorDetail;
+
+  constructor(response: Response, detail: SendOptionalTextErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
+
+export type SendRequiredJsonErrorDetail =
+  { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class SendRequiredJsonError extends ResponseError {
+  readonly detail: SendRequiredJsonErrorDetail;
+
+  constructor(response: Response, detail: SendRequiredJsonErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface DefaultApiInterface {
@@ -83,11 +132,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new SendOptionalBinaryError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -120,11 +176,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new SendOptionalJsonError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -157,11 +220,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new SendOptionalTextError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
@@ -200,11 +270,18 @@ export class DefaultApi extends BaseAPI implements DefaultApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+       {
+        let errorValue: Promise<Blob> | undefined;
+        throw new SendRequiredJsonError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
     else {
-      return new VoidApiResponse(response) as VoidApiResponse & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 

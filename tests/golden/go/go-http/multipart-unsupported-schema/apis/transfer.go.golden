@@ -30,6 +30,34 @@ type UploadRawMultipartResponse struct {
 	Raw *http.Response
 }
 
+type UploadRawMultipartError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UploadRawMultipartErrorDetail
+}
+
+func (e *UploadRawMultipartError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UploadRawMultipartErrorDetail interface {
+	isUploadRawMultipartErrorDetail()
+}
+
+type UploadRawMultipartUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UploadRawMultipartUnexpected) isUploadRawMultipartErrorDetail() {}
+
+func (d *UploadRawMultipartUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // UploadRawMultipart calls POST /uploads/raw.
 func (a *TransferAPI) UploadRawMultipart(ctx context.Context, body []byte) (*UploadRawMultipartResponse, error) {
 	path := "/uploads/raw"
@@ -49,11 +77,17 @@ func (a *TransferAPI) UploadRawMultipart(ctx context.Context, body []byte) (*Upl
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UploadRawMultipartResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &UploadRawMultipartUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UploadRawMultipartError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }

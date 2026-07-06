@@ -52,7 +52,7 @@ impl Client {
                 req = req.header(key, &value);
             }
         }
-        req
+        req.config().http_status_as_error(false).build()
     }
 
     /// Build a GET request.

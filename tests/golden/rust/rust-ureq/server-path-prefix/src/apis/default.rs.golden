@@ -5,7 +5,7 @@
 // Test fixture for server URL path prefix stripping in operation paths.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -23,36 +23,75 @@ impl<'a> DefaultApi<'a> {
     /// Health check
     pub fn health_check(
         &self,
-    ) -> Result<HealthCheckResponse, Error> {
+    ) -> Result<HealthCheckResponse, HealthCheckError> {
         let path = "/health".to_string();
         let req = self.client.get(&path);
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(HealthCheckResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = HealthCheckResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(HealthCheckError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// List users
     pub fn list_users(
         &self,
-    ) -> Result<ListUsersResponse, Error> {
+    ) -> Result<ListUsersResponse, ListUsersError> {
         let path = "/users".to_string();
         let req = self.client.get(&path);
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(ListUsersResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = ListUsersResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(ListUsersError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// Get user
     pub fn get_user(
         &self,
         user_id: &str,
-    ) -> Result<GetUserResponse, Error> {
+    ) -> Result<GetUserResponse, GetUserError> {
         let mut path = "/users/{user_id}".to_string();
         path = path.replace("{user_id}", &user_id.to_string());
         let req = self.client.get(&path);
-        let resp = req.call()?;
+        let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(GetUserResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = GetUserResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(GetUserError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -62,14 +101,107 @@ pub struct HealthCheckResponse {
     pub status_code: u16,
 }
 
+/// Error from `health_check`.
+#[derive(Debug)]
+pub enum HealthCheckError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HealthCheckError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HealthCheckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HealthCheckError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `list_users`.
 #[derive(Debug)]
 pub struct ListUsersResponse {
     pub status_code: u16,
 }
 
+/// Error from `list_users`.
+#[derive(Debug)]
+pub enum ListUsersError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for ListUsersError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for ListUsersError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for ListUsersError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `get_user`.
 #[derive(Debug)]
 pub struct GetUserResponse {
     pub status_code: u16,
+}
+
+/// Error from `get_user`.
+#[derive(Debug)]
+pub enum GetUserError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetUserError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetUserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetUserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

@@ -7,9 +7,30 @@ from __future__ import annotations
 
 import json
 
+from collections.abc import Mapping
+
 from ..models.upload_encoded_asset_multipart_request_body import UploadEncodedAssetMultipartRequestBody
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class UploadEncodedAssetUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type UploadEncodedAssetErrorDetail = (
+    UploadEncodedAssetUnexpected
+)
+
+class UploadEncodedAssetError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: UploadEncodedAssetErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: UploadEncodedAssetErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class TransferApi:
     def __init__(self, client: Client) -> None:
@@ -23,6 +44,7 @@ class TransferApi:
         files["metadata"] = (None, json.dumps(body.metadata.to_dict()), "application/vnd.openapi-nexus.metadata+json")
         files["purpose"] = (None, str(body.purpose), "text/plain")
         response = self._client.request("POST", path, files=files if files else None)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason, response.content)
+        if not (200 <= response.status_code < 300):
+            detail = UploadEncodedAssetUnexpected(response.status_code, response.headers, response.content)
+            raise UploadEncodedAssetError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
         return None

@@ -10,8 +10,10 @@
 export type {
   ApiCreateContainerRequest,
   CreateContainerRawResponse,
+  CreateContainerErrorDetail,
   ApiCreateVolumeRequest,
   CreateVolumeRawResponse,
+  CreateVolumeErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, CreateContainerError, CreateVolumeError } from './DefaultApi';

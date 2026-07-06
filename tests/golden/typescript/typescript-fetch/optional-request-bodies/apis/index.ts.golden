@@ -7,12 +7,22 @@
 export type {
   ApiSendOptionalBinaryRequest,
   SendOptionalBinaryRawResponse,
+  SendOptionalBinaryErrorDetail,
   ApiSendOptionalJsonRequest,
   SendOptionalJsonRawResponse,
+  SendOptionalJsonErrorDetail,
   ApiSendOptionalTextRequest,
   SendOptionalTextRawResponse,
+  SendOptionalTextErrorDetail,
   ApiSendRequiredJsonRequest,
   SendRequiredJsonRawResponse,
+  SendRequiredJsonErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export {
+  DefaultApi,
+  SendOptionalBinaryError,
+  SendOptionalJsonError,
+  SendOptionalTextError,
+  SendRequiredJsonError,
+} from './DefaultApi';

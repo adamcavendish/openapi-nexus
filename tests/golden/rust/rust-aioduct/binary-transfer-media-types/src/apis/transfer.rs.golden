@@ -5,7 +5,7 @@
 // Covers multipart upload and octet-stream download.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -24,19 +24,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> TransferApi<'a, R, 
     pub async fn download_asset(
         &self,
         asset_id: &str,
-    ) -> Result<DownloadAssetResponse, Error> {
+    ) -> Result<DownloadAssetResponse, DownloadAssetError> {
         let mut path = "/assets/{asset_id}/content".to_string();
         path = path.replace("{asset_id}", &asset_id.to_string());
         let req = self.client.get(&path)?;
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = DownloadAssetResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(Ok::<Vec<u8>, Error>(body_bytes.to_vec())?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(DownloadAssetError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(DownloadAssetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -45,23 +58,36 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> TransferApi<'a, R, 
     pub async fn upload_asset(
         &self,
         body: &crate::models::UploadAssetMultipartRequestBody,
-    ) -> Result<UploadAssetResponse, Error> {
+    ) -> Result<UploadAssetResponse, UploadAssetError> {
         let path = "/uploads".to_string();
         let mut req = self.client.post(&path)?;
         let mut multipart = aioduct::multipart::Multipart::new();
         multipart = multipart.file("file", body.file.filename_or_default("file").to_string(), "application/octet-stream", body.file.data.clone());
-        multipart = multipart.part(aioduct::multipart::Part::text("metadata", serde_json::to_string(&body.metadata)?).mime_str("application/json"));
+        multipart = multipart.part(aioduct::multipart::Part::text("metadata", serde_json::to_string(&body.metadata).map_err(Error::Deserialize)?).mime_str("application/json"));
         multipart = multipart.part(aioduct::multipart::Part::text("purpose", body.purpose.to_string()).mime_str("text/plain"));
         req = req.multipart(multipart);
-        let resp = req.send().await?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = UploadAssetResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(UploadAssetError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(UploadAssetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -74,9 +100,75 @@ pub struct DownloadAssetResponse {
     pub data: Option<Vec<u8>>,
 }
 
+/// Error from `download_asset`.
+#[derive(Debug)]
+pub enum DownloadAssetError {
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for DownloadAssetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for DownloadAssetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for DownloadAssetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `upload_asset`.
 #[derive(Debug)]
 pub struct UploadAssetResponse {
     pub status_code: u16,
     pub data: Option<crate::models::UploadMetadata>,
+}
+
+/// Error from `upload_asset`.
+#[derive(Debug)]
+pub enum UploadAssetError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UploadAssetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UploadAssetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UploadAssetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

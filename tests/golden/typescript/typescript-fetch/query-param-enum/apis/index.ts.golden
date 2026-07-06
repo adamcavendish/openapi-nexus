@@ -4,5 +4,10 @@
  * Query Parameter Enum Test — 1.0.0
  * Test case for query parameters that reference enum schemas
  */
-export type { ApiGetItemsRequest, GetItemsRawResponse, ItemsApiInterface } from './ItemsApi';
-export { ItemsApi } from './ItemsApi';
+export type {
+  ApiGetItemsRequest,
+  GetItemsRawResponse,
+  GetItemsErrorDetail,
+  ItemsApiInterface,
+} from './ItemsApi';
+export { ItemsApi, GetItemsError } from './ItemsApi';

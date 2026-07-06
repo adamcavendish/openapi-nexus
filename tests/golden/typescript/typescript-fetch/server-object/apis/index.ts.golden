@@ -6,8 +6,10 @@
  */
 export type {
   GetAllUsersRawResponse,
+  GetAllUsersErrorDetail,
   ApiGetUserByIdRequest,
   GetUserByIdRawResponse,
+  GetUserByIdErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, GetAllUsersError, GetUserByIdError } from './DefaultApi';

@@ -31,7 +31,49 @@ type ListWidgetsResponse struct {
 	Raw *http.Response
 	Status200 []models.Widget
 	Status206 *models.WidgetListPartial
-	Status404 *models.ErrorResponse
+}
+
+type ListWidgetsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail ListWidgetsErrorDetail
+}
+
+func (e *ListWidgetsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type ListWidgetsErrorDetail interface {
+	isListWidgetsErrorDetail()
+}
+
+type ListWidgetsNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*ListWidgetsNotFound) isListWidgetsErrorDetail() {}
+
+func (d *ListWidgetsNotFound) Body() (*models.ErrorResponse, error) {
+	var value models.ErrorResponse
+	if err := json.Unmarshal(d.RawBody, &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+type ListWidgetsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*ListWidgetsUnexpected) isListWidgetsErrorDetail() {}
+
+func (d *ListWidgetsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // ListWidgets calls GET /widgets.
@@ -47,32 +89,40 @@ func (a *WidgetAPI) ListWidgets(ctx context.Context) (*ListWidgetsResponse, erro
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &ListWidgetsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 404:
+				detail := &ListWidgetsNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &ListWidgetsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &ListWidgetsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &ListWidgetsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload []models.Widget
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = payload
 		case 206:
 			var payload models.WidgetListPartial
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status206 = &payload
-		case 404:
-			var payload models.ErrorResponse
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
-				return nil, fmt.Errorf("decode response: %w", err)
-			}
-			resp.Status404 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

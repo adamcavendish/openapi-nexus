@@ -5,7 +5,7 @@
 // Covers multipart object parts whose wire names differ from ergonomic names.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "multipart" tag.
 pub struct MultipartApi<'a> {
@@ -24,7 +24,7 @@ impl<'a> MultipartApi<'a> {
     pub fn send_nested_object_part(
         &self,
         body: &crate::models::SendNestedObjectPartMultipartRequestBody,
-    ) -> Result<SendNestedObjectPartResponse, Error> {
+    ) -> Result<SendNestedObjectPartResponse, SendNestedObjectPartError> {
         let path = "/multipart/nested-object".to_string();
         let mut req = self.client.post(&path);
         let boundary = format!("openapi-nexus-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|duration| duration.as_nanos()).unwrap_or(0));
@@ -35,13 +35,26 @@ impl<'a> MultipartApi<'a> {
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
         multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("item_config"), "application/json").as_bytes());
-        multipart_body.extend_from_slice(serde_json::to_string(&body.item_config)?.as_bytes());
+        multipart_body.extend_from_slice(serde_json::to_string(&body.item_config).map_err(Error::Deserialize)?.as_bytes());
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
         req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
-        let resp = req.send(multipart_body)?;
+        let resp = req.send(multipart_body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(SendNestedObjectPartResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendNestedObjectPartResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendNestedObjectPartError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -49,4 +62,35 @@ impl<'a> MultipartApi<'a> {
 #[derive(Debug)]
 pub struct SendNestedObjectPartResponse {
     pub status_code: u16,
+}
+
+/// Error from `send_nested_object_part`.
+#[derive(Debug)]
+pub enum SendNestedObjectPartError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendNestedObjectPartError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendNestedObjectPartError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendNestedObjectPartError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

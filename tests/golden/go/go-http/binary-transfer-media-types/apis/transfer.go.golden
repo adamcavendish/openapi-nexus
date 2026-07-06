@@ -38,6 +38,45 @@ type DownloadAssetResponse struct {
 	Status200 []byte
 }
 
+type DownloadAssetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail DownloadAssetErrorDetail
+}
+
+func (e *DownloadAssetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type DownloadAssetErrorDetail interface {
+	isDownloadAssetErrorDetail()
+}
+
+type DownloadAssetNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DownloadAssetNotFound) isDownloadAssetErrorDetail() {}
+
+func (d *DownloadAssetNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DownloadAssetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DownloadAssetUnexpected) isDownloadAssetErrorDetail() {}
+
+func (d *DownloadAssetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // DownloadAsset calls GET /assets/{asset_id}/content.
 func (a *TransferAPI) DownloadAsset(ctx context.Context, assetId string) (*DownloadAssetResponse, error) {
 	path := "/assets/{asset_id}/content"
@@ -52,20 +91,31 @@ func (a *TransferAPI) DownloadAsset(ctx context.Context, assetId string) (*Downl
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &DownloadAssetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 404:
+				detail := &DownloadAssetNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DownloadAssetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &DownloadAssetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DownloadAssetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
-			payload, err := io.ReadAll(httpResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("read response: %w", err)
-			}
+			payload := append([]byte(nil), responseBody...)
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -75,6 +125,45 @@ type UploadAssetResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.UploadMetadata
+}
+
+type UploadAssetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UploadAssetErrorDetail
+}
+
+func (e *UploadAssetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UploadAssetErrorDetail interface {
+	isUploadAssetErrorDetail()
+}
+
+type UploadAssetBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UploadAssetBadRequest) isUploadAssetErrorDetail() {}
+
+func (d *UploadAssetBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UploadAssetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UploadAssetUnexpected) isUploadAssetErrorDetail() {}
+
+func (d *UploadAssetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // UploadAsset calls POST /uploads.
@@ -145,20 +234,34 @@ func (a *TransferAPI) UploadAsset(ctx context.Context, body *models.UploadAssetM
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UploadAssetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &UploadAssetBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UploadAssetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &UploadAssetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UploadAssetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.UploadMetadata
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

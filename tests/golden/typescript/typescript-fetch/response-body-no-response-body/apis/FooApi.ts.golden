@@ -5,8 +5,8 @@
  */
 import type { ErrorResponse } from '../models/ErrorResponse';
 import type { FooRequest } from '../models/FooRequest';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, VoidApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, RequiredError, ResponseError, VoidApiResponse } from '../runtime/runtime';
 
 export interface ApiUpdateFooBarRequest {
   fooId: string;
@@ -15,14 +15,27 @@ export interface ApiUpdateFooBarRequest {
 
 export type UpdateFooBarRawResponse =
   | VoidApiResponse & { status: 204 }
-  | JSONApiResponse<ErrorResponse> & { status: 400 }
-  | JSONApiResponse<ErrorResponse> & { status: 500 }
-  | JSONApiResponse<unknown> & { status: number };
+  | VoidApiResponse & HttpSuccessResponse;
+
+
+export type UpdateFooBarErrorDetail =
+  { kind: 'badRequest'; status: 400; raw: Response; value(): Promise<ErrorResponse> }
+  | { kind: 'internalServerError'; status: 500; raw: Response; value(): Promise<ErrorResponse> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class UpdateFooBarError extends ResponseError {
+  readonly detail: UpdateFooBarErrorDetail;
+
+  constructor(response: Response, detail: UpdateFooBarErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface FooApiInterface {
   updateFooBarRaw: (requestParameters: ApiUpdateFooBarRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<UpdateFooBarRawResponse>;
-  updateFooBar: (requestParameters: ApiUpdateFooBarRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<ErrorResponse>;
+  updateFooBar: (requestParameters: ApiUpdateFooBarRequest, initOverrides?: RequestInit | InitOverrideFunction) => Promise<void>;
 }
 
 export class FooApi extends BaseAPI implements FooApiInterface {
@@ -69,23 +82,32 @@ export class FooApi extends BaseAPI implements FooApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 400) {
+        let errorValue: Promise<ErrorResponse> | undefined;
+        throw new UpdateFooBarError(response, { kind: 'badRequest', status: response.status as 400, raw: response, value: () => errorValue ??= new JSONApiResponse<ErrorResponse>(errorRaw.clone()).value() });
+      }
+      else if (response.status === 500) {
+        let errorValue: Promise<ErrorResponse> | undefined;
+        throw new UpdateFooBarError(response, { kind: 'internalServerError', status: response.status as 500, raw: response, value: () => errorValue ??= new JSONApiResponse<ErrorResponse>(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new UpdateFooBarError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 204) {
       return new VoidApiResponse(response) as VoidApiResponse & { status: 204 };
     }
-    else if (response.status === 400) {
-      return new JSONApiResponse(response) as JSONApiResponse<ErrorResponse> & { status: 400 };
-    }
-    else if (response.status === 500) {
-      return new JSONApiResponse(response) as JSONApiResponse<ErrorResponse> & { status: 500 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new VoidApiResponse(response) as VoidApiResponse & HttpSuccessResponse;
     }
   }
 
   async updateFooBar(requestParameters: ApiUpdateFooBarRequest, initOverrides?: RequestInit
-  | InitOverrideFunction): Promise<ErrorResponse> {
+  | InitOverrideFunction): Promise<void> {
     const response = await this.updateFooBarRaw(requestParameters, initOverrides);
-    return await response.value() as ErrorResponse;
+    return await response.value();
   }
 }

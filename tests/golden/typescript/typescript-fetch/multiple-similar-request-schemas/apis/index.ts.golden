@@ -7,8 +7,10 @@
 export type {
   ApiCreateTypeARequest,
   CreateTypeARawResponse,
+  CreateTypeAErrorDetail,
   ApiCreateTypeBRequest,
   CreateTypeBRawResponse,
+  CreateTypeBErrorDetail,
   TestApiApiInterface,
 } from './TestApiApi';
-export { TestApiApi } from './TestApiApi';
+export { TestApiApi, CreateTypeAError, CreateTypeBError } from './TestApiApi';

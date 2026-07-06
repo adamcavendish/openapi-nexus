@@ -13,6 +13,9 @@ use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::multipart_parts_for_request_body;
 pub use crate::generators::multipart::{MultipartPart, MultipartValueEncoding};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::{
+    response_entry_name as response_variant_name, response_match_rank,
+};
 use crate::ir::types::{
     IrOperation, IrParameter, IrRequestBody, IrResponse, IrSpec, IrTypeExpr, ParameterLocation,
 };
@@ -133,6 +136,7 @@ fn emit_api_file(
 
     // Use imports
     fsb = fsb.add_import(ImportSpec::named("crate::runtime::client", "Client"));
+    fsb = fsb.add_import(ImportSpec::named("crate::runtime::error", "ApiError"));
     fsb = fsb.add_import(ImportSpec::named("crate::runtime::error", "Error"));
 
     // Struct generics (e.g., `<'a, R: aioduct::RuntimePoll>`)
@@ -210,6 +214,7 @@ fn emit_api_file(
     // Response structs -- add as TypeSpec members
     for plan in &plans {
         fsb = fsb.add_type(emit_response_struct(plan, response_extra_derives));
+        fsb = fsb.add_code(emit_error_enum(plan));
     }
 
     let file = fsb.build().expect("FileSpec builds");
@@ -224,11 +229,13 @@ pub struct OpPlan<'a> {
     pub op: &'a IrOperation,
     pub method_name: String,
     pub response_type: String,
+    pub error_type: String,
     pub path_params: Vec<ParamBinding<'a>>,
     pub query_params: Vec<ParamBinding<'a>>,
     pub header_params: Vec<ParamBinding<'a>>,
     pub body: Option<BodyBinding>,
     pub typed_responses: Vec<TypedResponse>,
+    pub error_responses: Vec<ErrorResponse>,
 }
 
 pub struct ParamBinding<'a> {
@@ -266,6 +273,13 @@ pub struct TypedResponse {
     pub decoding: ResponseDecoding,
 }
 
+pub struct ErrorResponse {
+    pub status: String,
+    pub variant_name: String,
+    pub rust_type: String,
+    pub decoding: Option<ResponseDecoding>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResponseDecoding {
     Json,
@@ -283,6 +297,7 @@ pub fn plan_operation<'a>(
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_snake_case();
     let response_type = format!("{}Response", op_id.to_pascal_case());
+    let error_type = format!("{}Error", op_id.to_pascal_case());
 
     let mut used_names: HashSet<String> = HashSet::new();
     used_names.insert("self".to_string());
@@ -312,21 +327,31 @@ pub fn plan_operation<'a>(
         .as_ref()
         .and_then(|b| plan_body(op, b, &mut used_names, ir, request_inputs));
 
-    let typed_responses = op
+    let mut typed_responses: Vec<TypedResponse> = op
         .responses
         .iter()
+        .filter(|r| is_success_status(&r.status))
         .filter_map(|r| plan_response(r, ir))
+        .collect();
+    typed_responses.sort_by_key(|r| response_match_rank(&r.status));
+    let error_responses = op
+        .responses
+        .iter()
+        .filter(|r| !is_success_status(&r.status))
+        .map(|r| plan_error_response(r, ir))
         .collect();
 
     OpPlan {
         op,
         method_name,
         response_type,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
     }
 }
 
@@ -382,6 +407,34 @@ pub fn plan_response(r: &IrResponse, ir: &IrSpec) -> Option<TypedResponse> {
     })
 }
 
+pub fn plan_error_response(r: &IrResponse, ir: &IrSpec) -> ErrorResponse {
+    let (rust_type, decoding) = match pick_response_content(r) {
+        Some((media_type, t)) => {
+            let decoding = response_decoding(&media_type);
+            let rust_type = match decoding {
+                ResponseDecoding::OctetStream => "Vec<u8>".to_string(),
+                ResponseDecoding::TextPlain => "String".to_string(),
+                _ => rust_type_str_qualified(&t, ir),
+            };
+            (rust_type, Some(decoding))
+        }
+        None => ("()".to_string(), None),
+    };
+    ErrorResponse {
+        status: r.status.clone(),
+        variant_name: response_variant_name(&r.status),
+        rust_type,
+        decoding,
+    }
+}
+
+pub fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
+}
+
 pub fn param_rust_type(p: &IrParameter, ir: &IrSpec) -> (String, bool) {
     let base = rust_type_str_qualified(&p.type_expr, ir);
     if p.required {
@@ -420,6 +473,7 @@ fn emit_operation(
         op,
         method_name,
         response_type,
+        error_type,
         ..
     } = plan;
 
@@ -487,7 +541,7 @@ fn emit_operation(
     let async_kw = if config.is_async { "async " } else { "" };
     b.add(
         &format!(
-            "pub {async_kw}fn {method_name}(\n    {},\n) -> Result<{response_type}, Error>",
+            "pub {async_kw}fn {method_name}(\n    {},\n) -> Result<{response_type}, {error_type}>",
             params.join(",\n    "),
         ),
         (),
@@ -534,6 +588,99 @@ pub fn emit_response_struct(plan: &OpPlan<'_>, extra: Option<&ExtraDeriveConfig>
     }
 
     tb.build().expect("TypeSpec builds")
+}
+
+pub fn emit_error_enum(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let mut variants = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    for er in &plan.error_responses {
+        let variant = unique_variant_name(&er.variant_name, &mut seen);
+        variants.push((variant, er.rust_type.clone()));
+    }
+    let unexpected_variant = unique_variant_name("Unexpected", &mut seen);
+    let transport_variant = unique_variant_name("Transport", &mut seen);
+
+    cb.add(&format!("/// Error from `{}`.\n", plan.method_name), ());
+    cb.add("#[derive(Debug)]\n", ());
+    cb.add(&format!("pub enum {} {{\n", plan.error_type), ());
+    for (variant, rust_type) in &variants {
+        cb.add(&format!("    {variant}(ApiError<{rust_type}>),\n"), ());
+    }
+    cb.add(
+        &format!("    {unexpected_variant}(ApiError<Vec<u8>>),\n"),
+        (),
+    );
+    cb.add(&format!("    {transport_variant}(Error),\n"), ());
+    cb.add("}\n\n", ());
+
+    cb.add(
+        &format!("impl From<Error> for {} {{\n", plan.error_type),
+        (),
+    );
+    cb.add("    fn from(error: Error) -> Self {\n", ());
+    cb.add(&format!("        Self::{transport_variant}(error)\n"), ());
+    cb.add("    }\n", ());
+    cb.add("}\n\n", ());
+
+    cb.add(
+        &format!("impl std::fmt::Display for {} {{\n", plan.error_type),
+        (),
+    );
+    cb.add(
+        "    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n",
+        (),
+    );
+    cb.add("        match self {\n", ());
+    for (variant, _) in &variants {
+        cb.add(
+            &format!("            Self::{variant}(err) => write!(f, \"HTTP error {{}}\", err.status_code()),\n"),
+            (),
+        );
+    }
+    cb.add(&format!(
+        "            Self::{unexpected_variant}(err) => write!(f, \"unexpected HTTP error {{}}\", err.status_code()),\n"
+    ), ());
+    cb.add(
+        &format!("            Self::{transport_variant}(err) => std::fmt::Display::fmt(err, f),\n"),
+        (),
+    );
+    cb.add("        }\n", ());
+    cb.add("    }\n", ());
+    cb.add("}\n\n", ());
+
+    cb.add(
+        &format!("impl std::error::Error for {} {{\n", plan.error_type),
+        (),
+    );
+    cb.add(
+        "    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {\n",
+        (),
+    );
+    cb.add("        match self {\n", ());
+    cb.add(
+        &format!("            Self::{transport_variant}(err) => Some(err),\n"),
+        (),
+    );
+    cb.add("            _ => None,\n", ());
+    cb.add("        }\n", ());
+    cb.add("    }\n", ());
+    cb.add("}\n", ());
+
+    cb.build().expect("error enum builds")
+}
+
+fn unique_variant_name(desired: &str, used: &mut HashSet<String>) -> String {
+    if used.insert(desired.to_string()) {
+        return desired.to_string();
+    }
+    for i in 2..=u32::MAX {
+        let candidate = format!("{desired}{i}");
+        if used.insert(candidate.clone()) {
+            return candidate;
+        }
+    }
+    unreachable!("variant collision space exhausted")
 }
 
 // ---------------------------------------------------------------------------
@@ -727,7 +874,9 @@ pub fn text_field_expr(base: &str, part: &MultipartPart) -> String {
     let field_name = rust_field_name(&part.wire_name);
     match part.value_encoding {
         MultipartValueEncoding::Text => format!("{base}.{field_name}.to_string()"),
-        MultipartValueEncoding::Json => format!("serde_json::to_string(&{base}.{field_name})?"),
+        MultipartValueEncoding::Json => {
+            format!("serde_json::to_string(&{base}.{field_name}).map_err(Error::Deserialize)?")
+        }
         MultipartValueEncoding::Unsupported => {
             unreachable!("unsupported multipart parts are emitted before value expressions")
         }
@@ -741,7 +890,9 @@ pub fn binary_field_expr(base: &str, part: &MultipartPart) -> String {
 pub fn optional_text_field_expr(value: &str, part: &MultipartPart) -> String {
     match part.value_encoding {
         MultipartValueEncoding::Text => format!("{value}.to_string()"),
-        MultipartValueEncoding::Json => format!("serde_json::to_string({value})?"),
+        MultipartValueEncoding::Json => {
+            format!("serde_json::to_string({value}).map_err(Error::Deserialize)?")
+        }
         MultipartValueEncoding::Unsupported => {
             unreachable!("unsupported multipart parts are emitted before value expressions")
         }
@@ -862,6 +1013,13 @@ pub fn emit_result_init(
     );
 }
 
+pub fn emit_empty_result_init(b: &mut CodeBlockBuilder, response_type: &str) {
+    b.add(
+        &format!("let result = {response_type} {{ status_code }};\n"),
+        (),
+    );
+}
+
 /// Emit `match status_code { ... }` dispatching deserialized bodies into result fields.
 pub fn emit_response_match(
     b: &mut CodeBlockBuilder,
@@ -887,4 +1045,104 @@ pub fn emit_response_match(
         b.add("_ => {}\n", ());
     }
     b.end_control_flow();
+}
+
+pub fn emit_error_response_match(
+    b: &mut CodeBlockBuilder,
+    error_type: &str,
+    error_responses: &[ErrorResponse],
+    value_expr: &dyn Fn(&ErrorResponse) -> String,
+) {
+    b.begin_control_flow("if !(200..300).contains(&status_code)", ());
+    b.begin_control_flow("match status_code", ());
+
+    let mut seen: HashSet<String> = HashSet::new();
+    for er in error_responses
+        .iter()
+        .filter(|er| er.status.parse::<u16>().is_ok())
+    {
+        let key = format!("{}-{}", er.status, er.variant_name);
+        if !seen.insert(key) {
+            continue;
+        }
+        let pattern = status_match_pattern(&er.status);
+        let body_expr = value_expr(er);
+        b.begin_control_flow(&format!("{pattern} =>"), ());
+        b.add(&format!("let body = {body_expr};\n"), ());
+        b.add(&format!(
+            "return Err({error_type}::{}(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));\n",
+            er.variant_name
+        ), ());
+        b.end_control_flow();
+    }
+
+    for er in error_responses
+        .iter()
+        .filter(|er| er.status.ends_with("XX") && er.status.parse::<u16>().is_err())
+    {
+        let key = format!("{}-{}", er.status, er.variant_name);
+        if !seen.insert(key) {
+            continue;
+        }
+        let pattern = status_match_pattern(&er.status);
+        let body_expr = value_expr(er);
+        b.begin_control_flow(&format!("{pattern} =>"), ());
+        b.add(&format!("let body = {body_expr};\n"), ());
+        b.add(&format!(
+            "return Err({error_type}::{}(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));\n",
+            er.variant_name
+        ), ());
+        b.end_control_flow();
+    }
+
+    if let Some(er) = error_responses
+        .iter()
+        .find(|er| er.status.eq_ignore_ascii_case("default"))
+    {
+        let body_expr = value_expr(er);
+        b.begin_control_flow("_ =>", ());
+        b.add(&format!("let body = {body_expr};\n"), ());
+        b.add(&format!(
+            "return Err({error_type}::{}(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));\n",
+            er.variant_name
+        ), ());
+        b.end_control_flow();
+    } else {
+        b.begin_control_flow("_ =>", ());
+        b.add(
+            "let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());\n",
+            (),
+        );
+        b.add(&format!(
+            "return Err({error_type}::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));\n"
+        ), ());
+        b.end_control_flow();
+    }
+
+    b.end_control_flow();
+    b.end_control_flow();
+}
+
+pub fn error_response_value_expr(er: &ErrorResponse, bytes_var: &str) -> String {
+    let owned_bytes_expr = bytes_var.strip_prefix('&').unwrap_or(bytes_var);
+    match er.decoding {
+        Some(ResponseDecoding::Json) => {
+            format!("serde_json::from_slice({bytes_var}).map_err(Error::Deserialize)")
+        }
+        Some(ResponseDecoding::Xml) => {
+            format!(
+                "serde_xml_rs::from_reader(std::io::Cursor::new({bytes_var})).map_err(Error::Xml)"
+            )
+        }
+        Some(ResponseDecoding::TextPlain) => {
+            format!("Ok::<String, Error>(String::from_utf8_lossy({bytes_var}).into_owned())")
+        }
+        Some(ResponseDecoding::OctetStream) => {
+            format!("Ok::<Vec<u8>, Error>({owned_bytes_expr}.to_vec())")
+        }
+        Some(ResponseDecoding::Other(_)) => {
+            format!("serde_json::from_slice({bytes_var}).map_err(Error::Deserialize)")
+        }
+        None => "Ok::<(), Error>(())".to_string(),
+    }
 }

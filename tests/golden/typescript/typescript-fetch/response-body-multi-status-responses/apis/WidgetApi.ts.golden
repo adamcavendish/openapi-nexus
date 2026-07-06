@@ -6,21 +6,33 @@
 import type { ErrorResponse } from '../models/ErrorResponse';
 import type { Widget } from '../models/Widget';
 import type { WidgetListPartial } from '../models/WidgetListPartial';
-import type { Configuration, HTTPQuery, InitOverrideFunction } from '../runtime/runtime';
-import { BaseAPI, DefaultConfig, JSONApiResponse } from '../runtime/runtime';
+import type { Configuration, HTTPQuery, HttpSuccessResponse, InitOverrideFunction } from '../runtime/runtime';
+import { BaseAPI, DefaultConfig, JSONApiResponse, ResponseError } from '../runtime/runtime';
 
 export type ListWidgetsRawResponse =
   | JSONApiResponse<Widget[]> & { status: 200 }
   | JSONApiResponse<WidgetListPartial> & { status: 206 }
-  | JSONApiResponse<ErrorResponse> & { status: 404 }
-  | JSONApiResponse<unknown> & { status: number };
+  | JSONApiResponse<unknown> & HttpSuccessResponse;
+
+
+export type ListWidgetsErrorDetail =
+  { kind: 'notFound'; status: 404; raw: Response; value(): Promise<ErrorResponse> }
+  | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
+
+export class ListWidgetsError extends ResponseError {
+  readonly detail: ListWidgetsErrorDetail;
+
+  constructor(response: Response, detail: ListWidgetsErrorDetail, msg = 'Response returned an error code') {
+    super(response, msg);
+    this.detail = detail;
+  }
+}
 
 
 export interface WidgetApiInterface {
   listWidgetsRaw: (initOverrides?: RequestInit | InitOverrideFunction) => Promise<ListWidgetsRawResponse>;
   listWidgets: (initOverrides?: RequestInit | InitOverrideFunction) => Promise<Widget[]
-  | WidgetListPartial
-  | ErrorResponse>;
+  | WidgetListPartial>;
 }
 
 export class WidgetApi extends BaseAPI implements WidgetApiInterface {
@@ -50,24 +62,31 @@ export class WidgetApi extends BaseAPI implements WidgetApiInterface {
     }, initOverrides);
 
     // Handle responses
+    if (!(response.status >= 200 && response.status < 300)) {
+      const errorRaw = response.clone();
+      if (response.status === 404) {
+        let errorValue: Promise<ErrorResponse> | undefined;
+        throw new ListWidgetsError(response, { kind: 'notFound', status: response.status as 404, raw: response, value: () => errorValue ??= new JSONApiResponse<ErrorResponse>(errorRaw.clone()).value() });
+      }
+      else {
+        let errorValue: Promise<Blob> | undefined;
+        throw new ListWidgetsError(response, { kind: 'unexpected', status: response.status, raw: response, value: () => errorValue ??= errorRaw.clone().blob() });
+      }
+    }
     if (response.status === 200) {
       return new JSONApiResponse(response) as JSONApiResponse<Widget[]> & { status: 200 };
     }
     else if (response.status === 206) {
       return new JSONApiResponse(response) as JSONApiResponse<WidgetListPartial> & { status: 206 };
     }
-    else if (response.status === 404) {
-      return new JSONApiResponse(response) as JSONApiResponse<ErrorResponse> & { status: 404 };
-    }
     else {
-      return new JSONApiResponse(response) as JSONApiResponse<unknown> & { status: number };
+      return new JSONApiResponse(response) as JSONApiResponse<unknown> &HttpSuccessResponse;
     }
   }
 
   async listWidgets(initOverrides?: RequestInit | InitOverrideFunction): Promise<Widget[]
-      | WidgetListPartial
-      | ErrorResponse> {
+      | WidgetListPartial> {
     const response = await this.listWidgetsRaw(initOverrides);
-    return await response.value() as Widget[] | WidgetListPartial | ErrorResponse;
+    return await response.value() as Widget[] | WidgetListPartial;
   }
 }

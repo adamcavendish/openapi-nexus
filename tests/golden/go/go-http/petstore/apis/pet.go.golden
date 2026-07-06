@@ -37,6 +37,67 @@ type UpdatePetResponse struct {
 	Status200 *models.Pet
 }
 
+type UpdatePetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UpdatePetErrorDetail
+}
+
+func (e *UpdatePetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UpdatePetErrorDetail interface {
+	isUpdatePetErrorDetail()
+}
+
+type UpdatePetBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetBadRequest) isUpdatePetErrorDetail() {}
+
+func (d *UpdatePetBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdatePetNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetNotFound) isUpdatePetErrorDetail() {}
+
+func (d *UpdatePetNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdatePetValidation struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetValidation) isUpdatePetErrorDetail() {}
+
+func (d *UpdatePetValidation) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdatePetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetUnexpected) isUpdatePetErrorDetail() {}
+
+func (d *UpdatePetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // UpdatePet — Update an existing pet
 func (a *PetAPI) UpdatePet(ctx context.Context, body *models.Pet) (*UpdatePetResponse, error) {
 	path := "/pet"
@@ -59,20 +120,40 @@ func (a *PetAPI) UpdatePet(ctx context.Context, body *models.Pet) (*UpdatePetRes
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UpdatePetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &UpdatePetBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &UpdatePetNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 422:
+				detail := &UpdatePetValidation{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &UpdatePetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -82,6 +163,56 @@ type AddPetResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Pet
+}
+
+type AddPetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail AddPetErrorDetail
+}
+
+func (e *AddPetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type AddPetErrorDetail interface {
+	isAddPetErrorDetail()
+}
+
+type AddPetBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*AddPetBadRequest) isAddPetErrorDetail() {}
+
+func (d *AddPetBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type AddPetValidation struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*AddPetValidation) isAddPetErrorDetail() {}
+
+func (d *AddPetValidation) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type AddPetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*AddPetUnexpected) isAddPetErrorDetail() {}
+
+func (d *AddPetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // AddPet — Add a new pet to the store
@@ -106,20 +237,37 @@ func (a *PetAPI) AddPet(ctx context.Context, body *models.Pet) (*AddPetResponse,
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &AddPetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &AddPetBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &AddPetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 422:
+				detail := &AddPetValidation{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &AddPetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &AddPetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &AddPetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -129,6 +277,45 @@ type FindPetsByStatusResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 []models.Pet
+}
+
+type FindPetsByStatusError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail FindPetsByStatusErrorDetail
+}
+
+func (e *FindPetsByStatusError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type FindPetsByStatusErrorDetail interface {
+	isFindPetsByStatusErrorDetail()
+}
+
+type FindPetsByStatusBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*FindPetsByStatusBadRequest) isFindPetsByStatusErrorDetail() {}
+
+func (d *FindPetsByStatusBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type FindPetsByStatusUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*FindPetsByStatusUnexpected) isFindPetsByStatusErrorDetail() {}
+
+func (d *FindPetsByStatusUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // FindPetsByStatus — Find pets by status
@@ -146,20 +333,34 @@ func (a *PetAPI) FindPetsByStatus(ctx context.Context, status string) (*FindPets
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &FindPetsByStatusResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &FindPetsByStatusBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &FindPetsByStatusError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &FindPetsByStatusUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &FindPetsByStatusError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload []models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -169,6 +370,45 @@ type FindPetsByTagsResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 []models.Pet
+}
+
+type FindPetsByTagsError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail FindPetsByTagsErrorDetail
+}
+
+func (e *FindPetsByTagsError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type FindPetsByTagsErrorDetail interface {
+	isFindPetsByTagsErrorDetail()
+}
+
+type FindPetsByTagsBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*FindPetsByTagsBadRequest) isFindPetsByTagsErrorDetail() {}
+
+func (d *FindPetsByTagsBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type FindPetsByTagsUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*FindPetsByTagsUnexpected) isFindPetsByTagsErrorDetail() {}
+
+func (d *FindPetsByTagsUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // FindPetsByTags — Find pets by tags
@@ -186,20 +426,34 @@ func (a *PetAPI) FindPetsByTags(ctx context.Context, tags []string) (*FindPetsBy
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &FindPetsByTagsResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &FindPetsByTagsBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &FindPetsByTagsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &FindPetsByTagsUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &FindPetsByTagsError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload []models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -209,6 +463,56 @@ type GetPetByIdResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Pet
+}
+
+type GetPetByIdError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetPetByIdErrorDetail
+}
+
+func (e *GetPetByIdError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetPetByIdErrorDetail interface {
+	isGetPetByIdErrorDetail()
+}
+
+type GetPetByIdBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetPetByIdBadRequest) isGetPetByIdErrorDetail() {}
+
+func (d *GetPetByIdBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetPetByIdNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetPetByIdNotFound) isGetPetByIdErrorDetail() {}
+
+func (d *GetPetByIdNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetPetByIdUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetPetByIdUnexpected) isGetPetByIdErrorDetail() {}
+
+func (d *GetPetByIdUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // GetPetById — Find pet by ID
@@ -225,20 +529,37 @@ func (a *PetAPI) GetPetById(ctx context.Context, petId int64) (*GetPetByIdRespon
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetPetByIdResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &GetPetByIdBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetPetByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &GetPetByIdNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetPetByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetPetByIdUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetPetByIdError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -248,6 +569,45 @@ type UpdatePetWithFormResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.Pet
+}
+
+type UpdatePetWithFormError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UpdatePetWithFormErrorDetail
+}
+
+func (e *UpdatePetWithFormError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UpdatePetWithFormErrorDetail interface {
+	isUpdatePetWithFormErrorDetail()
+}
+
+type UpdatePetWithFormBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetWithFormBadRequest) isUpdatePetWithFormErrorDetail() {}
+
+func (d *UpdatePetWithFormBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type UpdatePetWithFormUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UpdatePetWithFormUnexpected) isUpdatePetWithFormErrorDetail() {}
+
+func (d *UpdatePetWithFormUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // UpdatePetWithForm — Update a pet in the store with form data
@@ -271,20 +631,34 @@ func (a *PetAPI) UpdatePetWithForm(ctx context.Context, petId int64, name *strin
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UpdatePetWithFormResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &UpdatePetWithFormBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetWithFormError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &UpdatePetWithFormUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UpdatePetWithFormError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Pet
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -293,6 +667,45 @@ func (a *PetAPI) UpdatePetWithForm(ctx context.Context, petId int64, name *strin
 type DeletePetResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+type DeletePetError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail DeletePetErrorDetail
+}
+
+func (e *DeletePetError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type DeletePetErrorDetail interface {
+	isDeletePetErrorDetail()
+}
+
+type DeletePetBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeletePetBadRequest) isDeletePetErrorDetail() {}
+
+func (d *DeletePetBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type DeletePetUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeletePetUnexpected) isDeletePetErrorDetail() {}
+
+func (d *DeletePetUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // DeletePet — Delete a pet
@@ -309,11 +722,20 @@ func (a *PetAPI) DeletePet(ctx context.Context, petId int64) (*DeletePetResponse
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &DeletePetResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
-	if httpResp.StatusCode >= 400 {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &DeletePetBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeletePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &DeletePetUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeletePetError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
 	}
 	return resp, nil
 }
@@ -323,6 +745,34 @@ type UploadFileResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.UploadResponse
+}
+
+type UploadFileError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail UploadFileErrorDetail
+}
+
+func (e *UploadFileError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type UploadFileErrorDetail interface {
+	isUploadFileErrorDetail()
+}
+
+type UploadFileUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*UploadFileUnexpected) isUploadFileErrorDetail() {}
+
+func (d *UploadFileUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // UploadFile — Upload an image
@@ -343,20 +793,31 @@ func (a *PetAPI) UploadFile(ctx context.Context, petId int64, additionalMetadata
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &UploadFileResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &UploadFileUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &UploadFileError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.UploadResponse
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

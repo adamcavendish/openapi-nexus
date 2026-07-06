@@ -3,12 +3,12 @@
 // Discriminated Union with Inline Discriminator Only Test — 1.0.0
 // Test fixture for discriminated union where variants are inline objects
 // with ONLY a discriminator property (no additional fields).
-// 
+//
 // This specifically tests the fix for the bug where inline objects with
 // only a discriminator property (like { kind: "UNSPECIFIED" }) were
 // generating generic "Kind.ts" files that conflicted across different
 // discriminated unions.
-// 
+//
 // After the fix, these should generate properly prefixed names like
 // "EventKindUnspecified" instead of generic "Kind".
 
@@ -30,33 +30,6 @@ import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
-/**
- * CreateEventResponse carries the response from createEvent.
- */
-public class CreateEventResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final Event status200;
-
-    public CreateEventResponse(int statusCode, Response raw, Event status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public Event getStatus200() {
-        return this.status200;
-    }
-}
 
 /**
  * DefaultApi groups operations under the default tag.
@@ -81,8 +54,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            CreateEventExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new CreateEventUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new CreateEventException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

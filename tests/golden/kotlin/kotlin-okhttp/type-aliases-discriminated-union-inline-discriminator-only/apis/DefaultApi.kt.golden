@@ -29,6 +29,34 @@ import okhttp3.Response
 data class CreateEventResponse(val statusCode: Int, val raw: Response, val status200: Event? = null) {
 }
 
+sealed interface CreateEventExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class CreateEventException(
+    val detail: CreateEventExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class CreateEventUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateEventExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * DefaultApi groups operations under the default tag.
  */
@@ -46,13 +74,25 @@ class DefaultApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: CreateEventExceptionDetail = when (response.code)  {
+                else ->  {
+                    CreateEventUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw CreateEventException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
+
         val responseBytes = response.body?.bytes() ?: ByteArray(0)
         val responseText = responseBytes.toString(Charsets.UTF_8)
+        var status200: Event? = null
 
-        val status200 = if (response.code == 200) gson.fromJson<Event>(responseText.ifEmpty { "null" }, object : TypeToken<Event>() {}.type) else null
+        if (response.code == 200) {
+            status200 = gson.fromJson<Event>(responseText.ifEmpty { "null" }, object : TypeToken<Event>() {}.type)
+        }
         return CreateEventResponse(statusCode = response.code, raw = response, status200 = status200)
     }
 }

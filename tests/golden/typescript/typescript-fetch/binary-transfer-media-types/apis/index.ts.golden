@@ -7,8 +7,10 @@
 export type {
   ApiDownloadAssetRequest,
   DownloadAssetRawResponse,
+  DownloadAssetErrorDetail,
   ApiUploadAssetRequest,
   UploadAssetRawResponse,
+  UploadAssetErrorDetail,
   TransferApiInterface,
 } from './TransferApi';
-export { TransferApi } from './TransferApi';
+export { TransferApi, DownloadAssetError, UploadAssetError } from './TransferApi';

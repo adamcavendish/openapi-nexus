@@ -8,7 +8,7 @@
 // the same Kind.ts file causing conflicts.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -27,19 +27,28 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
     pub async fn create_container(
         &self,
         body: &crate::models::ContainerKind,
-    ) -> Result<CreateContainerResponse, Error> {
+    ) -> Result<CreateContainerResponse, CreateContainerError> {
         let path = "/container".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = CreateContainerResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateContainerError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -48,19 +57,28 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
     pub async fn create_volume(
         &self,
         body: &crate::models::VolumeKind,
-    ) -> Result<CreateVolumeResponse, Error> {
+    ) -> Result<CreateVolumeResponse, CreateVolumeError> {
         let path = "/volume".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = CreateVolumeResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateVolumeError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -73,9 +91,71 @@ pub struct CreateContainerResponse {
     pub data: Option<crate::models::ContainerKind>,
 }
 
+/// Error from `create_container`.
+#[derive(Debug)]
+pub enum CreateContainerError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateContainerError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateContainerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateContainerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `create_volume`.
 #[derive(Debug)]
 pub struct CreateVolumeResponse {
     pub status_code: u16,
     pub data: Option<crate::models::VolumeKind>,
+}
+
+/// Error from `create_volume`.
+#[derive(Debug)]
+pub enum CreateVolumeError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateVolumeError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateVolumeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateVolumeError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

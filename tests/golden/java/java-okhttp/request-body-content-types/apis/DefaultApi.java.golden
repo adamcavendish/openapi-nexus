@@ -23,180 +23,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * PostBinaryResponse carries the response from postBinary.
- */
-public class PostBinaryResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostBinaryResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PostFormResponse carries the response from postForm.
- */
-public class PostFormResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostFormResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PostJsonResponse carries the response from postJson.
- */
-public class PostJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostJsonResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PostJsonOrXmlResponse carries the response from postJsonOrXml.
- */
-public class PostJsonOrXmlResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostJsonOrXmlResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PatchMergeJsonResponse carries the response from patchMergeJson.
- */
-public class PatchMergeJsonResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PatchMergeJsonResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PostTextResponse carries the response from postText.
- */
-public class PostTextResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostTextResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * PostXmlResponse carries the response from postXml.
- */
-public class PostXmlResponse {
-    private final int statusCode;
-    private final Response raw;
-
-    public PostXmlResponse(int statusCode, Response raw) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-}
-
-/**
- * GetXmlResponseResponse carries the response from getXmlResponse.
- */
-public class GetXmlResponseResponse {
-    private final int statusCode;
-    private final Response raw;
-    private final String status200;
-
-    public GetXmlResponseResponse(int statusCode, Response raw, String status200) {
-        this.statusCode = statusCode;
-        this.raw = raw;
-        this.status200 = status200;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public Response getRaw() {
-        return this.raw;
-    }
-
-    public String getStatus200() {
-        return this.status200;
-    }
-}
-
-/**
  * DefaultApi groups operations under the default tag.
  */
 public class DefaultApi {
@@ -218,8 +44,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            PostBinaryExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new PostBinaryUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new PostBinaryException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new PostBinaryResponse(response.code(), response);
     }
@@ -229,16 +63,7 @@ public class DefaultApi {
      */
     public PostFormResponse postForm(Payload body) throws IOException {
         String path = "/form";
-        Request request;
         throw new IllegalArgumentException("unsupported request body media type: application/x-www-form-urlencoded");
-        request = client.newRequestWithBody("POST", path, null, requestBody);
-        Response response = client.execute(request);
-
-        if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
-        }
-        return new PostFormResponse(response.code(), response);
     }
 
     /**
@@ -253,8 +78,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            PostJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new PostJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new PostJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new PostJsonResponse(response.code(), response);
     }
@@ -271,8 +104,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            PostJsonOrXmlExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new PostJsonOrXmlUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new PostJsonOrXmlException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new PostJsonOrXmlResponse(response.code(), response);
     }
@@ -289,8 +130,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            PatchMergeJsonExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new PatchMergeJsonUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new PatchMergeJsonException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new PatchMergeJsonResponse(response.code(), response);
     }
@@ -306,8 +155,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            PostTextExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new PostTextUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new PostTextException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         return new PostTextResponse(response.code(), response);
     }
@@ -317,16 +174,7 @@ public class DefaultApi {
      */
     public PostXmlResponse postXml(Payload body) throws IOException {
         String path = "/xml";
-        Request request;
         throw new IllegalArgumentException("unsupported request body media type: application/xml");
-        request = client.newRequestWithBody("POST", path, null, requestBody);
-        Response response = client.execute(request);
-
-        if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
-        }
-        return new PostXmlResponse(response.code(), response);
     }
 
     /**
@@ -338,8 +186,16 @@ public class DefaultApi {
         Response response = client.execute(request);
 
         if (!response.isSuccessful()) {
-            String errorBody = response.body() != null ? response.body().string() : "";
-            throw new ApiException(response.code(), response.message(), errorBody);
+            okhttp3.ResponseBody responseBody = response.body();
+            java.nio.charset.Charset responseCharset = responseBody != null && responseBody.contentType() != null ? responseBody.contentType().charset(StandardCharsets.UTF_8) : StandardCharsets.UTF_8;
+            byte[] responseBytes = responseBody != null ? responseBody.bytes() : new byte[0];
+            String responseText = new String(responseBytes, responseCharset);
+            GetXmlResponseExceptionDetail detail;
+            switch (response.code()) {
+                default:
+                    detail = new GetXmlResponseUnexpected(response.code(), response.headers(), responseBytes);
+            }
+            throw new GetXmlResponseException(response.code(), response.message(), responseText, response.headers(), responseBytes, detail);
         }
         byte[] responseBytes = response.body() != null ? response.body().bytes() : new byte[0];
         String responseText = new String(responseBytes, StandardCharsets.UTF_8);

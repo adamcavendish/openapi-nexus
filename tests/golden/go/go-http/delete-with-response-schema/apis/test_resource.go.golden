@@ -35,6 +35,34 @@ type CreateTestResourceResponse struct {
 	Status200 *models.CreateTestResourceResponse
 }
 
+type CreateTestResourceError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateTestResourceErrorDetail
+}
+
+func (e *CreateTestResourceError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateTestResourceErrorDetail interface {
+	isCreateTestResourceErrorDetail()
+}
+
+type CreateTestResourceUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateTestResourceUnexpected) isCreateTestResourceErrorDetail() {}
+
+func (d *CreateTestResourceUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateTestResource calls POST /v1/api/test-resource.
 func (a *TestResourceAPI) CreateTestResource(ctx context.Context,
 body *models.CreateTestResourceRequest) (*CreateTestResourceResponse, error) {
@@ -58,20 +86,31 @@ body *models.CreateTestResourceRequest) (*CreateTestResourceResponse, error) {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateTestResourceResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateTestResourceUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateTestResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.CreateTestResourceResponse
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -81,8 +120,64 @@ type DeleteTestResourceResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.DeleteTestResourceResponse
-	Status4XX *models.HttpErrorResponse
-	Status5XX *models.HttpErrorResponse
+}
+
+type DeleteTestResourceError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail DeleteTestResourceErrorDetail
+}
+
+func (e *DeleteTestResourceError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type DeleteTestResourceErrorDetail interface {
+	isDeleteTestResourceErrorDetail()
+}
+
+type DeleteTestResourceClientError struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteTestResourceClientError) isDeleteTestResourceErrorDetail() {}
+
+func (d *DeleteTestResourceClientError) Body() (*models.HttpErrorResponse, error) {
+	var value models.HttpErrorResponse
+	if err := json.Unmarshal(d.RawBody, &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+type DeleteTestResourceServerError struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteTestResourceServerError) isDeleteTestResourceErrorDetail() {}
+
+func (d *DeleteTestResourceServerError) Body() (*models.HttpErrorResponse, error) {
+	var value models.HttpErrorResponse
+	if err := json.Unmarshal(d.RawBody, &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+type DeleteTestResourceUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*DeleteTestResourceUnexpected) isDeleteTestResourceErrorDetail() {}
+
+func (d *DeleteTestResourceUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // DeleteTestResource calls DELETE /v1/api/test-resource/{resource_id}.
@@ -99,36 +194,39 @@ func (a *TestResourceAPI) DeleteTestResource(ctx context.Context, resourceId str
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &DeleteTestResourceResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				if httpResp.StatusCode >= 400 && httpResp.StatusCode < 500 {
+					detail := &DeleteTestResourceClientError{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+					return nil, &DeleteTestResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+				}
+				if httpResp.StatusCode >= 500 && httpResp.StatusCode < 600 {
+					detail := &DeleteTestResourceServerError{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+					return nil, &DeleteTestResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+				}
+				detail := &DeleteTestResourceUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &DeleteTestResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.DeleteTestResourceResponse
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 && httpResp.StatusCode < 500 {
-					var payload models.HttpErrorResponse
-					if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
-						return nil, fmt.Errorf("decode response: %w", err)
-					}
-					resp.Status4XX = &payload
-				return resp, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status}
-			}
-			if httpResp.StatusCode >= 500 && httpResp.StatusCode < 600 {
-					var payload models.HttpErrorResponse
-					if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
-						return nil, fmt.Errorf("decode response: %w", err)
-					}
-					resp.Status5XX = &payload
-				return resp, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status}
-			}
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

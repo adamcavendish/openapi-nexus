@@ -39,6 +39,34 @@ type CreateResourceResponse struct {
 	Status200 *models.Setup
 }
 
+type CreateResourceError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateResourceErrorDetail
+}
+
+func (e *CreateResourceError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateResourceErrorDetail interface {
+	isCreateResourceErrorDetail()
+}
+
+type CreateResourceUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateResourceUnexpected) isCreateResourceErrorDetail() {}
+
+func (d *CreateResourceUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateResource — Create resource
 func (a *DefaultAPI) CreateResource(ctx context.Context, body *models.Setup) (*CreateResourceResponse, error) {
 	path := "/resource"
@@ -61,20 +89,31 @@ func (a *DefaultAPI) CreateResource(ctx context.Context, body *models.Setup) (*C
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateResourceResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateResourceUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.Setup
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

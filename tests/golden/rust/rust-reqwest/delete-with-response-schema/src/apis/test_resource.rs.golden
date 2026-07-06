@@ -5,7 +5,7 @@
 // Test fixture for DELETE operations with JSON response schemas and type alias request bodies
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "test-resource" tag.
 pub struct TestResourceApi<'a> {
@@ -24,12 +24,13 @@ impl<'a> TestResourceApi<'a> {
     pub async fn create_test_resource(
         &self,
         body: &crate::models::CreateTestResourceRequest,
-    ) -> Result<CreateTestResourceResponse, Error> {
+    ) -> Result<CreateTestResourceResponse, CreateTestResourceError> {
         let path = "/v1/api/test-resource".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = CreateTestResourceResponse { status_code, data: None };
         match status_code {
@@ -38,6 +39,14 @@ impl<'a> TestResourceApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateTestResourceError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -45,25 +54,36 @@ impl<'a> TestResourceApi<'a> {
     pub async fn delete_test_resource(
         &self,
         resource_id: &str,
-    ) -> Result<DeleteTestResourceResponse, Error> {
+    ) -> Result<DeleteTestResourceResponse, DeleteTestResourceError> {
         let mut path = "/v1/api/test-resource/{resource_id}".to_string();
         path = path.replace("{resource_id}", &resource_id.to_string());
         let req = self.client.request(reqwest::Method::DELETE, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = DeleteTestResourceResponse { status_code, data: None, status_4xx: None, status_5xx: None };
+        let mut result = DeleteTestResourceResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
-            400..=499 => {
-                result.status_4xx = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
-            }
-            500..=599 => {
-                result.status_5xx = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
-            }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400..=499 => {
+                    let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
+                    return Err(DeleteTestResourceError::ClientError(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                500..=599 => {
+                    let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
+                    return Err(DeleteTestResourceError::ServerError(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(DeleteTestResourceError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -76,11 +96,75 @@ pub struct CreateTestResourceResponse {
     pub data: Option<crate::models::CreateTestResourceResponse>,
 }
 
+/// Error from `create_test_resource`.
+#[derive(Debug)]
+pub enum CreateTestResourceError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateTestResourceError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateTestResourceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateTestResourceError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `delete_test_resource`.
 #[derive(Debug)]
 pub struct DeleteTestResourceResponse {
     pub status_code: u16,
     pub data: Option<crate::models::DeleteTestResourceResponse>,
-    pub status_4xx: Option<crate::models::HttpErrorResponse>,
-    pub status_5xx: Option<crate::models::HttpErrorResponse>,
+}
+
+/// Error from `delete_test_resource`.
+#[derive(Debug)]
+pub enum DeleteTestResourceError {
+    ClientError(ApiError<crate::models::HttpErrorResponse>),
+    ServerError(ApiError<crate::models::HttpErrorResponse>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for DeleteTestResourceError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for DeleteTestResourceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ClientError(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::ServerError(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for DeleteTestResourceError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

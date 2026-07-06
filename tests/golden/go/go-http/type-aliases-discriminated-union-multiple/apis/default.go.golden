@@ -37,6 +37,34 @@ type CreateContainerResponse struct {
 	Status200 *models.ContainerKind
 }
 
+type CreateContainerError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateContainerErrorDetail
+}
+
+func (e *CreateContainerError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateContainerErrorDetail interface {
+	isCreateContainerErrorDetail()
+}
+
+type CreateContainerUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateContainerUnexpected) isCreateContainerErrorDetail() {}
+
+func (d *CreateContainerUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // CreateContainer — Create container with ContainerKind discriminated union
 func (a *DefaultAPI) CreateContainer(ctx context.Context, body *models.ContainerKind) (*CreateContainerResponse, error) {
 	path := "/container"
@@ -59,20 +87,31 @@ func (a *DefaultAPI) CreateContainer(ctx context.Context, body *models.Container
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateContainerResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateContainerUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateContainerError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.ContainerKind
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }
@@ -82,6 +121,34 @@ type CreateVolumeResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status200 *models.VolumeKind
+}
+
+type CreateVolumeError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail CreateVolumeErrorDetail
+}
+
+func (e *CreateVolumeError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type CreateVolumeErrorDetail interface {
+	isCreateVolumeErrorDetail()
+}
+
+type CreateVolumeUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateVolumeUnexpected) isCreateVolumeErrorDetail() {}
+
+func (d *CreateVolumeUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
 }
 
 // CreateVolume — Create volume with VolumeKind discriminated union
@@ -106,20 +173,31 @@ func (a *DefaultAPI) CreateVolume(ctx context.Context, body *models.VolumeKind) 
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &CreateVolumeResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			default:
+				detail := &CreateVolumeUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateVolumeError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.VolumeKind
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

@@ -36,6 +36,56 @@ type GetUserByIdDuplicateResponse struct {
 	Status200 *models.GetUserByIdDuplicateResponse200
 }
 
+type GetUserByIdDuplicateError struct {
+	StatusCode int
+	Status string
+	Header http.Header
+	RawBody []byte
+	Detail GetUserByIdDuplicateErrorDetail
+}
+
+func (e *GetUserByIdDuplicateError) Error() string {
+	return fmt.Sprintf("api error: %s", e.Status)
+}
+
+type GetUserByIdDuplicateErrorDetail interface {
+	isGetUserByIdDuplicateErrorDetail()
+}
+
+type GetUserByIdDuplicateBadRequest struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByIdDuplicateBadRequest) isGetUserByIdDuplicateErrorDetail() {}
+
+func (d *GetUserByIdDuplicateBadRequest) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetUserByIdDuplicateNotFound struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByIdDuplicateNotFound) isGetUserByIdDuplicateErrorDetail() {}
+
+func (d *GetUserByIdDuplicateNotFound) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+type GetUserByIdDuplicateUnexpected struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*GetUserByIdDuplicateUnexpected) isGetUserByIdDuplicateErrorDetail() {}
+
+func (d *GetUserByIdDuplicateUnexpected) Body() []byte {
+	return append([]byte(nil), d.RawBody...)
+}
+
 // GetUserByIdDuplicate — Get user by ID with duplicate parameter names
 func (a *UsersAPI) GetUserByIdDuplicate(ctx context.Context, id int64, id2 *int64, id3 *string) (*GetUserByIdDuplicateResponse, error) {
 	path := "/users/{id}"
@@ -57,20 +107,37 @@ func (a *UsersAPI) GetUserByIdDuplicate(ctx context.Context, id int64, id2 *int6
 		return nil, err
 	}
 	defer httpResp.Body.Close()
-
 	resp := &GetUserByIdDuplicateResponse{StatusCode: httpResp.StatusCode, Raw: httpResp}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		responseBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read response: %w", err)
+		}
+		switch httpResp.StatusCode {
+			case 400:
+				detail := &GetUserByIdDuplicateBadRequest{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByIdDuplicateError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 404:
+				detail := &GetUserByIdDuplicateNotFound{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByIdDuplicateError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			default:
+				detail := &GetUserByIdDuplicateUnexpected{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &GetUserByIdDuplicateError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+		}
+	}
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
 	switch httpResp.StatusCode {
 		case 200:
 			var payload models.GetUserByIdDuplicateResponse200
-			if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+			if err := json.Unmarshal(responseBody, &payload); err != nil {
 				return nil, fmt.Errorf("decode response: %w", err)
 			}
 			resp.Status200 = &payload
 		default:
-			if httpResp.StatusCode >= 400 {
-				body, _ := io.ReadAll(httpResp.Body)
-				return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}
-			}
 	}
 	return resp, nil
 }

@@ -7,8 +7,10 @@
 export type {
   ApiCreateTestRequest,
   CreateTestRawResponse,
+  CreateTestErrorDetail,
   ApiGetTestRequest,
   GetTestRawResponse,
+  GetTestErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, CreateTestError, GetTestError } from './DefaultApi';

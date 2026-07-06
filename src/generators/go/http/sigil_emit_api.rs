@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::response_entry_name as response_variant_name;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
     ParameterLocation,
@@ -117,6 +118,7 @@ fn emit_api_file(
     for plan in &plans {
         fb = fb
             .add_type(build_response_struct(plan, module_path))
+            .add_code(build_error_types_block(plan))
             .add_function(build_operation_fun(&struct_name, plan));
     }
 
@@ -136,7 +138,8 @@ fn collect_body_imports(plans: &[OpPlan<'_>], module_path: &str) -> Vec<ImportSp
         let has_path_params = !plan.path_params.is_empty();
         let has_query_params = !plan.query_params.is_empty();
         let has_body = plan.body.is_some();
-        let has_typed_responses = !plan.typed_responses.is_empty();
+        let has_typed_responses =
+            !plan.typed_responses.is_empty() || !plan.error_responses.is_empty();
 
         if has_path_params {
             pkgs.insert("strings".to_string());
@@ -187,11 +190,13 @@ fn collect_body_imports(plans: &[OpPlan<'_>], module_path: &str) -> Vec<ImportSp
         }
         // io.ReadAll used in error handling (4xx branch)
         pkgs.insert("io".to_string());
+        pkgs.insert("fmt".to_string());
         if has_typed_responses {
             pkgs.insert("fmt".to_string());
             if plan
                 .typed_responses
                 .iter()
+                .chain(plan.error_responses.iter())
                 .any(|tr| tr.decoding == ResponseDecoding::Json)
             {
                 pkgs.insert("encoding/json".to_string());
@@ -215,6 +220,11 @@ fn collect_body_imports(plans: &[OpPlan<'_>], module_path: &str) -> Vec<ImportSp
             pkgs.insert(format!("{module_path}/models"));
         }
         for tr in &plan.typed_responses {
+            if tr.go_type.contains("models.") {
+                pkgs.insert(format!("{module_path}/models"));
+            }
+        }
+        for tr in &plan.error_responses {
             if tr.go_type.contains("models.") {
                 pkgs.insert(format!("{module_path}/models"));
             }
@@ -372,6 +382,77 @@ fn build_response_struct(plan: &OpPlan<'_>, module_path: &str) -> TypeSpec {
     tb.build().expect("response struct TypeSpec builds")
 }
 
+fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let detail_interface = format!("{}Detail", plan.error_type);
+    cb.add(
+        &format!(
+            "type {} struct {{\n\tStatusCode int\n\tStatus string\n\tHeader http.Header\n\tRawBody []byte\n\tDetail {}\n}}\n\n",
+            plan.error_type, detail_interface
+        ),
+        (),
+    );
+    cb.add(
+        &format!(
+            "func (e *{}) Error() string {{\n\treturn fmt.Sprintf(\"api error: %%s\", e.Status)\n}}\n\n",
+            plan.error_type
+        ),
+        (),
+    );
+    cb.add(
+        &format!(
+            "type {} interface {{\n\tis{}()\n}}\n\n",
+            detail_interface, detail_interface
+        ),
+        (),
+    );
+
+    let mut seen = HashSet::new();
+    for tr in &plan.error_responses {
+        if !seen.insert(tr.field_name.clone()) {
+            continue;
+        }
+        let detail_name = format!("{}{}", plan.method_name, tr.field_name);
+        cb.add(
+            &format!(
+                "type {} struct {{\n\tStatusCode int\n\tHeader http.Header\n\tRawBody []byte\n}}\n\n",
+                detail_name
+            ),
+            (),
+        );
+        cb.add(
+            &format!("func (*{}) is{}() {{}}\n\n", detail_name, detail_interface),
+            (),
+        );
+        cb.add_code(go_error_body_helper(&detail_name, &tr.go_type, tr.decoding));
+    }
+
+    let unexpected_name = format!("{}Unexpected", plan.method_name);
+    cb.add(
+        &format!(
+            "type {} struct {{\n\tStatusCode int\n\tHeader http.Header\n\tRawBody []byte\n}}\n\n",
+            unexpected_name
+        ),
+        (),
+    );
+    cb.add(
+        &format!(
+            "func (*{}) is{}() {{}}\n\n",
+            unexpected_name, detail_interface
+        ),
+        (),
+    );
+    cb.add(
+        &format!(
+            "func (d *{}) Body() []byte {{\n\treturn append([]byte(nil), d.RawBody...)\n}}\n",
+            unexpected_name
+        ),
+        (),
+    );
+
+    cb.build().expect("error types block builds")
+}
+
 /// Build a FunSpec for an operation method.
 fn build_operation_fun(struct_name: &str, plan: &OpPlan<'_>) -> FunSpec {
     let OpPlan {
@@ -442,11 +523,13 @@ struct OpPlan<'a> {
     op: &'a IrOperation,
     method_name: String,
     response_type: String,
+    error_type: String,
     path_params: Vec<ParamBinding<'a>>,
     query_params: Vec<ParamBinding<'a>>,
     header_params: Vec<ParamBinding<'a>>,
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
+    error_responses: Vec<TypedResponse>,
 }
 
 struct ParamBinding<'a> {
@@ -507,6 +590,7 @@ fn plan_operation<'a>(
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_pascal_case();
     let response_type = format!("{method_name}Response");
+    let error_type = format!("{method_name}Error");
 
     let mut used_names: HashSet<String> = HashSet::new();
     used_names.insert("ctx".to_string());
@@ -537,17 +621,30 @@ fn plan_operation<'a>(
         .as_ref()
         .and_then(|b| plan_body(op, b, ir, request_inputs, &mut used_names));
 
-    let typed_responses = op.responses.iter().filter_map(plan_response).collect();
+    let typed_responses = op
+        .responses
+        .iter()
+        .filter(|r| is_success_status(&r.status))
+        .filter_map(plan_response)
+        .collect();
+    let error_responses = op
+        .responses
+        .iter()
+        .filter(|r| !is_success_status(&r.status))
+        .map(plan_error_response)
+        .collect();
 
     OpPlan {
         op,
         method_name,
         response_type,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
     }
 }
 
@@ -603,6 +700,38 @@ fn plan_response(r: &IrResponse) -> Option<TypedResponse> {
         go_type,
         decoding,
     })
+}
+
+fn plan_error_response(r: &IrResponse) -> TypedResponse {
+    match pick_response_content(r) {
+        Some((media_type, t)) => {
+            let decoding = response_decoding(&media_type);
+            let go_type = match decoding {
+                ResponseDecoding::Json => go_type_str(&t),
+                ResponseDecoding::Text => "string".to_string(),
+                ResponseDecoding::Bytes => "[]byte".to_string(),
+            };
+            TypedResponse {
+                status: r.status.clone(),
+                field_name: response_variant_name(&r.status),
+                go_type,
+                decoding,
+            }
+        }
+        None => TypedResponse {
+            status: r.status.clone(),
+            field_name: response_variant_name(&r.status),
+            go_type: "struct{}".to_string(),
+            decoding: ResponseDecoding::Bytes,
+        },
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
 }
 
 fn param_go_type(p: &IrParameter) -> (String, bool) {
@@ -755,11 +884,17 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     cb.add_code(return_nil_err());
     cb.end_control_flow();
     cb.add_code(defer_body_close());
-    cb.add_line();
 
     cb.add_code(response_init(response_type));
+    cb.add_code(return_operation_error(plan));
 
     if !plan.typed_responses.is_empty() {
+        cb.add_code(response_body_read());
+        cb.begin_control_flow("if err != nil", ());
+        cb.add_code(return_read_response_error());
+        cb.end_control_flow();
+        cb.add_line();
+
         let mut numeric_responses: Vec<&TypedResponse> = Vec::new();
         let mut wildcard_responses: Vec<&TypedResponse> = Vec::new();
         for tr in &plan.typed_responses {
@@ -777,7 +912,7 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
             cb.add_line();
             cb.add(
                 "%L",
-                emit_decode_into(&tr.field_name, &tr.go_type, tr.decoding),
+                emit_decode_into_from_bytes(&tr.field_name, &tr.go_type, tr.decoding),
             );
         }
         cb.add("default:", ());
@@ -794,21 +929,11 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
             );
             cb.add(
                 "%L",
-                emit_decode_into(&tr.field_name, &tr.go_type, tr.decoding),
+                emit_decode_into_from_bytes(&tr.field_name, &tr.go_type, tr.decoding),
             );
-            cb.add_code(return_status_api_error());
             cb.end_control_flow();
         }
-        cb.begin_control_flow("if httpResp.StatusCode >= 400", ());
-        cb.add_code(error_body_read());
-        cb.add_code(return_body_api_error());
-        cb.end_control_flow();
         cb.add("%<", ());
-        cb.end_control_flow();
-    } else {
-        cb.begin_control_flow("if httpResp.StatusCode >= 400", ());
-        cb.add_code(error_body_read());
-        cb.add_code(return_body_api_error());
         cb.end_control_flow();
     }
 
@@ -1006,28 +1131,108 @@ fn response_init(response_type: &str) -> CodeBlock {
     .expect("response init builds")
 }
 
-fn return_status_api_error() -> CodeBlock {
-    let stmt =
-        "return resp, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status}";
+fn response_body_read() -> CodeBlock {
     sigil_quote!(GoLang {
-        $L(stmt)
+        responseBody, err := io.ReadAll(httpResp.Body)
     })
-    .expect("return status API error builds")
+    .expect("response body read builds")
 }
 
-fn error_body_read() -> CodeBlock {
+fn return_read_response_error() -> CodeBlock {
     sigil_quote!(GoLang {
-        body, _ := io.ReadAll(httpResp.Body)
+        return nil, fmt.Errorf("read response: %w", err)
     })
-    .expect("error body read builds")
+    .expect("read response error builds")
 }
 
-fn return_body_api_error() -> CodeBlock {
-    let stmt = "return nil, &runtime.APIError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Body: body}";
+fn return_operation_error(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    cb.begin_control_flow(
+        "if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300",
+        (),
+    );
+    cb.add_code(response_body_read());
+    cb.begin_control_flow("if err != nil", ());
+    cb.add_code(return_read_response_error());
+    cb.end_control_flow();
+    cb.begin_control_flow("switch httpResp.StatusCode", ());
+
+    let mut seen = HashSet::new();
+    for tr in plan
+        .error_responses
+        .iter()
+        .filter(|tr| tr.status.parse::<u16>().is_ok())
+    {
+        if !seen.insert(tr.field_name.clone()) {
+            continue;
+        }
+        let code = tr.status.parse::<u16>().unwrap();
+        cb.add(&format!("case {code}:"), ());
+        cb.add_line();
+        cb.add("%>", ());
+        cb.add_code(return_operation_error_detail(plan, tr));
+        cb.add("%<", ());
+    }
+
+    cb.add("default:", ());
+    cb.add_line();
+    cb.add("%>", ());
+    for tr in plan
+        .error_responses
+        .iter()
+        .filter(|tr| tr.status.ends_with("XX"))
+    {
+        let (low, high) = wildcard_range(&tr.status);
+        cb.begin_control_flow(
+            &format!("if httpResp.StatusCode >= {low} && httpResp.StatusCode < {high}"),
+            (),
+        );
+        cb.add_code(return_operation_error_detail(plan, tr));
+        cb.end_control_flow();
+    }
+    if let Some(default) = plan
+        .error_responses
+        .iter()
+        .find(|tr| tr.status.eq_ignore_ascii_case("default"))
+    {
+        cb.add_code(return_operation_error_detail(plan, default));
+    } else {
+        let detail_name = format!("{}Unexpected", plan.method_name);
+        cb.add_code(return_operation_error_expr(
+            plan,
+            &detail_name,
+            "Unexpected",
+        ));
+    }
+    cb.add("%<", ());
+
+    cb.end_control_flow();
+    cb.end_control_flow();
+    cb.build().expect("operation error return builds")
+}
+
+fn return_operation_error_detail(plan: &OpPlan<'_>, tr: &TypedResponse) -> CodeBlock {
+    let detail_name = format!("{}{}", plan.method_name, tr.field_name);
+    return_operation_error_expr(plan, &detail_name, &tr.field_name)
+}
+
+fn return_operation_error_expr(
+    plan: &OpPlan<'_>,
+    detail_name: &str,
+    _variant_name: &str,
+) -> CodeBlock {
+    let stmt = format!(
+        "detail := &{detail_name}{{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}}"
+    );
+    let ret = format!(
+        "return nil, &{}{{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}}",
+        plan.error_type
+    );
     sigil_quote!(GoLang {
-        $L(stmt)
+        $L(stmt.as_str())
+        $L(ret.as_str())
     })
-    .expect("return body API error builds")
+    .expect("operation error expr builds")
 }
 
 fn return_resp_nil() -> CodeBlock {
@@ -1249,7 +1454,7 @@ fn return_unsupported_multipart_part_error() -> CodeBlock {
     .expect("unsupported multipart part error builds")
 }
 
-fn emit_decode_into(field: &str, go_ty: &str, decoding: ResponseDecoding) -> CodeBlock {
+fn emit_decode_into_from_bytes(field: &str, go_ty: &str, decoding: ResponseDecoding) -> CodeBlock {
     let (elem_ty, assignment) = if go_ty.starts_with('[') || go_ty.starts_with("map[") {
         (go_ty.to_string(), format!("resp.{field} = payload"))
     } else {
@@ -1262,7 +1467,7 @@ fn emit_decode_into(field: &str, go_ty: &str, decoding: ResponseDecoding) -> Cod
         ResponseDecoding::Json => sigil_quote!(GoLang {
             $>
             var $L("payload @{elem_ty}")
-            if err := json.NewDecoder(httpResp.Body).Decode(&payload); err != nil {
+            if err := json.Unmarshal(responseBody, &payload); err != nil {
                 return nil, fmt.Errorf("decode response: %w", err)
             }
             $L(assignment)
@@ -1271,25 +1476,58 @@ fn emit_decode_into(field: &str, go_ty: &str, decoding: ResponseDecoding) -> Cod
         .expect("decode JSON body builds"),
         ResponseDecoding::Text => sigil_quote!(GoLang {
             $>
-            bodyBytes, err := io.ReadAll(httpResp.Body)
-            if err != nil {
-                return nil, fmt.Errorf("read response: %w", err)
-            }
-            payload := string(bodyBytes)
+            payload := string(responseBody)
             $L(assignment)
             $<
         })
         .expect("decode text body builds"),
         ResponseDecoding::Bytes => sigil_quote!(GoLang {
             $>
-            payload, err := io.ReadAll(httpResp.Body)
-            if err != nil {
-                return nil, fmt.Errorf("read response: %w", err)
-            }
+            payload := append([]byte(nil), responseBody...)
             $L(assignment)
             $<
         })
         .expect("decode bytes body builds"),
+    }
+}
+
+fn go_error_body_helper(detail_name: &str, go_ty: &str, decoding: ResponseDecoding) -> CodeBlock {
+    match decoding {
+        ResponseDecoding::Json => {
+            let elem_ty = go_ty.trim_start_matches('*').to_string();
+            let return_ty = if go_ty.starts_with('[') || go_ty.starts_with("map[") {
+                go_ty.to_string()
+            } else {
+                format!("*{elem_ty}")
+            };
+            let success_return = if go_ty.starts_with('[') || go_ty.starts_with("map[") {
+                "return value, nil".to_string()
+            } else {
+                "return &value, nil".to_string()
+            };
+            sigil_quote!(GoLang {
+                func (d *$L(detail_name)) Body() ($L(return_ty), error) {
+                    var value $L(elem_ty)
+                    if err := json.Unmarshal(d.RawBody, &value); err != nil {
+                        return nil, err
+                    }
+                    $L(success_return)
+                }
+            })
+            .expect("go JSON error body helper builds")
+        }
+        ResponseDecoding::Text => sigil_quote!(GoLang {
+            func (d *$L(detail_name)) Body() string {
+                return string(d.RawBody)
+            }
+        })
+        .expect("go text error body helper builds"),
+        ResponseDecoding::Bytes => sigil_quote!(GoLang {
+            func (d *$L(detail_name)) Body() []byte {
+                return append([]byte(nil), d.RawBody...)
+            }
+        })
+        .expect("go bytes error body helper builds"),
     }
 }
 

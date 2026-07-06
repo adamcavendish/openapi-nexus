@@ -10,15 +10,70 @@ import com.example.sdk.runtime.ApiException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
 /**
  * UpdateFooBarResponse carries the response from updateFooBar.
  */
-data class UpdateFooBarResponse(val statusCode: Int, val raw: Response,
-val status400: ErrorResponse? = null,
-val status500: ErrorResponse? = null) {
+data class UpdateFooBarResponse(val statusCode: Int, val raw: Response) {
+}
+
+sealed interface UpdateFooBarExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class UpdateFooBarException(
+    val detail: UpdateFooBarExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class UpdateFooBarBadRequest(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdateFooBarExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): ErrorResponse = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type)
+}
+
+class UpdateFooBarInternalServerError(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdateFooBarExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): ErrorResponse = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type)
+}
+
+class UpdateFooBarUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UpdateFooBarExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
 }
 
 /**
@@ -38,15 +93,19 @@ class FooApi(private val client: ApiClient) {
         val response = client.execute(request)
 
         if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
+            val responseBody = response.body
+            val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+            val responseBytes = responseBody?.bytes() ?: ByteArray(0)
+            val responseText = responseBytes.toString(responseCharset)
+            val detail: UpdateFooBarExceptionDetail = when (response.code)  {
+                400 -> UpdateFooBarBadRequest(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                500 -> UpdateFooBarInternalServerError(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                else ->  {
+                    UpdateFooBarUnexpected(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                }
+            }
+            throw UpdateFooBarException(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)
         }
-        val responseBytes = response.body?.bytes() ?: ByteArray(0)
-        val responseText = responseBytes.toString(Charsets.UTF_8)
-
-        val status400 = if (response.code == 400) gson.fromJson<ErrorResponse>(responseText.ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type) else null
-
-        val status500 = if (response.code == 500) gson.fromJson<ErrorResponse>(responseText.ifEmpty { "null" }, object : TypeToken<ErrorResponse>() {}.type) else null
-        return UpdateFooBarResponse(statusCode = response.code, raw = response, status400 = status400, status500 = status500)
+        return UpdateFooBarResponse(statusCode = response.code, raw = response)
     }
 }

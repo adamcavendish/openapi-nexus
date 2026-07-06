@@ -5,7 +5,6 @@
 
 package com.example.sdk.apis
 
-import com.example.sdk.models.*
 import com.example.sdk.runtime.ApiClient
 import com.example.sdk.runtime.ApiException
 import com.google.gson.Gson
@@ -20,6 +19,34 @@ import okhttp3.Response
 data class UploadRawMultipartResponse(val statusCode: Int, val raw: Response) {
 }
 
+sealed interface UploadRawMultipartExceptionDetail {
+    val statusCode: Int
+    val headers: okhttp3.Headers
+    fun rawBody(): ByteArray
+}
+
+class UploadRawMultipartException(
+    val detail: UploadRawMultipartExceptionDetail,
+    statusCode: Int,
+    status: String,
+    body: String,
+    val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : ApiException(statusCode, status, body) {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+}
+
+class UploadRawMultipartUnexpected(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : UploadRawMultipartExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun body(): ByteArray = rawBody()
+}
+
 /**
  * TransferApi groups operations under the transfer tag.
  */
@@ -31,13 +58,6 @@ class TransferApi(private val client: ApiClient) {
      */
     fun uploadRawMultipart(body: ByteArray): UploadRawMultipartResponse {
         val path = "/uploads/raw"
-        val request: okhttp3.Request = throw IllegalArgumentException("unsupported multipart request body: schema must be object-shaped")
-        val response = client.execute(request)
-
-        if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
-        }
-        return UploadRawMultipartResponse(statusCode = response.code, raw = response)
+        throw IllegalArgumentException("unsupported multipart request body: schema must be object-shaped")
     }
 }

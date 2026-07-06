@@ -88,7 +88,11 @@ fn render_file_header(info: &IrInfo) -> String {
     out.push_str(&format!("// {} — {}\n", info.title, info.version));
     if let Some(desc) = &info.description {
         for line in desc.lines() {
-            out.push_str(&format!("// {line}\n"));
+            if line.is_empty() {
+                out.push_str("//\n");
+            } else {
+                out.push_str(&format!("// {line}\n"));
+            }
         }
     }
     out.push('\n');
@@ -116,6 +120,14 @@ dependencies {{
 java {{
     toolchain {{
         languageVersion.set(JavaLanguageVersion.of(17))
+    }}
+}}
+
+sourceSets {{
+    main {{
+        java {{
+            srcDirs("apis", "models", "runtime")
+        }}
     }}
 }}
 "#,

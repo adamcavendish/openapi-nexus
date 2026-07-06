@@ -5,10 +5,38 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ..models.foo_status import FooStatus
 from ..models.get_items_response200 import GetItemsResponse200
 from ..runtime.client import Client
 from ..runtime.errors import ApiError
+
+class GetItemsBadRequest:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+
+class GetItemsUnexpected:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+    @property
+    def body(self) -> bytes:
+        return self.raw_body
+
+type GetItemsErrorDetail = (
+    GetItemsBadRequest
+    | GetItemsUnexpected
+)
+
+class GetItemsError(ApiError):
+    def __init__(self, status_code: int, status: str, body: bytes, detail: GetItemsErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
+        self.detail: GetItemsErrorDetail = detail
+        super().__init__(status_code, status, body, headers=headers, response=response)
+
 
 class ItemsApi:
     def __init__(self, client: Client) -> None:
@@ -21,6 +49,10 @@ class ItemsApi:
         if status is not None:
             params["status"] = str(status)
         response = self._client.request("GET", path, params=params)
-        if response.status_code >= 400:
-            raise ApiError(response.status_code, response.reason, response.content)
+        if not (200 <= response.status_code < 300):
+            if response.status_code == 400:
+                detail = GetItemsBadRequest(response.status_code, response.headers, response.content)
+            else:
+                detail = GetItemsUnexpected(response.status_code, response.headers, response.content)
+            raise GetItemsError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
         return GetItemsResponse200.from_dict(response.json())

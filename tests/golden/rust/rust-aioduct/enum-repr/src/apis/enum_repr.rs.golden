@@ -5,7 +5,7 @@
 // This API demonstrates all 4 kinds of enum representation types: Externally Tagged, Internally Tagged, Adjacently Tagged, and Untagged
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "enum-repr" tag.
 pub struct EnumReprApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -24,19 +24,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> EnumReprApi<'a, R, 
     pub async fn handle_adjacently_tagged(
         &self,
         body: &crate::models::AdjacentlyTaggedEnum,
-    ) -> Result<HandleAdjacentlyTaggedResponse, Error> {
+    ) -> Result<HandleAdjacentlyTaggedResponse, HandleAdjacentlyTaggedError> {
         let path = "/adjacently-tagged".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = HandleAdjacentlyTaggedResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(HandleAdjacentlyTaggedError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(HandleAdjacentlyTaggedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -45,19 +58,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> EnumReprApi<'a, R, 
     pub async fn handle_externally_tagged(
         &self,
         body: &crate::models::ExternallyTaggedEnum,
-    ) -> Result<HandleExternallyTaggedResponse, Error> {
+    ) -> Result<HandleExternallyTaggedResponse, HandleExternallyTaggedError> {
         let path = "/externally-tagged".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = HandleExternallyTaggedResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(HandleExternallyTaggedError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(HandleExternallyTaggedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -66,19 +92,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> EnumReprApi<'a, R, 
     pub async fn handle_internally_tagged(
         &self,
         body: &crate::models::InternallyTaggedEnum,
-    ) -> Result<HandleInternallyTaggedResponse, Error> {
+    ) -> Result<HandleInternallyTaggedResponse, HandleInternallyTaggedError> {
         let path = "/internally-tagged".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = HandleInternallyTaggedResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(HandleInternallyTaggedError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(HandleInternallyTaggedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -87,19 +126,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> EnumReprApi<'a, R, 
     pub async fn handle_mixed(
         &self,
         body: &crate::models::MixedEnum,
-    ) -> Result<HandleMixedResponse, Error> {
+    ) -> Result<HandleMixedResponse, HandleMixedError> {
         let path = "/mixed".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = HandleMixedResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(HandleMixedError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(HandleMixedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -108,19 +160,32 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> EnumReprApi<'a, R, 
     pub async fn handle_untagged(
         &self,
         body: &crate::models::UntaggedEnum,
-    ) -> Result<HandleUntaggedResponse, Error> {
+    ) -> Result<HandleUntaggedResponse, HandleUntaggedError> {
         let path = "/untagged".to_string();
         let mut req = self.client.post(&path)?;
-        req = req.json(&body)?;
-        let resp = req.send().await?;
+        req = req.json(&body).map_err(Error::from)?;
+        let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.bytes().await?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.bytes().await.map_err(Error::from)?;
         let mut result = HandleUntaggedResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(HandleUntaggedError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(HandleUntaggedError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -133,11 +198,77 @@ pub struct HandleAdjacentlyTaggedResponse {
     pub data: Option<crate::models::AdjacentlyTaggedEnum>,
 }
 
+/// Error from `handle_adjacently_tagged`.
+#[derive(Debug)]
+pub enum HandleAdjacentlyTaggedError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HandleAdjacentlyTaggedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HandleAdjacentlyTaggedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HandleAdjacentlyTaggedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `handle_externally_tagged`.
 #[derive(Debug)]
 pub struct HandleExternallyTaggedResponse {
     pub status_code: u16,
     pub data: Option<crate::models::ExternallyTaggedEnum>,
+}
+
+/// Error from `handle_externally_tagged`.
+#[derive(Debug)]
+pub enum HandleExternallyTaggedError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HandleExternallyTaggedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HandleExternallyTaggedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HandleExternallyTaggedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `handle_internally_tagged`.
@@ -147,6 +278,39 @@ pub struct HandleInternallyTaggedResponse {
     pub data: Option<crate::models::InternallyTaggedEnum>,
 }
 
+/// Error from `handle_internally_tagged`.
+#[derive(Debug)]
+pub enum HandleInternallyTaggedError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HandleInternallyTaggedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HandleInternallyTaggedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HandleInternallyTaggedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `handle_mixed`.
 #[derive(Debug)]
 pub struct HandleMixedResponse {
@@ -154,9 +318,75 @@ pub struct HandleMixedResponse {
     pub data: Option<crate::models::MixedEnum>,
 }
 
+/// Error from `handle_mixed`.
+#[derive(Debug)]
+pub enum HandleMixedError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HandleMixedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HandleMixedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HandleMixedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `handle_untagged`.
 #[derive(Debug)]
 pub struct HandleUntaggedResponse {
     pub status_code: u16,
     pub data: Option<crate::models::UntaggedEnum>,
+}
+
+/// Error from `handle_untagged`.
+#[derive(Debug)]
+pub enum HandleUntaggedError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for HandleUntaggedError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for HandleUntaggedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for HandleUntaggedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

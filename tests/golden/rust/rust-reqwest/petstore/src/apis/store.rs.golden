@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "store" tag.
 pub struct StoreApi<'a> {
@@ -23,11 +23,12 @@ impl<'a> StoreApi<'a> {
     /// Returns pet inventories by status
     pub async fn get_inventory(
         &self,
-    ) -> Result<GetInventoryResponse, Error> {
+    ) -> Result<GetInventoryResponse, GetInventoryError> {
         let path = "/store/inventory".to_string();
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetInventoryResponse { status_code, data: None };
         match status_code {
@@ -36,6 +37,14 @@ impl<'a> StoreApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetInventoryError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -43,12 +52,13 @@ impl<'a> StoreApi<'a> {
     pub async fn place_order(
         &self,
         body: &crate::models::Order,
-    ) -> Result<PlaceOrderResponse, Error> {
+    ) -> Result<PlaceOrderResponse, PlaceOrderError> {
         let path = "/store/order".to_string();
         let mut req = self.client.request(reqwest::Method::POST, &path).await?;
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = PlaceOrderResponse { status_code, data: None };
         match status_code {
@@ -57,6 +67,18 @@ impl<'a> StoreApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(PlaceOrderError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(PlaceOrderError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -64,12 +86,13 @@ impl<'a> StoreApi<'a> {
     pub async fn get_order_by_id(
         &self,
         order_id: i64,
-    ) -> Result<GetOrderByIdResponse, Error> {
+    ) -> Result<GetOrderByIdResponse, GetOrderByIdError> {
         let mut path = "/store/order/{orderId}".to_string();
         path = path.replace("{orderId}", &order_id.to_string());
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
         let mut result = GetOrderByIdResponse { status_code, data: None };
         match status_code {
@@ -78,6 +101,22 @@ impl<'a> StoreApi<'a> {
             }
             _ => {}
         }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetOrderByIdError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                404 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(GetOrderByIdError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(GetOrderByIdError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
+        }
         Ok(result)
     }
 
@@ -85,13 +124,34 @@ impl<'a> StoreApi<'a> {
     pub async fn delete_order(
         &self,
         order_id: i64,
-    ) -> Result<DeleteOrderResponse, Error> {
+    ) -> Result<DeleteOrderResponse, DeleteOrderError> {
         let mut path = "/store/order/{orderId}".to_string();
         path = path.replace("{orderId}", &order_id.to_string());
         let req = self.client.request(reqwest::Method::DELETE, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        Ok(DeleteOrderResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = DeleteOrderResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.bytes().await.map_err(Error::Network)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    400 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(DeleteOrderError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    404 => {
+                        let body = Ok::<(), Error>(());
+                        return Err(DeleteOrderError::NotFound(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(DeleteOrderError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -102,11 +162,75 @@ pub struct GetInventoryResponse {
     pub data: Option<std::collections::HashMap<String, i32>>,
 }
 
+/// Error from `get_inventory`.
+#[derive(Debug)]
+pub enum GetInventoryError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetInventoryError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetInventoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetInventoryError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `place_order`.
 #[derive(Debug)]
 pub struct PlaceOrderResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Order>,
+}
+
+/// Error from `place_order`.
+#[derive(Debug)]
+pub enum PlaceOrderError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for PlaceOrderError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for PlaceOrderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for PlaceOrderError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 /// Response from `get_order_by_id`.
@@ -116,8 +240,78 @@ pub struct GetOrderByIdResponse {
     pub data: Option<crate::models::Order>,
 }
 
+/// Error from `get_order_by_id`.
+#[derive(Debug)]
+pub enum GetOrderByIdError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for GetOrderByIdError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for GetOrderByIdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for GetOrderByIdError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `delete_order`.
 #[derive(Debug)]
 pub struct DeleteOrderResponse {
     pub status_code: u16,
+}
+
+/// Error from `delete_order`.
+#[derive(Debug)]
+pub enum DeleteOrderError {
+    BadRequest(ApiError<()>),
+    NotFound(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for DeleteOrderError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for DeleteOrderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::NotFound(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for DeleteOrderError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

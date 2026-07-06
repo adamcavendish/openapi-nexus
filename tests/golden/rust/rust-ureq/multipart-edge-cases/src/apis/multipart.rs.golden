@@ -5,7 +5,7 @@
 // Covers optional multipart bodies, optional parts, and text-only multipart fields.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "multipart" tag.
 pub struct MultipartApi<'a> {
@@ -24,7 +24,7 @@ impl<'a> MultipartApi<'a> {
     pub fn send_optional_parts(
         &self,
         body: Option<&crate::models::SendOptionalPartsMultipartRequestBody>,
-    ) -> Result<SendOptionalPartsResponse, Error> {
+    ) -> Result<SendOptionalPartsResponse, SendOptionalPartsError> {
         let path = "/multipart/optional".to_string();
         let mut req = self.client.post(&path);
         let resp;
@@ -34,7 +34,7 @@ impl<'a> MultipartApi<'a> {
             if let Some(value) = &body.attributes {
                 multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
                 multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("attributes"), "application/json").as_bytes());
-                multipart_body.extend_from_slice(serde_json::to_string(value)?.as_bytes());
+                multipart_body.extend_from_slice(serde_json::to_string(value).map_err(Error::Deserialize)?.as_bytes());
                 multipart_body.extend_from_slice(b"\r\n");
             }
             if let Some(value) = &body.enabled {
@@ -63,20 +63,33 @@ impl<'a> MultipartApi<'a> {
             }
             multipart_body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
             req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
-            resp = req.send(multipart_body)?;
+            resp = req.send(multipart_body).map_err(Error::Http)?;
         }
         else {
-            resp = req.send_empty()?;
+            resp = req.send_empty().map_err(Error::Http)?;
         }
         let status_code = resp.status().as_u16();
-        Ok(SendOptionalPartsResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendOptionalPartsResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendOptionalPartsError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 
     /// POST /multipart/text-only
     pub fn send_text_fields(
         &self,
         body: &crate::models::SendTextFieldsMultipartRequestBody,
-    ) -> Result<SendTextFieldsResponse, Error> {
+    ) -> Result<SendTextFieldsResponse, SendTextFieldsError> {
         let path = "/multipart/text-only".to_string();
         let mut req = self.client.post(&path);
         let boundary = format!("openapi-nexus-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|duration| duration.as_nanos()).unwrap_or(0));
@@ -95,9 +108,22 @@ impl<'a> MultipartApi<'a> {
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
         req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
-        let resp = req.send(multipart_body)?;
+        let resp = req.send(multipart_body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(SendTextFieldsResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = SendTextFieldsResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(SendTextFieldsError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -107,8 +133,70 @@ pub struct SendOptionalPartsResponse {
     pub status_code: u16,
 }
 
+/// Error from `send_optional_parts`.
+#[derive(Debug)]
+pub enum SendOptionalPartsError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendOptionalPartsError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendOptionalPartsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendOptionalPartsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 /// Response from `send_text_fields`.
 #[derive(Debug)]
 pub struct SendTextFieldsResponse {
     pub status_code: u16,
+}
+
+/// Error from `send_text_fields`.
+#[derive(Debug)]
+pub enum SendTextFieldsError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for SendTextFieldsError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for SendTextFieldsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for SendTextFieldsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

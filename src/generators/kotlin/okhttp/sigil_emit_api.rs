@@ -3,6 +3,9 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_names::{
+    response_entry_name as response_variant_name, response_match_rank,
+};
 use crate::ir::types::{
     IrOperation, IrParameter, IrRequestBody, IrResponse, IrSpec, IrTypeExpr, ParameterLocation,
 };
@@ -25,10 +28,11 @@ pub fn generate_api_files(
 ) -> Result<Vec<FileInfo>, String> {
     let by_tag = group_by_tag(&ir.operations);
     let mut files = Vec::with_capacity(by_tag.len());
+    let has_models = has_kotlin_models(ir, request_inputs);
     for (tag, ops) in &by_tag {
         let class_name = format!("{}Api", tag.to_pascal_case());
         let filename = format!("{class_name}.kt");
-        let body = emit_api_file(tag, ops, ir, package_name, request_inputs);
+        let body = emit_api_file(tag, ops, ir, package_name, request_inputs, has_models);
         let content = format!("{header}{body}");
         files.push(FileInfo::api(filename, content));
     }
@@ -50,6 +54,10 @@ fn group_by_tag(operations: &[IrOperation]) -> BTreeMap<String, Vec<&IrOperation
     out
 }
 
+fn has_kotlin_models(ir: &IrSpec, request_inputs: &RequestInputPlan) -> bool {
+    !ir.schemas.is_empty() || !request_inputs.models().is_empty()
+}
+
 // ---------------------------------------------------------------------------
 // File assembly
 // ---------------------------------------------------------------------------
@@ -60,6 +68,7 @@ fn emit_api_file(
     ir: &IrSpec,
     package_name: &str,
     request_inputs: &RequestInputPlan,
+    has_models: bool,
 ) -> String {
     let class_name = format!("{}Api", tag.to_pascal_case());
     let plans: Vec<OpPlan> = ops
@@ -68,9 +77,16 @@ fn emit_api_file(
         .collect();
 
     let filename = format!("{class_name}.kt");
+    let has_textual_error_response = plans.iter().any(|plan| {
+        plan.error_responses.iter().any(|response| {
+            matches!(
+                response.decoding,
+                ResponseDecoding::Json | ResponseDecoding::Text
+            )
+        })
+    });
     let mut fb = FileSpec::builder_with(&filename, Kotlin::new())
         .header(package_header(package_name))
-        .add_import(ImportSpec::named(&format!("{package_name}.models"), "*"))
         .add_import(ImportSpec::named(
             &format!("{package_name}.runtime"),
             "ApiClient",
@@ -82,6 +98,9 @@ fn emit_api_file(
         .add_import(ImportSpec::named("com.google.gson", "Gson"))
         .add_import(ImportSpec::named("com.google.gson.reflect", "TypeToken"))
         .add_import(ImportSpec::named("okhttp3", "Response"));
+    if has_models {
+        fb = fb.add_import(ImportSpec::named(&format!("{package_name}.models"), "*"));
+    }
     let has_supported_multipart_body = plans.iter().any(|plan| {
         plan.body.as_ref().is_some_and(|body| {
             media_type_base(&body.media_type) == "multipart/form-data"
@@ -102,6 +121,12 @@ fn emit_api_file(
                 "okhttp3.RequestBody.Companion",
                 "toRequestBody",
             ));
+    }
+    if has_textual_error_response {
+        fb = fb.add_import(ImportSpec::named(
+            "okhttp3.MediaType.Companion",
+            "toMediaTypeOrNull",
+        ));
     }
 
     // API class
@@ -127,6 +152,7 @@ fn emit_api_file(
     // Response data classes + methods
     for plan in &plans {
         fb = fb.add_type(build_response_class(plan));
+        fb = fb.add_code(build_error_types_block(plan));
     }
 
     // API class with methods
@@ -184,6 +210,81 @@ fn build_response_class(plan: &OpPlan<'_>) -> TypeSpec {
     }
 
     tb.build().expect("response class builds")
+}
+
+fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let detail_interface = format!("{}Detail", plan.error_type);
+    cb.add(
+        &format!(
+            "sealed interface {detail_interface} {{\n    val statusCode: Int\n    val headers: okhttp3.Headers\n    fun rawBody(): ByteArray\n}}\n\n"
+        ),
+        (),
+    );
+    cb.add(
+        &format!(
+            "class {}(\n    val detail: {},\n    statusCode: Int,\n    status: String,\n    body: String,\n    val headers: okhttp3.Headers,\n    rawBodyBytes: ByteArray,\n) : ApiException(statusCode, status, body) {{\n    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()\n    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()\n}}\n\n",
+            plan.error_type, detail_interface
+        ),
+        (),
+    );
+    let mut seen = HashSet::new();
+    for response in &plan.error_responses {
+        if !seen.insert(response.field_name.clone()) {
+            continue;
+        }
+        let class_name = format!(
+            "{}{}",
+            plan.method_name.to_pascal_case(),
+            response.field_name
+        );
+        cb.add_code(kotlin_error_detail_class(
+            &class_name,
+            &detail_interface,
+            response,
+        ));
+    }
+    let unexpected = format!("{}Unexpected", plan.method_name.to_pascal_case());
+    cb.add(
+        &format!(
+            "class {unexpected}(\n    override val statusCode: Int,\n    override val headers: okhttp3.Headers,\n    rawBodyBytes: ByteArray,\n) : {detail_interface} {{\n    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()\n    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()\n    fun body(): ByteArray = rawBody()\n}}\n"
+        ),
+        (),
+    );
+    cb.build().expect("Kotlin error types block builds")
+}
+
+fn kotlin_error_detail_class(
+    class_name: &str,
+    detail_interface: &str,
+    response: &TypedResponse,
+) -> CodeBlock {
+    let body_method = kotlin_error_body_method(response);
+    let text_helper = kotlin_error_text_helper(response);
+    let block = format!(
+        "class {class_name}(\n    override val statusCode: Int,\n    override val headers: okhttp3.Headers,\n    rawBodyBytes: ByteArray,\n) : {detail_interface} {{\n    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()\n    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()\n{text_helper}{body_method}\n}}\n\n"
+    );
+    CodeBlock::of(&block, ()).expect("Kotlin error detail class builds")
+}
+
+fn kotlin_error_text_helper(response: &TypedResponse) -> &'static str {
+    match response.decoding {
+        ResponseDecoding::Json | ResponseDecoding::Text => {
+            "    private fun textBody(): String {\n        val charset = headers[\"Content-Type\"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8\n        return rawBodyBytes.toString(charset)\n    }\n"
+        }
+        ResponseDecoding::Bytes => "",
+    }
+}
+
+fn kotlin_error_body_method(response: &TypedResponse) -> String {
+    match response.decoding {
+        ResponseDecoding::Json => format!(
+            "    fun body(): {} = Gson().fromJson(textBody().ifEmpty {{ \"null\" }}, object : TypeToken<{}>() {{}}.type)",
+            response.kt_type, response.kt_type
+        ),
+        ResponseDecoding::Text => "    fun body(): String = textBody()".to_string(),
+        ResponseDecoding::Bytes => "    fun body(): ByteArray = rawBody()".to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -272,6 +373,15 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     // Build request
     let method = plan.op.method.to_uppercase();
     if let Some(body) = &plan.body {
+        if let Some(message) = unsupported_request_body_message(body) {
+            cb.add_code(
+                sigil_quote!(Kotlin {
+                    throw IllegalArgumentException($S(message))
+                })
+                .expect("unsupported request body builds"),
+            );
+            return cb.build().expect("method body builds");
+        }
         if body.encoding == BodyEncoding::Multipart {
             if let Some(parts) = &body.multipart_parts {
                 emit_multipart_body(&mut cb, body, parts);
@@ -317,19 +427,11 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
     // Execute
     cb.add_code(kotlin_execute_request(plan.header_params.is_empty()));
     cb.add_line();
-
-    // Error handling
-    let error_block = sigil_quote!(Kotlin {
-        if (!response.isSuccessful) {
-            val errorBody = response.body?.string() ?: ""
-            throw ApiException(response.code, response.message, errorBody)
-        }
-    })
-    .expect("error block");
-    cb.add_code(error_block);
+    cb.add_code(kotlin_error_throw(plan));
 
     // Response parsing
     if !plan.typed_responses.is_empty() {
+        cb.add_line();
         cb.add(
             "val responseBytes = response.body?.bytes() ?: ByteArray(0)",
             (),
@@ -339,15 +441,19 @@ fn emit_method_body(plan: &OpPlan<'_>) -> CodeBlock {
             "val responseText = responseBytes.toString(Charsets.UTF_8)",
             (),
         );
-        cb.add_line();
         let mut seen: HashSet<String> = HashSet::new();
         for tr in &plan.typed_responses {
             if !seen.insert(tr.field_name.clone()) {
                 continue;
             }
             cb.add_line();
-            cb.add_code(kotlin_response_decode_assignment(tr));
+            cb.add(
+                &format!("var {}: {}? = null\n", tr.field_name, tr.kt_type),
+                (),
+            );
         }
+        cb.add_line();
+        cb.add_code(kotlin_response_decode_assignments(&plan.typed_responses));
 
         // Return with typed fields
         let fields: Vec<String> = std::iter::once("statusCode = response.code".to_string())
@@ -397,6 +503,21 @@ fn kotlin_new_request(method: &str, has_query: bool) -> CodeBlock {
         }
     })
     .expect("Kotlin request construction builds")
+}
+
+fn unsupported_request_body_message(body: &BodyBinding) -> Option<String> {
+    if body.encoding == BodyEncoding::Multipart && body.multipart_parts.is_none() {
+        return Some(
+            "unsupported multipart request body: schema must be object-shaped".to_string(),
+        );
+    }
+    match body.encoding {
+        BodyEncoding::FormUrlEncoded | BodyEncoding::Xml | BodyEncoding::Other => Some(format!(
+            "unsupported request body media type: {}",
+            body.media_type
+        )),
+        _ => None,
+    }
 }
 
 fn kotlin_new_request_with_body(method: &str, has_query: bool, body_expr: &str) -> CodeBlock {
@@ -583,21 +704,132 @@ fn response_decode_expr(tr: &TypedResponse) -> String {
     }
 }
 
-fn kotlin_response_decode_assignment(tr: &TypedResponse) -> CodeBlock {
-    let exact_status = tr.status.parse::<u16>().ok();
-    let has_exact_status = exact_status.is_some();
-    let status_code = exact_status.unwrap_or_default().to_string();
-    let guard = wildcard_status_guard(&tr.status);
-    let field_name = tr.field_name.as_str();
-    let deserialize_expr = response_decode_expr(tr);
-    sigil_quote!(Kotlin {
-        $if(has_exact_status) {
-            val $L(field_name) = if (response.code == $L(status_code.as_str())) $L(deserialize_expr.as_str()) else null
-        } $else {
-            val $L(field_name) = if ($L(guard.as_str())) $L(deserialize_expr.as_str()) else null
+fn kotlin_response_decode_assignments(typed_responses: &[TypedResponse]) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut emitted_any = false;
+    for tr in typed_responses {
+        if !seen.insert(tr.field_name.clone()) {
+            continue;
         }
-    })
-    .expect("Kotlin response decode assignment builds")
+        let keyword = if emitted_any { "else if" } else { "if" };
+        let guard = response_status_guard(&tr.status);
+        let field_name = tr.field_name.as_str();
+        let deserialize_expr = response_decode_expr(tr);
+        cb.begin_control_flow(&format!("{keyword} ({guard})"), ());
+        cb.add(&format!("{field_name} = {deserialize_expr}\n"), ());
+        cb.end_control_flow();
+        emitted_any = true;
+    }
+    cb.build()
+        .expect("Kotlin response decode assignments build")
+}
+
+fn kotlin_error_throw(plan: &OpPlan<'_>) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    cb.begin_control_flow("if (!response.isSuccessful)", ());
+    cb.add("val responseBody = response.body", ());
+    cb.add_line();
+    cb.add(
+        "val responseCharset = responseBody?.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8",
+        (),
+    );
+    cb.add_line();
+    cb.add(
+        "val responseBytes = responseBody?.bytes() ?: ByteArray(0)",
+        (),
+    );
+    cb.add_line();
+    cb.add(
+        "val responseText = responseBytes.toString(responseCharset)",
+        (),
+    );
+    cb.add_line();
+    cb.add(
+        &format!(
+            "val detail: {}Detail = when (response.code) ",
+            plan.error_type
+        ),
+        (),
+    );
+    cb.begin_control_flow("", ());
+    let mut seen = HashSet::new();
+    for response in plan
+        .error_responses
+        .iter()
+        .filter(|response| response.status.parse::<u16>().is_ok())
+    {
+        if !seen.insert(response.field_name.clone()) {
+            continue;
+        }
+        cb.add(&format!("{} -> ", response.status), ());
+        cb.add_code(kotlin_error_detail_expr(plan, response));
+    }
+    cb.add("else -> ", ());
+    cb.begin_control_flow("", ());
+    let mut emitted_wildcard = false;
+    for response in plan
+        .error_responses
+        .iter()
+        .filter(|response| response.status.ends_with("XX"))
+    {
+        let keyword = if emitted_wildcard { "else if" } else { "if" };
+        cb.add(
+            &format!("{keyword} ({}) ", wildcard_status_guard(&response.status)),
+            (),
+        );
+        cb.begin_control_flow("", ());
+        cb.add_code(kotlin_error_detail_expr(plan, response));
+        cb.end_control_flow();
+        emitted_wildcard = true;
+    }
+    if let Some(default) = plan
+        .error_responses
+        .iter()
+        .find(|response| response.status.eq_ignore_ascii_case("default"))
+    {
+        if emitted_wildcard {
+            cb.add("else ", ());
+            cb.begin_control_flow("", ());
+        }
+        cb.add_code(kotlin_error_detail_expr(plan, default));
+        if emitted_wildcard {
+            cb.end_control_flow();
+        }
+    } else {
+        let unexpected = format!("{}Unexpected", plan.method_name.to_pascal_case());
+        if emitted_wildcard {
+            cb.add("else ", ());
+            cb.begin_control_flow("", ());
+        }
+        cb.add(&format!(
+            "{unexpected}(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)\n"
+        ), ());
+        if emitted_wildcard {
+            cb.end_control_flow();
+        }
+    }
+    cb.end_control_flow();
+    cb.end_control_flow();
+    cb.add(&format!(
+        "throw {}(detail = detail, statusCode = response.code, status = response.message, body = responseText, headers = response.headers, rawBodyBytes = responseBytes)",
+        plan.error_type
+    ), ());
+    cb.add_line();
+    cb.end_control_flow();
+    cb.build().expect("Kotlin error throw builds")
+}
+
+fn kotlin_error_detail_expr(plan: &OpPlan<'_>, response: &TypedResponse) -> CodeBlock {
+    let class_name = format!(
+        "{}{}",
+        plan.method_name.to_pascal_case(),
+        response.field_name
+    );
+    let expr = format!(
+        "{class_name}(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)\n"
+    );
+    CodeBlock::of(&expr, ()).expect("Kotlin error detail expr builds")
 }
 
 fn emit_required_multipart_part(
@@ -634,11 +866,13 @@ struct OpPlan<'a> {
     op: &'a IrOperation,
     method_name: String,
     response_type: String,
+    error_type: String,
     path_params: Vec<ParamBinding<'a>>,
     query_params: Vec<ParamBinding<'a>>,
     header_params: Vec<ParamBinding<'a>>,
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
+    error_responses: Vec<TypedResponse>,
 }
 
 struct ParamBinding<'a> {
@@ -698,6 +932,7 @@ fn plan_operation<'a>(
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_lower_camel_case();
     let response_type = format!("{}Response", op_id.to_pascal_case());
+    let error_type = format!("{}Exception", op_id.to_pascal_case());
 
     let mut used_names: HashSet<String> = HashSet::new();
 
@@ -729,17 +964,31 @@ fn plan_operation<'a>(
         .as_ref()
         .and_then(|b| plan_body(op, b, ir, request_inputs, &mut used_names));
 
-    let typed_responses = op.responses.iter().filter_map(plan_response).collect();
+    let mut typed_responses: Vec<TypedResponse> = op
+        .responses
+        .iter()
+        .filter(|r| is_success_status(&r.status))
+        .filter_map(plan_response)
+        .collect();
+    typed_responses.sort_by_key(|r| response_match_rank(&r.status));
+    let error_responses = op
+        .responses
+        .iter()
+        .filter(|r| !is_success_status(&r.status))
+        .map(plan_error_response)
+        .collect();
 
     OpPlan {
         op,
         method_name,
         response_type,
+        error_type,
         path_params,
         query_params,
         header_params,
         body,
         typed_responses,
+        error_responses,
     }
 }
 
@@ -795,6 +1044,38 @@ fn plan_response(r: &IrResponse) -> Option<TypedResponse> {
     })
 }
 
+fn plan_error_response(r: &IrResponse) -> TypedResponse {
+    match pick_response_content(r) {
+        Some((media_type, t)) => {
+            let decoding = response_decoding(&media_type);
+            let kt_type = match decoding {
+                ResponseDecoding::Json => kt_type_str(&t),
+                ResponseDecoding::Text => "String".to_string(),
+                ResponseDecoding::Bytes => "ByteArray".to_string(),
+            };
+            TypedResponse {
+                status: r.status.clone(),
+                field_name: response_variant_name(&r.status),
+                kt_type,
+                decoding,
+            }
+        }
+        None => TypedResponse {
+            status: r.status.clone(),
+            field_name: response_variant_name(&r.status),
+            kt_type: "ByteArray".to_string(),
+            decoding: ResponseDecoding::Bytes,
+        },
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    status
+        .parse::<u16>()
+        .is_ok_and(|code| (200..300).contains(&code))
+        || status.eq_ignore_ascii_case("2XX")
+}
+
 fn response_field_name(status: &str) -> String {
     if status == "default" {
         "default".to_string()
@@ -811,10 +1092,19 @@ fn wildcard_status_guard(status: &str) -> String {
         "response.code in 400..499".to_string()
     } else if upper == "5XX" {
         "response.code in 500..599".to_string()
+    } else if upper == "2XX" {
+        "response.code in 200..299".to_string()
     } else {
         // "default" or unknown wildcard: match everything (fallback response)
         "true".to_string()
     }
+}
+
+fn response_status_guard(status: &str) -> String {
+    status
+        .parse::<u16>()
+        .map(|code| format!("response.code == {code}"))
+        .unwrap_or_else(|_| wildcard_status_guard(status))
 }
 
 fn body_encoding(media_type: &str) -> BodyEncoding {

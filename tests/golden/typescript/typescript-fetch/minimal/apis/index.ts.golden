@@ -3,5 +3,5 @@
  *
  * Minimal API — 1.0.0
  */
-export type { GetTestRawResponse, DefaultApiInterface } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export type { GetTestRawResponse, GetTestErrorDetail, DefaultApiInterface } from './DefaultApi';
+export { DefaultApi, GetTestError } from './DefaultApi';

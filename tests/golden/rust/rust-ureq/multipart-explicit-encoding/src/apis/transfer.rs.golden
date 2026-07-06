@@ -5,7 +5,7 @@
 // Covers explicit multipart part content types.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a> {
@@ -24,14 +24,14 @@ impl<'a> TransferApi<'a> {
     pub fn upload_encoded_asset(
         &self,
         body: &crate::models::UploadEncodedAssetMultipartRequestBody,
-    ) -> Result<UploadEncodedAssetResponse, Error> {
+    ) -> Result<UploadEncodedAssetResponse, UploadEncodedAssetError> {
         let path = "/uploads/encoded".to_string();
         let mut req = self.client.post(&path);
         let boundary = format!("openapi-nexus-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|duration| duration.as_nanos()).unwrap_or(0));
         let mut multipart_body: Vec<u8> = Vec::new();
         multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
         multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("audit"), "application/json").as_bytes());
-        multipart_body.extend_from_slice(serde_json::to_string(&body.audit)?.as_bytes());
+        multipart_body.extend_from_slice(serde_json::to_string(&body.audit).map_err(Error::Deserialize)?.as_bytes());
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
         multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"; filename=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("file"), crate::runtime::multipart_header_value(&body.file.filename_or_default("file").to_string()), "application/pdf").as_bytes());
@@ -39,7 +39,7 @@ impl<'a> TransferApi<'a> {
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
         multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("metadata"), "application/vnd.openapi-nexus.metadata+json").as_bytes());
-        multipart_body.extend_from_slice(serde_json::to_string(&body.metadata)?.as_bytes());
+        multipart_body.extend_from_slice(serde_json::to_string(&body.metadata).map_err(Error::Deserialize)?.as_bytes());
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
         multipart_body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\nContent-Type: {}\r\n\r\n", crate::runtime::multipart_header_value("purpose"), "text/plain").as_bytes());
@@ -47,9 +47,22 @@ impl<'a> TransferApi<'a> {
         multipart_body.extend_from_slice(b"\r\n");
         multipart_body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
         req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
-        let resp = req.send(multipart_body)?;
+        let resp = req.send(multipart_body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        Ok(UploadEncodedAssetResponse { status_code })
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let result = UploadEncodedAssetResponse { status_code };
+        if !(200..300).contains(&status_code) {
+            let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
+            if !(200..300).contains(&status_code) {
+                match status_code {
+                    _ => {
+                        let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                        return Err(UploadEncodedAssetError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                    }
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -57,4 +70,35 @@ impl<'a> TransferApi<'a> {
 #[derive(Debug)]
 pub struct UploadEncodedAssetResponse {
     pub status_code: u16,
+}
+
+/// Error from `upload_encoded_asset`.
+#[derive(Debug)]
+pub enum UploadEncodedAssetError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for UploadEncodedAssetError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for UploadEncodedAssetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for UploadEncodedAssetError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

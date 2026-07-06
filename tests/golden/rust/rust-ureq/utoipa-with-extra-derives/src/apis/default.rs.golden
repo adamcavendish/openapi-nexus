@@ -5,7 +5,7 @@
 // Test that utoipa::ToSchema is additive alongside user extra_derives
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -24,18 +24,27 @@ impl<'a> DefaultApi<'a> {
     pub fn create_item(
         &self,
         body: &crate::models::Item,
-    ) -> Result<CreateItemResponse, Error> {
+    ) -> Result<CreateItemResponse, CreateItemError> {
         let path = "/items".to_string();
         let req = self.client.post(&path);
-        let resp = req.send_json(&body)?;
+        let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = CreateItemResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateItemError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -46,4 +55,35 @@ impl<'a> DefaultApi<'a> {
 pub struct CreateItemResponse {
     pub status_code: u16,
     pub data: Option<crate::models::Item>,
+}
+
+/// Error from `create_item`.
+#[derive(Debug)]
+pub enum CreateItemError {
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateItemError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateItemError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateItemError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

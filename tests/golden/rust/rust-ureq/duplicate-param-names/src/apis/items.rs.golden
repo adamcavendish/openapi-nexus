@@ -5,7 +5,7 @@
 // Test API with duplicate parameter names across different locations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::Error;
+use crate::runtime::error::{ApiError, Error};
 
 /// API operations under the "items" tag.
 pub struct ItemsApi<'a> {
@@ -26,22 +26,35 @@ impl<'a> ItemsApi<'a> {
         item_id: &str,
         body: &Option<String>,
         body_2: &crate::models::CreateItemWithBodyConflictRequest,
-    ) -> Result<CreateItemWithBodyConflictResponse, Error> {
+    ) -> Result<CreateItemWithBodyConflictResponse, CreateItemWithBodyConflictError> {
         let mut path = "/items/{itemId}".to_string();
         path = path.replace("{itemId}", &item_id.to_string());
         let mut req = self.client.post(&path);
         if let Some(v) = &body {
             req = req.query("body", &v.to_string());
         }
-        let resp = req.send_json(&body_2)?;
+        let resp = req.send_json(&body_2).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let body_bytes = resp.into_body().read_to_vec()?;
+        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
         let mut result = CreateItemWithBodyConflictResponse { status_code, data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
             }
             _ => {}
+        }
+        if !(200..300).contains(&status_code) {
+            match status_code {
+                400 => {
+                    let body = Ok::<(), Error>(());
+                    return Err(CreateItemWithBodyConflictError::BadRequest(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+                _ => {
+                    let body = Ok::<Vec<u8>, Error>(body_bytes.to_vec());
+                    return Err(CreateItemWithBodyConflictError::Unexpected(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
+            }
         }
         Ok(result)
     }
@@ -52,4 +65,37 @@ impl<'a> ItemsApi<'a> {
 pub struct CreateItemWithBodyConflictResponse {
     pub status_code: u16,
     pub data: Option<crate::models::CreateItemWithBodyConflictResponse200>,
+}
+
+/// Error from `create_item_with_body_conflict`.
+#[derive(Debug)]
+pub enum CreateItemWithBodyConflictError {
+    BadRequest(ApiError<()>),
+    Unexpected(ApiError<Vec<u8>>),
+    Transport(Error),
+}
+
+impl From<Error> for CreateItemWithBodyConflictError {
+    fn from(error: Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+impl std::fmt::Display for CreateItemWithBodyConflictError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadRequest(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
+            Self::Transport(err) => std::fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl std::error::Error for CreateItemWithBodyConflictError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Transport(err) => Some(err),
+            _ => None,
+        }
+    }
 }

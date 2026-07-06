@@ -6,9 +6,12 @@
  */
 export type {
   HealthCheckRawResponse,
+  HealthCheckErrorDetail,
   ListUsersRawResponse,
+  ListUsersErrorDetail,
   ApiGetUserRequest,
   GetUserRawResponse,
+  GetUserErrorDetail,
   DefaultApiInterface,
 } from './DefaultApi';
-export { DefaultApi } from './DefaultApi';
+export { DefaultApi, HealthCheckError, ListUsersError, GetUserError } from './DefaultApi';
