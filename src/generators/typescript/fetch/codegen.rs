@@ -379,8 +379,8 @@ impl TypeScriptFetchCodeGenerator {
                         "check": "vp check --no-fmt",
                     });
                     package_json["devDependencies"] = serde_json::json!({
-                        "typescript": "latest",
-                        "vite-plus": "latest",
+                        "typescript": "^7.0.2",
+                        "vite-plus": "^0.2.5",
                     });
                 }
             }

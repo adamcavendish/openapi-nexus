@@ -1,8 +1,8 @@
 {
   "description": "Comprehensive test for all OpenAPI v3.1.2 schema types",
   "devDependencies": {
-    "typescript": "latest",
-    "vite-plus": "latest"
+    "typescript": "^7.0.2",
+    "vite-plus": "^0.2.5"
   },
   "exports": {
     ".": {
