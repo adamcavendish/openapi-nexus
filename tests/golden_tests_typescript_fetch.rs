@@ -57,6 +57,7 @@ fn get_golden_test_cases() -> HashMap<&'static str, &'static str> {
         ("recursive-json-optional-inline-object", "valid/recursive-json/optional-inline-object.yaml"),
         ("recursive-json-optional-nested-object-reference", "valid/recursive-json/optional-nested-object-reference.yaml"),
         ("recursive-json-primitive-array", "valid/recursive-json/primitive-array.yaml"),
+        ("recursive-json-self-referential-object", "valid/recursive-json/self-referential-object.yaml"),
 
         ("type-aliases-complex-union", "valid/type-aliases/complex-union.yaml"),
         ("type-aliases-intersection-allof", "valid/type-aliases/intersection-allof.yaml"),
@@ -145,6 +146,7 @@ generate_golden_tests! {
     test_recursive_json_optional_inline_object_golden: "recursive-json-optional-inline-object",
     test_recursive_json_optional_nested_object_reference_golden: "recursive-json-optional-nested-object-reference",
     test_recursive_json_primitive_array_golden: "recursive-json-primitive-array",
+    test_recursive_json_self_referential_object_golden: "recursive-json-self-referential-object",
 
     test_type_aliases_complex_union_golden: "type-aliases-complex-union",
     test_type_aliases_intersection_allof_golden: "type-aliases-intersection-allof",
@@ -570,6 +572,71 @@ components:
     );
 }
 
+#[test]
+fn test_self_referential_object_keeps_self_references_local() {
+    let parsed = openapi_nexus::parser::parse_content_yaml(include_str!(
+        "fixtures/valid/recursive-json/self-referential-object.yaml"
+    ))
+    .unwrap();
+    let ir = openapi_nexus::ir::lower::lower(parsed).unwrap();
+
+    for (config, camel_case) in [
+        (toml::value::Table::new(), false),
+        (
+            toml::from_str("property_naming = \"camelCase\"").unwrap(),
+            true,
+        ),
+    ] {
+        let generator = TypeScriptFetchCodeGenerator::new(config);
+        let files = generator
+            .generate_models_from_ir(&ir, &RequestInputPlan::empty())
+            .unwrap();
+        let foo_file = files
+            .iter()
+            .find(|file| file.filename.ends_with("Foo.ts"))
+            .unwrap();
+
+        assert!(
+            !foo_file.content.contains("from './Foo'"),
+            "Foo.ts must not import its own declarations:\n{}",
+            foo_file.content
+        );
+        assert!(
+            foo_file.content.contains("from './Bar'"),
+            "Foo.ts must retain imports for other models:\n{}",
+            foo_file.content
+        );
+        assert!(
+            foo_file.content.contains("readonly Foo[]"),
+            "Foo.children must retain its recursive type:\n{}",
+            foo_file.content
+        );
+        if camel_case {
+            assert!(
+                foo_file
+                    .content
+                    .contains("readonly children?: readonly Foo$Wire[];"),
+                "Foo$Wire.children must use the local wire type:\n{}",
+                foo_file.content
+            );
+            assert!(
+                foo_file
+                    .content
+                    .contains("json.children.map((item) => fooFromJSON(item))"),
+                "Foo's decoder must call itself locally:\n{}",
+                foo_file.content
+            );
+            assert!(
+                foo_file
+                    .content
+                    .contains("value.children.map((item) => fooToJSON(item))"),
+                "Foo's encoder must call itself locally:\n{}",
+                foo_file.content
+            );
+        }
+    }
+}
+
 // ===========================================================================
 // Toolchain = "vp" golden tests
 // Same fixtures re-generated with vp toolchain to verify both paths compile.
@@ -604,6 +671,11 @@ generate_vp_golden_tests! {
     test_toolchain_vp_camel_case_golden: ("ts-toolchain-vp", "valid/type-aliases/discriminated-union-with-refs.yaml", "property_naming = \"camelCase\""),
     test_toolchain_vp_delete_response_golden: ("ts-toolchain-vp-delete-response", "valid/delete-with-response-schema.yaml", "property_naming = \"camelCase\""),
     test_toolchain_vp_enum_repr_golden: ("ts-toolchain-vp-enum-repr", "valid/enum-repr/enum-repr.yaml", "emit_enum_constants = true"),
+    test_toolchain_vp_self_referential_object_golden: (
+        "ts-toolchain-vp-self-referential-object",
+        "valid/recursive-json/self-referential-object.yaml",
+        "property_naming = \"camelCase\""
+    ),
     test_toolchain_vp_camel_case_tagged_nullable_unions_golden: (
         "ts-toolchain-vp-camel-case-tagged-nullable-unions",
         "valid/type-aliases/typescript-fetch-vp-camel-case-tagged-nullable-unions.yaml",

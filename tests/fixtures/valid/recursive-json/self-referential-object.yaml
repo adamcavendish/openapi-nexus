@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Self-Referential Object Test
+  version: 1.0.0
+
+paths:
+  /foo:
+    get:
+      operationId: getFoo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foo'
+
+components:
+  schemas:
+    Bar:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+
+    Foo:
+      type: object
+      required:
+        - related_bar
+      properties:
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Foo'
+        related_bar:
+          $ref: '#/components/schemas/Bar'
