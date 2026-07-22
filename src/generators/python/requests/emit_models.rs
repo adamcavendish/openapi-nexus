@@ -5,6 +5,8 @@
 //! Each schema produces one `.py` file via `FileSpec`.
 
 use crate::codegen::traits::file_writer::FileInfo;
+pub use crate::generators::python::type_names::python_type_name;
+use crate::generators::python::type_names::python_type_name_for_schema;
 use crate::generators::request_inputs::{
     RequestInputField, RequestInputFieldKind, RequestInputModel, RequestInputPlan,
 };
@@ -163,7 +165,7 @@ fn emit_object(schema: &IrSchema, obj: &IrObject, ir: &IrSpec) -> Option<FileSpe
     } else {
         for (_json_name, prop) in &required {
             let field_name = python_field_name(&prop.name);
-            let type_name = python_type_name(&prop.type_expr);
+            let type_name = python_type_name_for_schema(&prop.type_expr, &schema.name);
             cls = cls.add_field(
                 FieldSpec::builder(&field_name, type_name)
                     .build()
@@ -172,7 +174,7 @@ fn emit_object(schema: &IrSchema, obj: &IrObject, ir: &IrSpec) -> Option<FileSpe
         }
         for (_json_name, prop) in &optional {
             let field_name = python_field_name(&prop.name);
-            let type_name = python_type_name(&prop.type_expr);
+            let type_name = python_type_name_for_schema(&prop.type_expr, &schema.name);
             cls = cls.add_field(
                 FieldSpec::builder(&field_name, TypeName::optional(type_name))
                     .initializer(CodeBlock::of("None", ()).expect("None init"))
@@ -497,7 +499,7 @@ fn emit_intersection_as_dataclass(
     } else {
         for (_json_name, prop) in &required {
             let field_name = python_field_name(&prop.name);
-            let type_name = python_type_name(&prop.type_expr);
+            let type_name = python_type_name_for_schema(&prop.type_expr, &schema.name);
             cls = cls.add_field(
                 FieldSpec::builder(&field_name, type_name)
                     .build()
@@ -506,7 +508,7 @@ fn emit_intersection_as_dataclass(
         }
         for (_json_name, prop) in &optional {
             let field_name = python_field_name(&prop.name);
-            let type_name = python_type_name(&prop.type_expr);
+            let type_name = python_type_name_for_schema(&prop.type_expr, &schema.name);
             cls = cls.add_field(
                 FieldSpec::builder(&field_name, TypeName::optional(type_name))
                     .initializer(CodeBlock::of("None", ()).expect("None init"))
@@ -743,46 +745,6 @@ fn emit_elif(
 // Type mapping
 // ---------------------------------------------------------------------------
 
-/// Map an IR type expression to a sigil-stitch TypeName with auto-import tracking.
-pub fn python_type_name(expr: &IrTypeExpr) -> TypeName {
-    match expr {
-        IrTypeExpr::Named(name) => {
-            let py_name = name.to_pascal_case();
-            let module = format!(".{}", name.to_snake_case());
-            TypeName::importable(&module, &py_name)
-        }
-        IrTypeExpr::Primitive(p) => python_primitive_type_name(p),
-        IrTypeExpr::StringLiteral(s) => {
-            let lit = format!("Literal[\"{}\"]", escape_python_string(s));
-            TypeName::raw(&lit)
-        }
-        IrTypeExpr::StringEnum(values) => {
-            let members: Vec<String> = values
-                .iter()
-                .map(|v| format!("\"{}\"", escape_python_string(v)))
-                .collect();
-            let lit = format!("Literal[{}]", members.join(", "));
-            TypeName::raw(&lit)
-        }
-        IrTypeExpr::Array(inner) => {
-            TypeName::generic(TypeName::primitive("list"), vec![python_type_name(inner)])
-        }
-        IrTypeExpr::Map(inner) => TypeName::generic(
-            TypeName::primitive("dict"),
-            vec![TypeName::primitive("str"), python_type_name(inner)],
-        ),
-        IrTypeExpr::Union(members) => {
-            if members.is_empty() {
-                TypeName::importable("typing", "Any")
-            } else {
-                TypeName::union(members.iter().map(python_type_name).collect())
-            }
-        }
-        IrTypeExpr::Nullable(inner) => TypeName::optional(python_type_name(inner)),
-        IrTypeExpr::Any => TypeName::importable("typing", "Any"),
-    }
-}
-
 /// Like `python_type_name` but Named types import from `..models.{snake}` (for API files).
 pub fn api_type_name(expr: &IrTypeExpr) -> TypeName {
     match expr {
@@ -807,19 +769,6 @@ pub fn api_type_name(expr: &IrTypeExpr) -> TypeName {
         }
         IrTypeExpr::Nullable(inner) => TypeName::optional(api_type_name(inner)),
         _ => python_type_name(expr),
-    }
-}
-
-fn python_primitive_type_name(p: &IrPrimitive) -> TypeName {
-    match p {
-        IrPrimitive::String | IrPrimitive::StringWithFormat(_) => TypeName::primitive("str"),
-        IrPrimitive::Integer | IrPrimitive::IntegerWithFormat(_) => TypeName::primitive("int"),
-        IrPrimitive::Number | IrPrimitive::NumberWithFormat(_) => TypeName::primitive("float"),
-        IrPrimitive::Boolean => TypeName::primitive("bool"),
-        IrPrimitive::Binary => TypeName::primitive("bytes"),
-        IrPrimitive::Date => TypeName::importable("datetime", "date"),
-        IrPrimitive::DateTime => TypeName::importable("datetime", "datetime"),
-        IrPrimitive::Uuid => TypeName::importable("uuid", "UUID"),
     }
 }
 

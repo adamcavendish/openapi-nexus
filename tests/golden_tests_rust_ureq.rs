@@ -80,6 +80,7 @@ fn get_golden_test_cases() -> HashMap<&'static str, &'static str> {
         ("recursive-json-optional-inline-object", "valid/recursive-json/optional-inline-object.yaml"),
         ("recursive-json-optional-nested-object-reference", "valid/recursive-json/optional-nested-object-reference.yaml"),
         ("recursive-json-primitive-array", "valid/recursive-json/primitive-array.yaml"),
+        ("recursive-json-self-referential-object", "valid/recursive-json/self-referential-object.yaml"),
 
         ("query-param-enum", "valid/query/query-param-enum.yaml"),
         ("server-path-prefix", "valid/server-path-prefix.yaml"),
@@ -167,6 +168,7 @@ generate_golden_tests! {
     test_recursive_json_optional_inline_object_golden: "recursive-json-optional-inline-object",
     test_recursive_json_optional_nested_object_reference_golden: "recursive-json-optional-nested-object-reference",
     test_recursive_json_primitive_array_golden: "recursive-json-primitive-array",
+    test_recursive_json_self_referential_object_golden: "recursive-json-self-referential-object",
 
     test_query_param_enum_golden: "query-param-enum",
     test_server_path_prefix_golden: "server-path-prefix",
