@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Breaking Changes
+
+- Generated clients now treat only HTTP `2xx` responses as success. Documented
+  `4xx`, `5xx`, and `default` responses, plus unexpected non-`2xx` responses,
+  use each language's native error path instead of returning a normal response.
+- Success response types no longer contain non-success status fields such as
+  `status_4xx` or `status_5xx`. Regenerate clients and move non-`2xx` handling
+  to the generated operation-specific error type or exception.
+
+### Added
+
+- Generate operation-specific typed HTTP errors for TypeScript Fetch, Go HTTP,
+  Rust reqwest, Rust ureq, Rust aioduct, Python httpx, Python requests, Java
+  OkHttp, and Kotlin OkHttp.
+- Preserve status, headers, and raw response bytes for HTTP errors, with typed
+  response-entry details and deferred body decoding where supported.
+- Distinguish exact statuses, wildcard ranges, default responses, and
+  unexpected non-success responses even when entries reuse the same schema.
+
+### Changed
+
+- TypeScript Fetch Vite+ projects now require `"typescript": "^7.0.2"` and
+  `"vite-plus": "^0.2.5"` instead of unbounded latest versions.
+
+### Fixed
+
+- TypeScript Fetch: keep self-referential model types and JSON converters local
+  instead of generating imports from their own module.
+- Python httpx and requests: keep self-referential model annotations local
+  while retaining imports for other referenced models.
+
 ## [0.1.17]
 
 ### Changed
