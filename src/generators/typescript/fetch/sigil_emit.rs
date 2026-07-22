@@ -201,7 +201,7 @@ fn emit_object_file(
     }
 
     for (_json_name, prop) in &obj.properties {
-        tb = tb.add_field(build_field(prop, unknown_aliases)?);
+        tb = tb.add_field(build_field(prop, &schema.name, unknown_aliases)?);
     }
 
     let filename = format!("{}.ts", name);
@@ -231,7 +231,12 @@ fn emit_object_file_camel_case(
         wire_tb = wire_tb.doc(doc);
     }
     for (_json_name, prop) in &obj.properties {
-        wire_tb = wire_tb.add_field(build_field_wire(prop, convertible, unknown_aliases)?);
+        wire_tb = wire_tb.add_field(build_field_wire(
+            prop,
+            &schema.name,
+            convertible,
+            unknown_aliases,
+        )?);
     }
 
     // --- Ergonomic interface (camelCase property names) ---
@@ -240,11 +245,14 @@ fn emit_object_file_camel_case(
         ergo_tb = ergo_tb.doc(doc);
     }
     for (_json_name, prop) in &obj.properties {
-        ergo_tb = ergo_tb.add_field(build_field_camel(prop, unknown_aliases)?);
+        ergo_tb = ergo_tb.add_field(build_field_camel(prop, &schema.name, unknown_aliases)?);
     }
 
     // Collect Named refs that need converter imports (only convertible ones)
-    let named_refs = collect_named_refs(obj, convertible);
+    let named_refs = collect_named_refs(obj, convertible)
+        .into_iter()
+        .filter(|ref_name| ref_name != &schema.name)
+        .collect::<Vec<_>>();
 
     // --- fromJSON / toJSON functions ---
     let from_json = build_from_json_fn(name, &wire_name, obj, convertible)?;
@@ -273,6 +281,7 @@ fn emit_object_file_camel_case(
 /// Build a field for the $Wire interface (preserves original property name).
 fn build_field_wire(
     prop: &IrProperty,
+    current_schema: &str,
     convertible: &HashSet<String>,
     unknown_aliases: &HashSet<String>,
 ) -> Option<FieldSpec> {
@@ -281,7 +290,7 @@ fn build_field_wire(
     } else {
         format!("'{}'", prop.name)
     };
-    let inner_ty = type_expr_to_typename_wire(&prop.type_expr, convertible);
+    let inner_ty = type_expr_to_typename_wire(&prop.type_expr, current_schema, convertible);
     let field_ty = if prop.nullable {
         nullable_field_type_name(
             &prop.type_expr,
@@ -304,14 +313,18 @@ fn build_field_wire(
 }
 
 /// Build a field for the ergonomic interface (camelCase property name).
-fn build_field_camel(prop: &IrProperty, unknown_aliases: &HashSet<String>) -> Option<FieldSpec> {
+fn build_field_camel(
+    prop: &IrProperty,
+    current_schema: &str,
+    unknown_aliases: &HashSet<String>,
+) -> Option<FieldSpec> {
     let camel = prop.name.to_lower_camel_case();
     let field_name = if is_valid_ts_identifier(&camel) {
         camel
     } else {
         format!("'{}'", camel)
     };
-    let inner_ty = type_expr_to_typename(&prop.type_expr);
+    let inner_ty = type_expr_to_typename_for_schema(&prop.type_expr, current_schema);
     let field_ty = if prop.nullable {
         nullable_field_type_name(
             &prop.type_expr,
@@ -334,30 +347,36 @@ fn build_field_camel(prop: &IrProperty, unknown_aliases: &HashSet<String>) -> Op
 }
 
 /// Like `type_expr_to_typename` but Named refs resolve to `Name$Wire` (only if convertible).
-fn type_expr_to_typename_wire(expr: &IrTypeExpr, convertible: &HashSet<String>) -> TypeName {
+fn type_expr_to_typename_wire(
+    expr: &IrTypeExpr,
+    current_schema: &str,
+    convertible: &HashSet<String>,
+) -> TypeName {
     match expr {
         IrTypeExpr::Named(name) => {
             let ts_name = name.to_pascal_case();
-            let module = format!("./{ts_name}");
-            if convertible.contains(name) {
+            let rendered_name = if convertible.contains(name) {
                 let wire_name = format!("{}$Wire", ts_name);
-                TypeName::importable_type(&module, &wire_name)
+                wire_name
             } else {
-                TypeName::importable_type(&module, &ts_name)
-            }
+                ts_name
+            };
+            named_ref_to_typename(name, &rendered_name, Some(current_schema))
         }
-        IrTypeExpr::Array(inner) => {
-            TypeName::readonly_array(type_expr_to_typename_wire_nested(inner, convertible))
-        }
+        IrTypeExpr::Array(inner) => TypeName::readonly_array(type_expr_to_typename_wire_nested(
+            inner,
+            current_schema,
+            convertible,
+        )),
         IrTypeExpr::Nullable(inner) => union_typename(vec![
-            type_expr_to_typename_wire(inner, convertible),
+            type_expr_to_typename_wire(inner, current_schema, convertible),
             TypeName::primitive("null"),
         ]),
         IrTypeExpr::Map(inner) => TypeName::generic(
             TypeName::primitive("Record"),
             vec![
                 TypeName::primitive("string"),
-                type_expr_to_typename_wire(inner, convertible),
+                type_expr_to_typename_wire(inner, current_schema, convertible),
             ],
         ),
         IrTypeExpr::StringLiteral(s) => TypeName::raw(&format!("'{s}'")),
@@ -370,7 +389,7 @@ fn type_expr_to_typename_wire(expr: &IrTypeExpr, convertible: &HashSet<String>) 
         IrTypeExpr::Union(members) => union_typename(
             members
                 .iter()
-                .map(|member| type_expr_to_typename_wire(member, convertible))
+                .map(|member| type_expr_to_typename_wire(member, current_schema, convertible))
                 .collect(),
         ),
         IrTypeExpr::Primitive(p) => TypeName::primitive(primitive_to_ts(p)),
@@ -378,12 +397,18 @@ fn type_expr_to_typename_wire(expr: &IrTypeExpr, convertible: &HashSet<String>) 
     }
 }
 
-fn type_expr_to_typename_wire_nested(expr: &IrTypeExpr, convertible: &HashSet<String>) -> TypeName {
+fn type_expr_to_typename_wire_nested(
+    expr: &IrTypeExpr,
+    current_schema: &str,
+    convertible: &HashSet<String>,
+) -> TypeName {
     match expr {
-        IrTypeExpr::Array(inner) => {
-            TypeName::array(type_expr_to_typename_wire_nested(inner, convertible))
-        }
-        other => type_expr_to_typename_wire(other, convertible),
+        IrTypeExpr::Array(inner) => TypeName::array(type_expr_to_typename_wire_nested(
+            inner,
+            current_schema,
+            convertible,
+        )),
+        other => type_expr_to_typename_wire(other, current_schema, convertible),
     }
 }
 
@@ -1999,13 +2024,17 @@ fn json_value_to_ts_literal(v: &serde_json::Value) -> Option<String> {
     }
 }
 
-fn build_field(prop: &IrProperty, unknown_aliases: &HashSet<String>) -> Option<FieldSpec> {
+fn build_field(
+    prop: &IrProperty,
+    current_schema: &str,
+    unknown_aliases: &HashSet<String>,
+) -> Option<FieldSpec> {
     let field_name = if is_valid_ts_identifier(&prop.name) {
         prop.name.clone()
     } else {
         format!("'{}'", prop.name)
     };
-    let inner_ty = type_expr_to_typename(&prop.type_expr);
+    let inner_ty = type_expr_to_typename_for_schema(&prop.type_expr, current_schema);
     let field_ty = if prop.nullable {
         nullable_field_type_name(
             &prop.type_expr,
@@ -2028,23 +2057,32 @@ fn build_field(prop: &IrProperty, unknown_aliases: &HashSet<String>) -> Option<F
 }
 
 fn type_expr_to_typename(expr: &IrTypeExpr) -> TypeName {
+    type_expr_to_typename_with_current(expr, None)
+}
+
+fn type_expr_to_typename_for_schema(expr: &IrTypeExpr, current_schema: &str) -> TypeName {
+    type_expr_to_typename_with_current(expr, Some(current_schema))
+}
+
+fn type_expr_to_typename_with_current(expr: &IrTypeExpr, current_schema: Option<&str>) -> TypeName {
     match expr {
         IrTypeExpr::Named(name) => {
             let ts_name = name.to_pascal_case();
-            let module = format!("./{ts_name}");
-            TypeName::importable_type(&module, &ts_name)
+            named_ref_to_typename(name, &ts_name, current_schema)
         }
         IrTypeExpr::Primitive(p) => TypeName::primitive(primitive_to_ts(p)),
         // Outer array is `readonly X[]`; nested arrays stay plain `X[]` to
         // avoid sigil's invalid-TS `readonly readonly X[][]` when both layers
         // are readonly. Field-level readonly on the property is still applied
         // by `FieldSpec::is_readonly()` elsewhere.
-        IrTypeExpr::Array(inner) => TypeName::readonly_array(type_expr_to_typename_nested(inner)),
+        IrTypeExpr::Array(inner) => {
+            TypeName::readonly_array(type_expr_to_typename_nested(inner, current_schema))
+        }
         IrTypeExpr::Nullable(inner) if !contains_any_named_ref(inner) => {
             TypeName::raw(&type_expr_str(expr))
         }
         IrTypeExpr::Nullable(inner) => union_typename(vec![
-            type_expr_to_typename(inner),
+            type_expr_to_typename_with_current(inner, current_schema),
             TypeName::primitive("null"),
         ]),
         IrTypeExpr::StringLiteral(s) => TypeName::raw(&format!("'{s}'")),
@@ -2056,23 +2094,44 @@ fn type_expr_to_typename(expr: &IrTypeExpr) -> TypeName {
         ),
         IrTypeExpr::Map(inner) => TypeName::generic(
             TypeName::primitive("Record"),
-            vec![TypeName::primitive("string"), type_expr_to_typename(inner)],
+            vec![
+                TypeName::primitive("string"),
+                type_expr_to_typename_with_current(inner, current_schema),
+            ],
         ),
         IrTypeExpr::Union(_) if !contains_any_named_ref(expr) => {
             TypeName::raw(&type_expr_str(expr))
         }
-        IrTypeExpr::Union(members) => {
-            union_typename(members.iter().map(type_expr_to_typename).collect())
-        }
+        IrTypeExpr::Union(members) => union_typename(
+            members
+                .iter()
+                .map(|member| type_expr_to_typename_with_current(member, current_schema))
+                .collect(),
+        ),
         IrTypeExpr::Any => TypeName::primitive("unknown"),
     }
 }
 
+fn named_ref_to_typename(
+    schema_name: &str,
+    rendered_name: &str,
+    current_schema: Option<&str>,
+) -> TypeName {
+    if current_schema == Some(schema_name) {
+        TypeName::primitive(rendered_name)
+    } else {
+        let module = format!("./{}", schema_name.to_pascal_case());
+        TypeName::importable_type(&module, rendered_name)
+    }
+}
+
 /// Same as [`type_expr_to_typename`] but nested arrays render as plain `X[]`.
-fn type_expr_to_typename_nested(expr: &IrTypeExpr) -> TypeName {
+fn type_expr_to_typename_nested(expr: &IrTypeExpr, current_schema: Option<&str>) -> TypeName {
     match expr {
-        IrTypeExpr::Array(inner) => TypeName::array(type_expr_to_typename_nested(inner)),
-        other => type_expr_to_typename(other),
+        IrTypeExpr::Array(inner) => {
+            TypeName::array(type_expr_to_typename_nested(inner, current_schema))
+        }
+        other => type_expr_to_typename_with_current(other, current_schema),
     }
 }
 
