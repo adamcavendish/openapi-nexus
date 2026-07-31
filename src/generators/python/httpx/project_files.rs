@@ -76,6 +76,7 @@ fn top_level_init(package_name: &str, header: &str, include_upload_file: bool) -
     content.push_str("from .runtime import ApiKeyAuth as ApiKeyAuth\n");
     content.push_str("from .runtime import Authenticator as Authenticator\n");
     content.push_str("from .runtime import BearerAuth as BearerAuth\n");
+    content.push_str("from .runtime import ApiResponse as ApiResponse\n");
     content.push_str("from .runtime import Client as Client\n");
     content.push_str("from .runtime import ApiError as ApiError\n");
     if include_upload_file {

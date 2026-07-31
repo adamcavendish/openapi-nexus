@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.foo import Foo
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetFooUnexpected:
@@ -33,10 +33,14 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_foo(self) -> Foo:
+    def get_foo_with_http_info(self) -> ApiResponse[Foo]:
         path = "/foo"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetFooUnexpected(response.status_code, response.headers, response.content)
             raise GetFooError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return Foo.from_dict(response.json())
+        data = Foo.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_foo(self) -> Foo:
+        return self.get_foo_with_http_info().data

@@ -7,14 +7,17 @@ use crate::generators::rust::common::emit_api::{
     BodyEncoding, MultipartPart, MultipartValueEncoding, OpPlan, RustBackendConfig,
     binary_field_expr, binary_filename_expr, emit_empty_result_init, emit_error_response_match,
     emit_response_match, emit_result_init, error_response_value_expr, optional_binary_field_expr,
-    optional_binary_filename_expr, optional_text_field_expr, render_to_string, response_value_expr,
-    rust_field_name, rust_string_literal, text_field_expr,
+    optional_binary_filename_expr, optional_text_field_expr, render_to_string,
+    response_headers_init, response_value_expr, rust_field_name, rust_string_literal,
+    text_field_expr,
 };
 
 /// Backend configuration for aioduct (async, with generic runtime parameter).
 pub fn aioduct_backend_config() -> RustBackendConfig {
     RustBackendConfig {
         is_async: true,
+        response_headers_module: "aioduct",
+        response_headers_name: "HeaderMap",
         struct_generics: Some("R: aioduct::RuntimePoll, C: aioduct::ConnectorSend".to_string()),
         client_type_args: Some("<R, C>".to_string()),
     }
@@ -229,22 +232,6 @@ fn status_code_init() -> CodeBlock {
         let status_code = resp.status().as_u16();
     })
     .expect("status code init builds")
-}
-
-fn response_headers_init() -> CodeBlock {
-    sigil_quote!(RustLang {
-        let response_headers: Vec<(String, String)> = resp
-            .headers()
-            .iter()
-            .filter_map(|(name, value)| {
-                value
-                    .to_str()
-                    .ok()
-                    .map(|value| (name.to_string(), value.to_string()))
-            })
-            .collect();
-    })
-    .expect("response headers init builds")
 }
 
 fn aioduct_body_bytes_init() -> CodeBlock {

@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.get_user_by_id_duplicate_response200 import GetUserByIdDuplicateResponse200
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetUserByIdDuplicateBadRequest:
@@ -48,8 +48,8 @@ class UsersApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_user_by_id_duplicate(self, id: int, *, id2: int | None = None, id3: str | None = None) -> GetUserByIdDuplicateResponse200:
-        """Get user by ID with duplicate parameter names."""
+    def get_user_by_id_duplicate_with_http_info(self, id: int, *, id2: int | None = None, id3: str | None = None) -> ApiResponse[GetUserByIdDuplicateResponse200]:
+        """Get user by ID with duplicate parameter names, including HTTP response metadata."""
         path = f"/users/{id}"
         params: dict[str, str] = {}
         if id2 is not None:
@@ -66,4 +66,9 @@ class UsersApi:
             else:
                 detail = GetUserByIdDuplicateUnexpected(response.status_code, response.headers, response.content)
             raise GetUserByIdDuplicateError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return GetUserByIdDuplicateResponse200.from_dict(response.json())
+        data = GetUserByIdDuplicateResponse200.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_user_by_id_duplicate(self, id: int, *, id2: int | None = None, id3: str | None = None) -> GetUserByIdDuplicateResponse200:
+        """Get user by ID with duplicate parameter names."""
+        return self.get_user_by_id_duplicate_with_http_info(id, id2=id2, id3=id3).data

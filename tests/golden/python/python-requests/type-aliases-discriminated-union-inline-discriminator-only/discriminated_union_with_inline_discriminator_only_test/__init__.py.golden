@@ -15,5 +15,6 @@
 from .runtime import ApiKeyAuth as ApiKeyAuth
 from .runtime import Authenticator as Authenticator
 from .runtime import BearerAuth as BearerAuth
+from .runtime import ApiResponse as ApiResponse
 from .runtime import Client as Client
 from .runtime import ApiError as ApiError

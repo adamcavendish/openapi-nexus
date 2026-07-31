@@ -27,8 +27,8 @@ impl<'a> DefaultApi<'a> {
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = GetTestResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = GetTestResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -48,6 +48,7 @@ impl<'a> DefaultApi<'a> {
 #[derive(Debug)]
 pub struct GetTestResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `get_test`.

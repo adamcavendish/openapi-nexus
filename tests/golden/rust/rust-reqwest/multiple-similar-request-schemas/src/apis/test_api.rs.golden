@@ -30,9 +30,9 @@ impl<'a> TestApiApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = CreateTypeAResponse { status_code, data: None };
+        let mut result = CreateTypeAResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -60,9 +60,9 @@ impl<'a> TestApiApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = CreateTypeBResponse { status_code, data: None };
+        let mut result = CreateTypeBResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -85,6 +85,7 @@ impl<'a> TestApiApi<'a> {
 #[derive(Debug)]
 pub struct CreateTypeAResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::ResourceTypeA>,
 }
 
@@ -123,6 +124,7 @@ impl std::error::Error for CreateTypeAError {
 #[derive(Debug)]
 pub struct CreateTypeBResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::ResourceTypeB>,
 }
 

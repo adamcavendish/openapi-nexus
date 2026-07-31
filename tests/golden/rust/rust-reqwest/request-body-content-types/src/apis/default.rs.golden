@@ -31,8 +31,8 @@ impl<'a> DefaultApi<'a> {
         req = req.body(body.clone());
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostBinaryResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostBinaryResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -57,8 +57,8 @@ impl<'a> DefaultApi<'a> {
         req = req.form(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostFormResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostFormResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -83,8 +83,8 @@ impl<'a> DefaultApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostJsonResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostJsonResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -111,8 +111,8 @@ impl<'a> DefaultApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostJsonOrXmlResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostJsonOrXmlResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -137,8 +137,8 @@ impl<'a> DefaultApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PatchMergeJsonResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PatchMergeJsonResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -164,8 +164,8 @@ impl<'a> DefaultApi<'a> {
         req = req.body(body.clone());
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostTextResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostTextResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -191,8 +191,8 @@ impl<'a> DefaultApi<'a> {
         req = req.header("Content-Type", "application/xml").body(body_xml);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = PostXmlResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = PostXmlResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -215,9 +215,9 @@ impl<'a> DefaultApi<'a> {
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = GetXmlResponseResponse { status_code, data: None };
+        let mut result = GetXmlResponseResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_xml_rs::from_reader(std::io::Cursor::new(&body_bytes)).map_err(Error::Xml)?);
@@ -240,6 +240,7 @@ impl<'a> DefaultApi<'a> {
 #[derive(Debug)]
 pub struct PostBinaryResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_binary`.
@@ -277,6 +278,7 @@ impl std::error::Error for PostBinaryError {
 #[derive(Debug)]
 pub struct PostFormResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_form`.
@@ -314,6 +316,7 @@ impl std::error::Error for PostFormError {
 #[derive(Debug)]
 pub struct PostJsonResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_json`.
@@ -351,6 +354,7 @@ impl std::error::Error for PostJsonError {
 #[derive(Debug)]
 pub struct PostJsonOrXmlResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_json_or_xml`.
@@ -388,6 +392,7 @@ impl std::error::Error for PostJsonOrXmlError {
 #[derive(Debug)]
 pub struct PatchMergeJsonResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `patch_merge_json`.
@@ -425,6 +430,7 @@ impl std::error::Error for PatchMergeJsonError {
 #[derive(Debug)]
 pub struct PostTextResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_text`.
@@ -462,6 +468,7 @@ impl std::error::Error for PostTextError {
 #[derive(Debug)]
 pub struct PostXmlResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
 }
 
 /// Error from `post_xml`.
@@ -499,6 +506,7 @@ impl std::error::Error for PostXmlError {
 #[derive(Debug)]
 pub struct GetXmlResponseResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::Payload>,
 }
 

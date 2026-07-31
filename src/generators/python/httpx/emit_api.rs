@@ -9,6 +9,9 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+};
 use crate::generators::response_names::response_entry_name as response_variant_name;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
@@ -18,10 +21,13 @@ use heck::{ToPascalCase, ToSnakeCase};
 use sigil_stitch::code_block::CodeBlock;
 use sigil_stitch::lang::python::Python;
 use sigil_stitch::prelude::*;
+use sigil_stitch::spec::fun_spec::FunSpecBuilder;
 
 use super::emit_models::{
     api_type_name, future_annotations_header, is_object_schema, python_field_name,
 };
+use crate::generators::python::operation_names::plan_python_operation_names;
+use crate::generators::python::response_headers::build_header_accessors;
 
 /// Generate every API file from the IR.
 pub fn generate_api_files(
@@ -63,10 +69,16 @@ fn emit_api_file(
     request_inputs: &RequestInputPlan,
 ) -> String {
     let class_name = format!("{}Api", tag.to_pascal_case());
-    let plans: Vec<OpPlan> = ops
+    let mut plans: Vec<OpPlan> = ops
         .iter()
         .map(|op| plan_operation(op, ir, request_inputs))
         .collect();
+    let operation_names =
+        plan_python_operation_names(plans.iter().map(|plan| plan.method_name.clone()));
+    for (plan, names) in plans.iter_mut().zip(operation_names) {
+        plan.method_name = names.method;
+        plan.with_http_info_method_name = names.with_http_info_method;
+    }
 
     let client_type = TypeName::importable("..runtime.client", "Client");
     let error_type = TypeName::importable("..runtime.errors", "ApiError");
@@ -84,11 +96,18 @@ fn emit_api_file(
     let mut cls = TypeSpec::builder(&class_name, TypeKind::Class).add_method(init);
 
     for plan in &plans {
+        cls = cls.add_method(build_api_method_with_http_info(plan, ir, &error_type));
         cls = cls.add_method(build_api_method(plan, ir, &error_type));
     }
 
     let mut fb = FileSpec::builder_with(&format!("{}_api.py", tag.to_snake_case()), Python::new())
-        .header(future_annotations_header())
+        .header(future_annotations_header());
+    for plan in &plans {
+        if !plan.success_headers.is_empty() {
+            fb = fb.add_type(build_response_class(plan));
+        }
+    }
+    fb = fb
         .add_code(build_error_classes_block(&plans, ir))
         .add_type(cls.build().expect("API TypeSpec builds"));
     if plans
@@ -109,6 +128,27 @@ fn emit_api_file(
     }) {
         fb = fb.add_import(ImportSpec::side_effect("json"));
     }
+    if plans.iter().any(|plan| {
+        plan.success_headers
+            .iter()
+            .chain(&plan.error_headers)
+            .any(|header| {
+                matches!(
+                    header.value_kind,
+                    ResponseHeaderValueKind::Integer | ResponseHeaderValueKind::Number
+                )
+            })
+    }) {
+        fb = fb.add_import(ImportSpec::side_effect("re"));
+    }
+    if plans.iter().any(|plan| {
+        plan.success_headers
+            .iter()
+            .chain(&plan.error_headers)
+            .any(|header| header.value_kind == ResponseHeaderValueKind::Number)
+    }) {
+        fb = fb.add_import(ImportSpec::side_effect("math"));
+    }
     let file = fb.build().expect("API FileSpec builds");
 
     let body = file.render(120).unwrap_or_default();
@@ -120,11 +160,63 @@ fn emit_api_file(
 
 fn build_api_method(plan: &OpPlan<'_>, ir: &IrSpec, error_type: &TypeName) -> FunSpec {
     let mut fun = FunSpec::builder(&plan.method_name);
+    fun = add_api_method_params(fun, plan);
+    fun = fun.returns(response_payload_type(plan));
 
-    // self (bare, no type annotation)
+    if let Some(summary) = &plan.op.summary {
+        fun = fun.doc(&format!("{summary}."));
+    }
+
+    let mut args: Vec<(&str, bool)> = plan
+        .path_params
+        .iter()
+        .map(|param| (param.var_name.as_str(), false))
+        .collect();
+    for param in plan.query_params.iter().chain(&plan.header_params) {
+        if param.param.required {
+            args.push((param.var_name.as_str(), true));
+        }
+    }
+    if let Some(body) = &plan.body {
+        args.push((body.var_name.as_str(), true));
+    }
+    for param in plan.query_params.iter().chain(&plan.header_params) {
+        if !param.param.required {
+            args.push((param.var_name.as_str(), true));
+        }
+    }
+    fun = fun.body(
+        sigil_quote!(Python {
+            return self.$N(plan.with_http_info_method_name.as_str())($for((arg, is_keyword) in &args; separator = ", ") { $if(*is_keyword) { $N(*arg)$L("=")$N(*arg) } $else { $N(*arg) } }).data
+        })
+        .expect("convenience response body builds"),
+    );
+
+    let _ = (ir, error_type);
+    fun.build().expect("API method FunSpec builds")
+}
+
+fn build_api_method_with_http_info(
+    plan: &OpPlan<'_>,
+    ir: &IrSpec,
+    error_type: &TypeName,
+) -> FunSpec {
+    let mut fun = FunSpec::builder(&plan.with_http_info_method_name);
+    fun = add_api_method_params(fun, plan);
+    fun = fun.returns(response_metadata_type(plan));
+
+    if let Some(summary) = &plan.op.summary {
+        fun = fun.doc(&format!("{summary}, including HTTP response metadata."));
+    }
+
+    fun = fun.body(build_method_body(plan, ir, error_type));
+    fun.build()
+        .expect("API with-http-info method FunSpec builds")
+}
+
+fn add_api_method_params(mut fun: FunSpecBuilder, plan: &OpPlan<'_>) -> FunSpecBuilder {
     fun = fun.add_param(ParameterSpec::of("self", TypeName::primitive("")));
 
-    // Positional params (path params)
     for p in &plan.path_params {
         fun = fun.add_param(ParameterSpec::of(
             &p.var_name,
@@ -182,23 +274,26 @@ fn build_api_method(plan: &OpPlan<'_>, ir: &IrSpec, error_type: &TypeName) -> Fu
         }
     }
 
-    // Return type — auto-tracked via TypeName
-    let return_type = if plan.typed_responses.is_empty() {
+    fun
+}
+
+fn response_payload_type(plan: &OpPlan<'_>) -> TypeName {
+    if plan.typed_responses.is_empty() {
         TypeName::primitive("None")
     } else {
         response_type_name(&plan.typed_responses[0])
-    };
-    fun = fun.returns(return_type);
-
-    // Docstring
-    if let Some(summary) = &plan.op.summary {
-        fun = fun.doc(&format!("{summary}."));
     }
+}
 
-    // Method body (imperative control flow, stays as CodeBlock)
-    fun = fun.body(build_method_body(plan, ir, error_type));
-
-    fun.build().expect("API method FunSpec builds")
+fn response_metadata_type(plan: &OpPlan<'_>) -> TypeName {
+    if plan.success_headers.is_empty() {
+        TypeName::generic(
+            TypeName::importable("..runtime.client", "ApiResponse"),
+            vec![response_payload_type(plan)],
+        )
+    } else {
+        TypeName::primitive(&plan.response_type)
+    }
 }
 
 fn build_method_body(plan: &OpPlan<'_>, ir: &IrSpec, _error_type: &TypeName) -> CodeBlock {
@@ -352,14 +447,24 @@ fn build_method_body(plan: &OpPlan<'_>, ir: &IrSpec, _error_type: &TypeName) -> 
     // Error handling
     cb.add_code(emit_error_raise(plan, "response.reason_phrase"));
 
-    // Response parsing
-    if !plan.typed_responses.is_empty() {
+    let data_expr = if !plan.typed_responses.is_empty() {
         let tr = &plan.typed_responses[0];
-        let parse_expr = render_response_parse(tr, ir);
-        cb.add_statement(&format!("return {parse_expr}"), ());
+        render_response_parse(tr, ir)
     } else {
-        cb.add_statement("return None", ());
-    }
+        "None".to_string()
+    };
+    let response_type = TypeName::primitive(if plan.success_headers.is_empty() {
+        "ApiResponse"
+    } else {
+        &plan.response_type
+    });
+    cb.add_code(
+        sigil_quote!(Python {
+            data = $L(data_expr.as_str())
+            return $T(response_type)$L("(data=data, status_code=response.status_code, headers=response.headers, raw=response)")
+        })
+        .expect("metadata response result builds"),
+    );
 
     cb.build().expect("API method body builds")
 }
@@ -589,12 +694,32 @@ fn build_error_classes_block(plans: &[OpPlan<'_>], ir: &IrSpec) -> CodeBlock {
         );
         cb.add_statement(&format!("self.detail: {detail_type} = detail"), ());
         cb.add_statement(
-            "super().__init__(status_code, status, body, headers=headers, response=response)%<%<",
+            "super().__init__(status_code, status, body, headers=headers, response=response)%<",
             (),
         );
+        for accessor in build_header_accessors(&plan.error_headers, true) {
+            cb.add_code(
+                accessor
+                    .emit(&Python::new(), DeclarationContext::Member)
+                    .expect("Python error header accessor emits"),
+            );
+        }
+        cb.add("%<", ());
         cb.add_line();
     }
     cb.build().expect("Python error classes block builds")
+}
+
+fn build_response_class(plan: &OpPlan<'_>) -> TypeSpec {
+    let mut response =
+        TypeSpec::builder(&plan.response_type, TypeKind::Class).extends(TypeName::generic(
+            TypeName::importable("..runtime.client", "ApiResponse"),
+            vec![response_payload_type(plan)],
+        ));
+    for accessor in build_header_accessors(&plan.success_headers, false) {
+        response = response.add_method(accessor);
+    }
+    response.build().expect("Python response class builds")
 }
 
 fn error_body_property(
@@ -806,6 +931,8 @@ fn is_array_of_objects(type_expr: &IrTypeExpr, ir: &IrSpec) -> bool {
 struct OpPlan<'a> {
     op: &'a IrOperation,
     method_name: String,
+    with_http_info_method_name: String,
+    response_type: String,
     error_type: String,
     path_params: Vec<ParamBinding<'a>>,
     query_params: Vec<ParamBinding<'a>>,
@@ -813,6 +940,8 @@ struct OpPlan<'a> {
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
     error_responses: Vec<ErrorResponse>,
+    success_headers: Vec<ResponseHeaderPlan>,
+    error_headers: Vec<ResponseHeaderPlan>,
 }
 
 struct ParamBinding<'a> {
@@ -877,6 +1006,7 @@ fn plan_operation<'a>(
 ) -> OpPlan<'a> {
     let op_id = sanitize_operation_id(&op.operation_id, &op.method, &op.path);
     let method_name = op_id.to_snake_case();
+    let response_type = format!("{}ApiResponse", op_id.to_pascal_case());
     let error_type = format!("{}Error", op_id.to_pascal_case());
 
     let mut used_names: HashSet<String> = HashSet::new();
@@ -914,10 +1044,24 @@ fn plan_operation<'a>(
         .filter(|r| !is_success_status(&r.status))
         .map(|r| plan_error_response(&op_id, r))
         .collect();
+    let success_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| is_success_status(&response.status)),
+        ir,
+    );
+    let error_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| !is_success_status(&response.status)),
+        ir,
+    );
 
     OpPlan {
         op,
+        with_http_info_method_name: format!("{method_name}_with_http_info"),
         method_name,
+        response_type,
         error_type,
         path_params,
         query_params,
@@ -925,6 +1069,8 @@ fn plan_operation<'a>(
         body,
         typed_responses,
         error_responses,
+        success_headers,
+        error_headers,
     }
 }
 

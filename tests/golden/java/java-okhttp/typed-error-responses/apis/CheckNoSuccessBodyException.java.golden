@@ -30,4 +30,8 @@ public final class CheckNoSuccessBodyException extends ApiException {
     public byte[] rawBody() {
         return this.rawBody.clone();
     }
+
+    public String getRetryAfterHeader() {
+        return this.headers.get("Retry-After");
+    }
 }

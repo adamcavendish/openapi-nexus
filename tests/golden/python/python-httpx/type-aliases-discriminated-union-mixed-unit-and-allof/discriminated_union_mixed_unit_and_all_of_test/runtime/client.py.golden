@@ -12,11 +12,25 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any, Generic, TypeVar
 
 import httpx
 
 from .auth import Authenticator
+
+ResponseData = TypeVar("ResponseData")
+
+
+@dataclass(frozen=True)
+class ApiResponse(Generic[ResponseData]):
+    """Decoded response data together with its HTTP metadata."""
+
+    data: ResponseData
+    status_code: int
+    headers: Mapping[str, str]
+    raw: httpx.Response
 
 
 class Client:

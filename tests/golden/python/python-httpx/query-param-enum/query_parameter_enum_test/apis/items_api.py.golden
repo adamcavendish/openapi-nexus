@@ -9,7 +9,7 @@ from collections.abc import Mapping
 
 from ..models.foo_status import FooStatus
 from ..models.get_items_response200 import GetItemsResponse200
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetItemsBadRequest:
@@ -42,8 +42,8 @@ class ItemsApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_items(self, *, status: FooStatus | None = None) -> GetItemsResponse200:
-        """Get items with enum query parameter."""
+    def get_items_with_http_info(self, *, status: FooStatus | None = None) -> ApiResponse[GetItemsResponse200]:
+        """Get items with enum query parameter, including HTTP response metadata."""
         path = "/items"
         params: dict[str, str] = {}
         if status is not None:
@@ -55,4 +55,9 @@ class ItemsApi:
             else:
                 detail = GetItemsUnexpected(response.status_code, response.headers, response.content)
             raise GetItemsError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return GetItemsResponse200.from_dict(response.json())
+        data = GetItemsResponse200.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_items(self, *, status: FooStatus | None = None) -> GetItemsResponse200:
+        """Get items with enum query parameter."""
+        return self.get_items_with_http_info(status=status).data

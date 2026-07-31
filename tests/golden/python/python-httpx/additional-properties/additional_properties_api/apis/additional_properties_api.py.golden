@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from ..models.leaf_value import LeafValue
 from ..models.middle_level import MiddleLevel
 from ..models.root_level import RootLevel
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class PostLeafBadRequest:
@@ -93,8 +93,8 @@ class AdditionalPropertiesApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def post_leaf(self, *, body: LeafValue) -> LeafValue:
-        """Echo leaf payload (attributes map).."""
+    def post_leaf_with_http_info(self, *, body: LeafValue) -> ApiResponse[LeafValue]:
+        """Echo leaf payload (attributes map)., including HTTP response metadata."""
         path = "/leaf"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -105,10 +105,15 @@ class AdditionalPropertiesApi:
             else:
                 detail = PostLeafUnexpected(response.status_code, response.headers, response.content)
             raise PostLeafError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return LeafValue.from_dict(response.json())
+        data = LeafValue.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_middle(self, *, body: MiddleLevel) -> MiddleLevel:
-        """Echo middle-level payload (nested + extra maps).."""
+    def post_leaf(self, *, body: LeafValue) -> LeafValue:
+        """Echo leaf payload (attributes map).."""
+        return self.post_leaf_with_http_info(body=body).data
+
+    def post_middle_with_http_info(self, *, body: MiddleLevel) -> ApiResponse[MiddleLevel]:
+        """Echo middle-level payload (nested + extra maps)., including HTTP response metadata."""
         path = "/middle"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -119,10 +124,15 @@ class AdditionalPropertiesApi:
             else:
                 detail = PostMiddleUnexpected(response.status_code, response.headers, response.content)
             raise PostMiddleError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return MiddleLevel.from_dict(response.json())
+        data = MiddleLevel.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_root(self, *, body: RootLevel) -> RootLevel:
-        """Echo root payload (all three levels with additional-properties-style maps).."""
+    def post_middle(self, *, body: MiddleLevel) -> MiddleLevel:
+        """Echo middle-level payload (nested + extra maps).."""
+        return self.post_middle_with_http_info(body=body).data
+
+    def post_root_with_http_info(self, *, body: RootLevel) -> ApiResponse[RootLevel]:
+        """Echo root payload (all three levels with additional-properties-style maps)., including HTTP response metadata."""
         path = "/root"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -133,4 +143,9 @@ class AdditionalPropertiesApi:
             else:
                 detail = PostRootUnexpected(response.status_code, response.headers, response.content)
             raise PostRootError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return RootLevel.from_dict(response.json())
+        data = RootLevel.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def post_root(self, *, body: RootLevel) -> RootLevel:
+        """Echo root payload (all three levels with additional-properties-style maps).."""
+        return self.post_root_with_http_info(body=body).data

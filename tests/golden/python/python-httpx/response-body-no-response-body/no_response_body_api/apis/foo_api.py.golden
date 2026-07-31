@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 from ..models.error_response import ErrorResponse
 from ..models.foo_request import FooRequest
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class UpdateFooBarBadRequest:
@@ -82,7 +82,7 @@ class FooApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def update_foo_bar(self, foo_id: str, *, body: FooRequest) -> None:
+    def update_foo_bar_with_http_info(self, foo_id: str, *, body: FooRequest) -> ApiResponse[None]:
         path = f"/foo/bar"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -95,4 +95,8 @@ class FooApi:
             else:
                 detail = UpdateFooBarUnexpected(response.status_code, response.headers, response.content)
             raise UpdateFooBarError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def update_foo_bar(self, foo_id: str, *, body: FooRequest) -> None:
+        return self.update_foo_bar_with_http_info(foo_id, body=body).data

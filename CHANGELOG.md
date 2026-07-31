@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- Rust generated clients now expose backend-native header maps from
+  `ApiError::headers()` instead of lossy `Vec<(String, String)>` values.
+  Successful Rust response structs also include a public native `headers`
+  field.
+
+### Added
+
+- Preserve successful response headers across every generator. Python clients
+  add `*_with_http_info()` methods while keeping existing body-only methods
+  unchanged.
+- Generate optional typed convenience accessors for OpenAPI-declared response
+  headers on both success and error paths. Undeclared headers remain available
+  through each backend's native response header collection.
+
+### Fixed
+
+- Resolve response-header component references during OpenAPI 3.0, 3.1, and
+  3.2 lowering instead of silently dropping referenced headers.
+
 ## [0.2.0]
 
 ### Breaking Changes

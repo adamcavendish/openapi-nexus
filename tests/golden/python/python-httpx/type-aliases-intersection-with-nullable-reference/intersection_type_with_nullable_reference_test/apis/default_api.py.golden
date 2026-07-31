@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.baz import Baz
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateTestUnexpected:
@@ -52,8 +52,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_test(self, *, body: Baz) -> Baz:
-        """Create test with intersection type."""
+    def create_test_with_http_info(self, *, body: Baz) -> ApiResponse[Baz]:
+        """Create test with intersection type, including HTTP response metadata."""
         path = "/test"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -61,13 +61,23 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = CreateTestUnexpected(response.status_code, response.headers, response.content)
             raise CreateTestError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Baz.from_dict(response.json())
+        data = Baz.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_test(self, id: str) -> Baz:
-        """Get test."""
+    def create_test(self, *, body: Baz) -> Baz:
+        """Create test with intersection type."""
+        return self.create_test_with_http_info(body=body).data
+
+    def get_test_with_http_info(self, id: str) -> ApiResponse[Baz]:
+        """Get test, including HTTP response metadata."""
         path = f"/test/{id}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetTestUnexpected(response.status_code, response.headers, response.content)
             raise GetTestError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Baz.from_dict(response.json())
+        data = Baz.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_test(self, id: str) -> Baz:
+        """Get test."""
+        return self.get_test_with_http_info(id).data

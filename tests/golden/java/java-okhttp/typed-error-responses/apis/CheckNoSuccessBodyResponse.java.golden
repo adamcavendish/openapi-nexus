@@ -29,4 +29,8 @@ public class CheckNoSuccessBodyResponse {
     public Response getRaw() {
         return this.raw;
     }
+
+    public String getXRequestIdHeader() {
+        return this.raw.header("X-Request-Id");
+    }
 }

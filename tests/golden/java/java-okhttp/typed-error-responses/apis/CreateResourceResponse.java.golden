@@ -35,4 +35,16 @@ public class CreateResourceResponse {
     public CreatedResource getStatus201() {
         return this.status201;
     }
+
+    public String get1RequestIdHeader() {
+        return this.raw.header("1-Request-Id");
+    }
+
+    public String getXRequestIdHeader() {
+        return this.raw.header("X-Request-Id");
+    }
+
+    public String getXRequestIdHeader2() {
+        return this.raw.header("X_Request_Id");
+    }
 }

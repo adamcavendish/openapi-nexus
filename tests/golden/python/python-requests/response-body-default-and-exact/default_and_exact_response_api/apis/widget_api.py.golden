@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 from ..models.error_response import ErrorResponse
 from ..models.widget import Widget
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetWidgetDefault:
@@ -59,10 +59,14 @@ class WidgetApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_widget(self) -> Widget:
+    def get_widget_with_http_info(self) -> ApiResponse[Widget]:
         path = "/widgets"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetWidgetDefault(response.status_code, response.headers, response.content)
             raise GetWidgetError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return Widget.from_dict(response.json())
+        data = Widget.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_widget(self) -> Widget:
+        return self.get_widget_with_http_info().data

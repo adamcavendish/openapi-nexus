@@ -21,6 +21,10 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+    unique_response_header_accessor_names,
+};
 use crate::generators::response_names::response_entry_name as response_variant_name;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
@@ -116,10 +120,18 @@ fn emit_api_file(
 
     // For each operation: response struct + method
     for plan in &plans {
-        fb = fb
-            .add_type(build_response_struct(plan, module_path))
-            .add_code(build_error_types_block(plan))
-            .add_function(build_operation_fun(&struct_name, plan));
+        fb = fb.add_type(build_response_struct(plan, module_path));
+        for accessor in
+            build_go_header_accessors(&plan.response_type, "r.Raw.Header", &plan.success_headers)
+        {
+            fb = fb.add_function(accessor);
+        }
+        fb = fb.add_code(build_error_types_block(plan));
+        for accessor in build_go_header_accessors(&plan.error_type, "r.Header", &plan.error_headers)
+        {
+            fb = fb.add_function(accessor);
+        }
+        fb = fb.add_function(build_operation_fun(&struct_name, plan));
     }
 
     let file = fb.build().expect("FileSpec builds for API file");
@@ -201,6 +213,28 @@ fn collect_body_imports(plans: &[OpPlan<'_>], module_path: &str) -> Vec<ImportSp
             {
                 pkgs.insert("encoding/json".to_string());
             }
+        }
+        if plan
+            .success_headers
+            .iter()
+            .chain(&plan.error_headers)
+            .any(|header| {
+                matches!(
+                    header.value_kind,
+                    ResponseHeaderValueKind::Integer | ResponseHeaderValueKind::Number
+                )
+            })
+        {
+            pkgs.insert("strconv".to_string());
+        }
+        if plan
+            .success_headers
+            .iter()
+            .chain(&plan.error_headers)
+            .any(|header| header.value_kind == ResponseHeaderValueKind::Number)
+        {
+            pkgs.insert("math".to_string());
+            pkgs.insert("regexp".to_string());
         }
 
         // Check if any param stringification needs strconv or fmt
@@ -382,6 +416,103 @@ fn build_response_struct(plan: &OpPlan<'_>, module_path: &str) -> TypeSpec {
     tb.build().expect("response struct TypeSpec builds")
 }
 
+fn build_go_header_accessors(
+    receiver_type: &str,
+    headers_expr: &str,
+    headers: &[ResponseHeaderPlan],
+) -> Vec<FunSpec> {
+    let method_names = unique_response_header_accessor_names(headers, |wire_name| {
+        let mut base = wire_name.to_pascal_case();
+        if base.is_empty() || base.starts_with(|character: char| character.is_ascii_digit()) {
+            base = format!("Header{base}");
+        }
+        format!("{base}Header")
+    });
+    headers
+        .iter()
+        .zip(method_names)
+        .map(|(header, method_name)| {
+            FunSpec::builder(&method_name)
+                .receiver(
+                    ParameterSpec::new("r", TypeName::pointer(TypeName::primitive(receiver_type)))
+                        .expect("Go response header receiver builds"),
+                )
+                .returns(TypeName::tuple(vec![
+                    TypeName::primitive(go_header_type(header.value_kind)),
+                    TypeName::primitive("bool"),
+                ]))
+                .body(go_header_accessor_body(
+                    header.value_kind,
+                    headers_expr,
+                    &header.wire_name,
+                ))
+                .build()
+                .expect("Go response header accessor builds")
+        })
+        .collect()
+}
+
+fn go_header_accessor_body(
+    kind: ResponseHeaderValueKind,
+    headers_expr: &str,
+    wire_name: &str,
+) -> CodeBlock {
+    let number_pattern = r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$";
+    match kind {
+        ResponseHeaderValueKind::String => sigil_quote!(GoLang {
+            values := $L(headers_expr).Values($S(wire_name))
+            if len(values) == 0 {
+                return $S(""), false
+            }
+            return values[0], true
+        }),
+        ResponseHeaderValueKind::Integer => sigil_quote!(GoLang {
+            values := $L(headers_expr).Values($S(wire_name))
+            if len(values) == 0 {
+                return 0, false
+            }
+            value, err := strconv.ParseInt(values[0], 10, 64)
+            return value, err == nil
+        }),
+        ResponseHeaderValueKind::Number => sigil_quote!(GoLang {
+            values := $L(headers_expr).Values($S(wire_name))
+            if len(values) == 0 {
+                return 0, false
+            }
+            matched, err := regexp.MatchString($S(number_pattern), values[0])
+            if err != nil || !matched {
+                return 0, false
+            }
+            value, err := strconv.ParseFloat(values[0], 64)
+            return value, err == nil && !math.IsNaN(value) && !math.IsInf(value, 0)
+        }),
+        ResponseHeaderValueKind::Boolean => sigil_quote!(GoLang {
+            values := $L(headers_expr).Values($S(wire_name))
+            if len(values) == 0 {
+                return false, false
+            }
+            switch values[0] {
+            case $S("true"):
+                return true, true
+            case $S("false"):
+                return false, true
+            default:
+                return false, false
+            }
+        }),
+    }
+    .expect("Go response header accessor body builds")
+}
+
+fn go_header_type(kind: ResponseHeaderValueKind) -> &'static str {
+    match kind {
+        ResponseHeaderValueKind::String => "string",
+        ResponseHeaderValueKind::Integer => "int64",
+        ResponseHeaderValueKind::Number => "float64",
+        ResponseHeaderValueKind::Boolean => "bool",
+    }
+}
+
 fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
     let mut cb = CodeBlock::builder();
     let detail_interface = format!("{}Detail", plan.error_type);
@@ -530,6 +661,8 @@ struct OpPlan<'a> {
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
     error_responses: Vec<TypedResponse>,
+    success_headers: Vec<ResponseHeaderPlan>,
+    error_headers: Vec<ResponseHeaderPlan>,
 }
 
 struct ParamBinding<'a> {
@@ -633,6 +766,18 @@ fn plan_operation<'a>(
         .filter(|r| !is_success_status(&r.status))
         .map(plan_error_response)
         .collect();
+    let success_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| is_success_status(&response.status)),
+        ir,
+    );
+    let error_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| !is_success_status(&response.status)),
+        ir,
+    );
 
     OpPlan {
         op,
@@ -645,6 +790,8 @@ fn plan_operation<'a>(
         body,
         typed_responses,
         error_responses,
+        success_headers,
+        error_headers,
     }
 }
 

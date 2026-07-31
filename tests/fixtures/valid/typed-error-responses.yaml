@@ -17,6 +17,20 @@ paths:
       responses:
         '201':
           description: Created.
+          headers:
+            X-Request-Id:
+              description: Request correlation identifier.
+              required: true
+              schema:
+                type: string
+            X_Request_Id:
+              description: Distinct wire name that normalizes to the same identifier.
+              schema:
+                type: string
+            1-Request-Id:
+              description: Digit-leading wire name.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -51,8 +65,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SameShapeValidationError'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            Retry_After:
+              description: Distinct wire name that normalizes to the same identifier.
+              schema:
+                type: string
+            1-Retry-After:
+              description: Digit-leading wire name.
+              schema:
+                type: string
+            X-Rate-Limit-Remaining:
+              description: Requests remaining in the current window.
+              schema:
+                type: integer
+            X-Rate-Limit-Enabled:
+              description: Whether rate limiting is enabled.
+              schema:
+                type: boolean
+            X-Rate-Limit-Ratio:
+              description: Fraction of the current rate-limit window remaining.
+              schema:
+                type: number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultError'
         5XX:
           description: Server failure.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
           content:
             application/json:
               schema:
@@ -101,13 +147,28 @@ paths:
       responses:
         '200':
           description: Successful response with no documented body.
+          headers:
+            X-Request-Id:
+              description: Request correlation identifier.
+              required: true
+              schema:
+                type: string
         '503':
           description: Server failure.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerError'
 components:
+  headers:
+    RetryAfter:
+      description: Delay in seconds or an HTTP date before retrying.
+      required: true
+      schema:
+        type: string
   schemas:
     CreateResourceRequest:
       type: object

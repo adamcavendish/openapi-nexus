@@ -85,6 +85,8 @@ public class ResourcesApi {
                     detail = new CreateResourceStatus423(response.code(), response.headers(), responseBytes);break;
                 case 424:
                     detail = new CreateResourceStatus424(response.code(), response.headers(), responseBytes);break;
+                case 429:
+                    detail = new CreateResourceTooManyRequests(response.code(), response.headers(), responseBytes);break;
                 default:
                     if (response.code() >= 500 && response.code() < 600) {
                         detail = new CreateResourceServerError(response.code(), response.headers(), responseBytes);break;

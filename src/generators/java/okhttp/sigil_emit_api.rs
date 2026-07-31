@@ -3,6 +3,10 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+    unique_response_header_accessor_names,
+};
 use crate::generators::response_names::{
     response_entry_name as response_variant_name, response_match_rank,
 };
@@ -235,7 +239,7 @@ fn operation_support_files(
             ImportSpec::named(&format!("{package_name}.runtime"), "ApiException"),
             ImportSpec::named("okhttp3", "Headers"),
         ],
-        java_error_exception_class(&plan.error_type, &detail_interface),
+        java_error_exception_class(&plan.error_type, &detail_interface, &plan.error_headers),
     ));
 
     let mut seen = HashSet::new();
@@ -428,8 +432,37 @@ fn build_response_class(plan: &OpPlan<'_>) -> TypeSpec {
             &tr.field_name,
         ));
     }
+    let header_method_names =
+        unique_response_header_accessor_names(&plan.success_headers, |wire_name| {
+            format!("get{}Header", wire_name.to_pascal_case())
+        });
+    for (header, method_name) in plan.success_headers.iter().zip(header_method_names) {
+        tb = tb.add_method(build_java_header_getter(
+            header,
+            &method_name,
+            "this.raw.header",
+        ));
+    }
 
     tb.build().expect("response class builds")
+}
+
+fn build_java_header_getter(
+    header: &ResponseHeaderPlan,
+    method_name: &str,
+    lookup: &str,
+) -> FunSpec {
+    let return_type = java_header_type(header.value_kind);
+    FunSpec::builder(method_name)
+        .visibility(Visibility::Public)
+        .returns(TypeName::primitive(return_type))
+        .body(java_header_accessor_body(
+            header.value_kind,
+            lookup,
+            &header.wire_name,
+        ))
+        .build()
+        .expect("Java header getter builds")
 }
 
 fn java_error_detail_interface(detail_interface: &str, permits: &[String]) -> CodeBlock {
@@ -443,14 +476,89 @@ fn java_error_detail_interface(detail_interface: &str, permits: &[String]) -> Co
     .expect("Java error detail interface builds")
 }
 
-fn java_error_exception_class(error_type: &str, detail_interface: &str) -> CodeBlock {
-    CodeBlock::of(
+fn java_error_exception_class(
+    error_type: &str,
+    detail_interface: &str,
+    headers: &[ResponseHeaderPlan],
+) -> CodeBlock {
+    let mut cb = CodeBlock::builder();
+    cb.add(
         &format!(
-            "public final class {error_type} extends ApiException {{\n    private final {detail_interface} detail;\n    private final Headers headers;\n    private final byte[] rawBody;\n\n    public {error_type}(int statusCode, String status, String body, Headers headers, byte[] rawBody, {detail_interface} detail) {{\n        super(statusCode, status, body);\n        this.headers = headers;\n        this.rawBody = rawBody.clone();\n        this.detail = detail;\n    }}\n\n    public {detail_interface} detail() {{\n        return this.detail;\n    }}\n\n    public Headers headers() {{\n        return this.headers;\n    }}\n\n    public byte[] rawBody() {{\n        return this.rawBody.clone();\n    }}\n}}\n"
+            "public final class {error_type} extends ApiException {{\n    private final {detail_interface} detail;\n    private final Headers headers;\n    private final byte[] rawBody;\n\n    public {error_type}(int statusCode, String status, String body, Headers headers, byte[] rawBody, {detail_interface} detail) {{\n        super(statusCode, status, body);\n        this.headers = headers;\n        this.rawBody = rawBody.clone();\n        this.detail = detail;\n    }}\n\n    public {detail_interface} detail() {{\n        return this.detail;\n    }}\n\n    public Headers headers() {{\n        return this.headers;\n    }}\n\n    public byte[] rawBody() {{\n        return this.rawBody.clone();\n    }}\n"
         ),
         (),
-    )
-    .expect("Java error exception class builds")
+    );
+    cb.add("%>", ());
+    let method_names = unique_response_header_accessor_names(headers, |wire_name| {
+        format!("get{}Header", wire_name.to_pascal_case())
+    });
+    for (header, method_name) in headers.iter().zip(method_names) {
+        cb.add_line();
+        cb.add_code(
+            build_java_header_getter(header, &method_name, "this.headers.get")
+                .emit(&Java::new(), DeclarationContext::Member)
+                .expect("Java error header getter emits"),
+        );
+    }
+    cb.add("%<}\n", ());
+    cb.build().expect("Java error exception class builds")
+}
+
+fn java_header_type(kind: ResponseHeaderValueKind) -> &'static str {
+    match kind {
+        ResponseHeaderValueKind::String => "String",
+        ResponseHeaderValueKind::Integer => "Long",
+        ResponseHeaderValueKind::Number => "Double",
+        ResponseHeaderValueKind::Boolean => "Boolean",
+    }
+}
+
+fn java_header_accessor_body(
+    kind: ResponseHeaderValueKind,
+    lookup: &str,
+    wire_name: &str,
+) -> CodeBlock {
+    let integer_pattern = r"[+-]?[0-9]+";
+    let number_pattern = r"[+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?";
+    match kind {
+        ResponseHeaderValueKind::String => sigil_quote!(Java {
+            return $L(lookup)($S(wire_name));
+        }),
+        ResponseHeaderValueKind::Integer => sigil_quote!(Java {
+            String value = $L(lookup)($S(wire_name));
+            if (value == null || !value.matches($S(integer_pattern))) {
+                return null;
+            }
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }),
+        ResponseHeaderValueKind::Number => sigil_quote!(Java {
+            String value = $L(lookup)($S(wire_name));
+            if (value == null || !value.matches($S(number_pattern))) {
+                return null;
+            }
+            try {
+                Double parsed = Double.valueOf(value);
+                return Double.isFinite(parsed) ? parsed : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }),
+        ResponseHeaderValueKind::Boolean => sigil_quote!(Java {
+            String value = $L(lookup)($S(wire_name));
+            if ($S("true").equals(value)) {
+                return true;
+            }
+            if ($S("false").equals(value)) {
+                return false;
+            }
+            return null;
+        }),
+    }
+    .expect("Java header getter body builds")
 }
 
 fn java_unexpected_detail_class(unexpected: &str, detail_interface: &str) -> CodeBlock {
@@ -1039,6 +1147,8 @@ struct OpPlan<'a> {
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
     error_responses: Vec<TypedResponse>,
+    success_headers: Vec<ResponseHeaderPlan>,
+    error_headers: Vec<ResponseHeaderPlan>,
 }
 
 struct ParamBinding<'a> {
@@ -1143,6 +1253,18 @@ fn plan_operation<'a>(
         .filter(|r| !is_success_status(&r.status))
         .map(plan_error_response)
         .collect();
+    let success_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| is_success_status(&response.status)),
+        ir,
+    );
+    let error_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| !is_success_status(&response.status)),
+        ir,
+    );
 
     OpPlan {
         op,
@@ -1155,6 +1277,8 @@ fn plan_operation<'a>(
         body,
         typed_responses,
         error_responses,
+        success_headers,
+        error_headers,
     }
 }
 

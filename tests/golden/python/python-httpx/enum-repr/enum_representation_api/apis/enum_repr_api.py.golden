@@ -12,7 +12,7 @@ from ..models.externally_tagged_enum import ExternallyTaggedEnum
 from ..models.internally_tagged_enum import InternallyTaggedEnum
 from ..models.mixed_enum import MixedEnum
 from ..models.untagged_enum import UntaggedEnum
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class HandleAdjacentlyTaggedBadRequest:
@@ -145,8 +145,8 @@ class EnumReprApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def handle_adjacently_tagged(self, *, body: AdjacentlyTaggedEnum) -> AdjacentlyTaggedEnum:
-        """Handle adjacently tagged enum."""
+    def handle_adjacently_tagged_with_http_info(self, *, body: AdjacentlyTaggedEnum) -> ApiResponse[AdjacentlyTaggedEnum]:
+        """Handle adjacently tagged enum, including HTTP response metadata."""
         path = "/adjacently-tagged"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -157,10 +157,15 @@ class EnumReprApi:
             else:
                 detail = HandleAdjacentlyTaggedUnexpected(response.status_code, response.headers, response.content)
             raise HandleAdjacentlyTaggedError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def handle_externally_tagged(self, *, body: ExternallyTaggedEnum) -> ExternallyTaggedEnum:
-        """Handle externally tagged enum."""
+    def handle_adjacently_tagged(self, *, body: AdjacentlyTaggedEnum) -> AdjacentlyTaggedEnum:
+        """Handle adjacently tagged enum."""
+        return self.handle_adjacently_tagged_with_http_info(body=body).data
+
+    def handle_externally_tagged_with_http_info(self, *, body: ExternallyTaggedEnum) -> ApiResponse[ExternallyTaggedEnum]:
+        """Handle externally tagged enum, including HTTP response metadata."""
         path = "/externally-tagged"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -171,10 +176,15 @@ class EnumReprApi:
             else:
                 detail = HandleExternallyTaggedUnexpected(response.status_code, response.headers, response.content)
             raise HandleExternallyTaggedError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def handle_internally_tagged(self, *, body: InternallyTaggedEnum) -> InternallyTaggedEnum:
-        """Handle internally tagged enum."""
+    def handle_externally_tagged(self, *, body: ExternallyTaggedEnum) -> ExternallyTaggedEnum:
+        """Handle externally tagged enum."""
+        return self.handle_externally_tagged_with_http_info(body=body).data
+
+    def handle_internally_tagged_with_http_info(self, *, body: InternallyTaggedEnum) -> ApiResponse[InternallyTaggedEnum]:
+        """Handle internally tagged enum, including HTTP response metadata."""
         path = "/internally-tagged"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -185,10 +195,15 @@ class EnumReprApi:
             else:
                 detail = HandleInternallyTaggedUnexpected(response.status_code, response.headers, response.content)
             raise HandleInternallyTaggedError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def handle_mixed(self, *, body: MixedEnum) -> MixedEnum:
-        """Handle mixed enum (unit variants SimpleA, SimpleB and tuple variants VariantA(VariantA), VariantB(VariantB))."""
+    def handle_internally_tagged(self, *, body: InternallyTaggedEnum) -> InternallyTaggedEnum:
+        """Handle internally tagged enum."""
+        return self.handle_internally_tagged_with_http_info(body=body).data
+
+    def handle_mixed_with_http_info(self, *, body: MixedEnum) -> ApiResponse[MixedEnum]:
+        """Handle mixed enum (unit variants SimpleA, SimpleB and tuple variants VariantA(VariantA), VariantB(VariantB)), including HTTP response metadata."""
         path = "/mixed"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -199,10 +214,15 @@ class EnumReprApi:
             else:
                 detail = HandleMixedUnexpected(response.status_code, response.headers, response.content)
             raise HandleMixedError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def handle_untagged(self, *, body: UntaggedEnum) -> UntaggedEnum:
-        """Handle untagged enum."""
+    def handle_mixed(self, *, body: MixedEnum) -> MixedEnum:
+        """Handle mixed enum (unit variants SimpleA, SimpleB and tuple variants VariantA(VariantA), VariantB(VariantB))."""
+        return self.handle_mixed_with_http_info(body=body).data
+
+    def handle_untagged_with_http_info(self, *, body: UntaggedEnum) -> ApiResponse[UntaggedEnum]:
+        """Handle untagged enum, including HTTP response metadata."""
         path = "/untagged"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -213,4 +233,9 @@ class EnumReprApi:
             else:
                 detail = HandleUntaggedUnexpected(response.status_code, response.headers, response.content)
             raise HandleUntaggedError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def handle_untagged(self, *, body: UntaggedEnum) -> UntaggedEnum:
+        """Handle untagged enum."""
+        return self.handle_untagged_with_http_info(body=body).data

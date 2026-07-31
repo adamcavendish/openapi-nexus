@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 from ..models.error_response import ErrorResponse
 from ..models.widget import Widget
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class ListWidgetsNotFound:
@@ -59,7 +59,7 @@ class WidgetApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def list_widgets(self) -> list[Widget]:
+    def list_widgets_with_http_info(self) -> ApiResponse[list[Widget]]:
         path = "/widgets"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -68,4 +68,8 @@ class WidgetApi:
             else:
                 detail = ListWidgetsUnexpected(response.status_code, response.headers, response.content)
             raise ListWidgetsError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return [Widget.from_dict(item) for item in response.json()]
+        data = [Widget.from_dict(item) for item in response.json()]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def list_widgets(self) -> list[Widget]:
+        return self.list_widgets_with_http_info().data

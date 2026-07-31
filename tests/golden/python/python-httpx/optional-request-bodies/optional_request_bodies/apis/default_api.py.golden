@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.payload import Payload
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class SendOptionalBinaryUnexpected:
@@ -88,7 +88,7 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def send_optional_binary(self, *, body: bytes | None = None) -> None:
+    def send_optional_binary_with_http_info(self, *, body: bytes | None = None) -> ApiResponse[None]:
         path = "/optional-binary"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/octet-stream"
@@ -96,9 +96,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = SendOptionalBinaryUnexpected(response.status_code, response.headers, response.content)
             raise SendOptionalBinaryError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_optional_json(self, *, body: Payload | None = None) -> None:
+    def send_optional_binary(self, *, body: bytes | None = None) -> None:
+        return self.send_optional_binary_with_http_info(body=body).data
+
+    def send_optional_json_with_http_info(self, *, body: Payload | None = None) -> ApiResponse[None]:
         path = "/optional-json"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -106,9 +110,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = SendOptionalJsonUnexpected(response.status_code, response.headers, response.content)
             raise SendOptionalJsonError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_optional_text(self, *, body: str | None = None) -> None:
+    def send_optional_json(self, *, body: Payload | None = None) -> None:
+        return self.send_optional_json_with_http_info(body=body).data
+
+    def send_optional_text_with_http_info(self, *, body: str | None = None) -> ApiResponse[None]:
         path = "/optional-text"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "text/plain"
@@ -116,9 +124,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = SendOptionalTextUnexpected(response.status_code, response.headers, response.content)
             raise SendOptionalTextError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_required_json(self, *, body: Payload) -> None:
+    def send_optional_text(self, *, body: str | None = None) -> None:
+        return self.send_optional_text_with_http_info(body=body).data
+
+    def send_required_json_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/required-json"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -126,4 +138,8 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = SendRequiredJsonUnexpected(response.status_code, response.headers, response.content)
             raise SendRequiredJsonError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def send_required_json(self, *, body: Payload) -> None:
+        return self.send_required_json_with_http_info(body=body).data

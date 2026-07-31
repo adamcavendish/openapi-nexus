@@ -28,8 +28,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = HealthCheckResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = HealthCheckResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -52,8 +52,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = ListUsersResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = ListUsersResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -78,8 +78,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = GetUserResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = GetUserResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -99,6 +99,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
 #[derive(Debug)]
 pub struct HealthCheckResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `health_check`.
@@ -136,6 +137,7 @@ impl std::error::Error for HealthCheckError {
 #[derive(Debug)]
 pub struct ListUsersResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `list_users`.
@@ -173,6 +175,7 @@ impl std::error::Error for ListUsersError {
 #[derive(Debug)]
 pub struct GetUserResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `get_user`.

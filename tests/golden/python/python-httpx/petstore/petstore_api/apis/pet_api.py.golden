@@ -9,7 +9,7 @@ from collections.abc import Mapping
 
 from ..models.pet import Pet
 from ..models.upload_response import UploadResponse
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class UpdatePetBadRequest:
@@ -238,8 +238,8 @@ class PetApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def update_pet(self, *, body: Pet) -> Pet:
-        """Update an existing pet."""
+    def update_pet_with_http_info(self, *, body: Pet) -> ApiResponse[Pet]:
+        """Update an existing pet, including HTTP response metadata."""
         path = "/pet"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -254,10 +254,15 @@ class PetApi:
             else:
                 detail = UpdatePetUnexpected(response.status_code, response.headers, response.content)
             raise UpdatePetError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Pet.from_dict(response.json())
+        data = Pet.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def add_pet(self, *, body: Pet) -> Pet:
-        """Add a new pet to the store."""
+    def update_pet(self, *, body: Pet) -> Pet:
+        """Update an existing pet."""
+        return self.update_pet_with_http_info(body=body).data
+
+    def add_pet_with_http_info(self, *, body: Pet) -> ApiResponse[Pet]:
+        """Add a new pet to the store, including HTTP response metadata."""
         path = "/pet"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -270,10 +275,15 @@ class PetApi:
             else:
                 detail = AddPetUnexpected(response.status_code, response.headers, response.content)
             raise AddPetError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Pet.from_dict(response.json())
+        data = Pet.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def find_pets_by_status(self, *, status: str) -> list[Pet]:
-        """Find pets by status."""
+    def add_pet(self, *, body: Pet) -> Pet:
+        """Add a new pet to the store."""
+        return self.add_pet_with_http_info(body=body).data
+
+    def find_pets_by_status_with_http_info(self, *, status: str) -> ApiResponse[list[Pet]]:
+        """Find pets by status, including HTTP response metadata."""
         path = "/pet/findByStatus"
         params: dict[str, str] = {}
         params["status"] = str(status)
@@ -284,10 +294,15 @@ class PetApi:
             else:
                 detail = FindPetsByStatusUnexpected(response.status_code, response.headers, response.content)
             raise FindPetsByStatusError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return [Pet.from_dict(item) for item in response.json()]
+        data = [Pet.from_dict(item) for item in response.json()]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def find_pets_by_tags(self, *, tags: list[str]) -> list[Pet]:
-        """Find pets by tags."""
+    def find_pets_by_status(self, *, status: str) -> list[Pet]:
+        """Find pets by status."""
+        return self.find_pets_by_status_with_http_info(status=status).data
+
+    def find_pets_by_tags_with_http_info(self, *, tags: list[str]) -> ApiResponse[list[Pet]]:
+        """Find pets by tags, including HTTP response metadata."""
         path = "/pet/findByTags"
         params: dict[str, str] = {}
         params["tags"] = ",".join(str(v) for v in tags)
@@ -298,10 +313,15 @@ class PetApi:
             else:
                 detail = FindPetsByTagsUnexpected(response.status_code, response.headers, response.content)
             raise FindPetsByTagsError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return [Pet.from_dict(item) for item in response.json()]
+        data = [Pet.from_dict(item) for item in response.json()]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_pet_by_id(self, pet_id: int) -> Pet:
-        """Find pet by ID."""
+    def find_pets_by_tags(self, *, tags: list[str]) -> list[Pet]:
+        """Find pets by tags."""
+        return self.find_pets_by_tags_with_http_info(tags=tags).data
+
+    def get_pet_by_id_with_http_info(self, pet_id: int) -> ApiResponse[Pet]:
+        """Find pet by ID, including HTTP response metadata."""
         path = f"/pet/{pet_id}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -312,10 +332,15 @@ class PetApi:
             else:
                 detail = GetPetByIdUnexpected(response.status_code, response.headers, response.content)
             raise GetPetByIdError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Pet.from_dict(response.json())
+        data = Pet.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def update_pet_with_form(self, pet_id: int, *, name: str | None = None, status: str | None = None) -> Pet:
-        """Update a pet in the store with form data."""
+    def get_pet_by_id(self, pet_id: int) -> Pet:
+        """Find pet by ID."""
+        return self.get_pet_by_id_with_http_info(pet_id).data
+
+    def update_pet_with_form_with_http_info(self, pet_id: int, *, name: str | None = None, status: str | None = None) -> ApiResponse[Pet]:
+        """Update a pet in the store with form data, including HTTP response metadata."""
         path = f"/pet/{pet_id}"
         params: dict[str, str] = {}
         if name is not None:
@@ -329,10 +354,15 @@ class PetApi:
             else:
                 detail = UpdatePetWithFormUnexpected(response.status_code, response.headers, response.content)
             raise UpdatePetWithFormError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return Pet.from_dict(response.json())
+        data = Pet.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def delete_pet(self, pet_id: int) -> None:
-        """Delete a pet."""
+    def update_pet_with_form(self, pet_id: int, *, name: str | None = None, status: str | None = None) -> Pet:
+        """Update a pet in the store with form data."""
+        return self.update_pet_with_form_with_http_info(pet_id, name=name, status=status).data
+
+    def delete_pet_with_http_info(self, pet_id: int) -> ApiResponse[None]:
+        """Delete a pet, including HTTP response metadata."""
         path = f"/pet/{pet_id}"
         response = self._client.request("DELETE", path)
         if not (200 <= response.status_code < 300):
@@ -341,10 +371,15 @@ class PetApi:
             else:
                 detail = DeletePetUnexpected(response.status_code, response.headers, response.content)
             raise DeletePetError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def upload_file(self, pet_id: int, *, additional_metadata: str | None = None) -> UploadResponse:
-        """Upload an image."""
+    def delete_pet(self, pet_id: int) -> None:
+        """Delete a pet."""
+        return self.delete_pet_with_http_info(pet_id).data
+
+    def upload_file_with_http_info(self, pet_id: int, *, additional_metadata: str | None = None) -> ApiResponse[UploadResponse]:
+        """Upload an image, including HTTP response metadata."""
         path = f"/pet/{pet_id}/uploadImage"
         params: dict[str, str] = {}
         if additional_metadata is not None:
@@ -353,4 +388,9 @@ class PetApi:
         if not (200 <= response.status_code < 300):
             detail = UploadFileUnexpected(response.status_code, response.headers, response.content)
             raise UploadFileError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return UploadResponse.from_dict(response.json())
+        data = UploadResponse.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def upload_file(self, pet_id: int, *, additional_metadata: str | None = None) -> UploadResponse:
+        """Upload an image."""
+        return self.upload_file_with_http_info(pet_id, additional_metadata=additional_metadata).data

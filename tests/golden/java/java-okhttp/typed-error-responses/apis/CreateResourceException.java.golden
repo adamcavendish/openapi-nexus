@@ -30,4 +30,54 @@ public final class CreateResourceException extends ApiException {
     public byte[] rawBody() {
         return this.rawBody.clone();
     }
+
+    public String get1RetryAfterHeader() {
+        return this.headers.get("1-Retry-After");
+    }
+
+    public String getRetryAfterHeader() {
+        return this.headers.get("Retry-After");
+    }
+
+    public String getRetryAfterHeader2() {
+        return this.headers.get("Retry_After");
+    }
+
+    public Boolean getXRateLimitEnabledHeader() {
+        String value = this.headers.get("X-Rate-Limit-Enabled");
+        if ("true".equals(value)) {
+            return true;
+        }
+        if ("false".equals(value)) {
+            return false;
+        }
+        return null;
+    }
+
+    public Double getXRateLimitRatioHeader() {
+        String value = this.headers.get("X-Rate-Limit-Ratio");
+        if (value == null || !value.matches("[+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?")) {
+            return null;
+        }
+        try {
+            Double parsed = Double.valueOf(value);
+            return Double.isFinite(parsed) ? parsed : null;
+        }
+        catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    public Long getXRateLimitRemainingHeader() {
+        String value = this.headers.get("X-Rate-Limit-Remaining");
+        if (value == null || !value.matches("[+-]?[0-9]+")) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value);
+        }
+        catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
 }

@@ -28,9 +28,9 @@ impl<'a> StoreApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetInventoryResponse { status_code, data: None };
+        let mut result = GetInventoryResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -57,9 +57,9 @@ impl<'a> StoreApi<'a> {
         let req = self.client.post(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = PlaceOrderResponse { status_code, data: None };
+        let mut result = PlaceOrderResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -91,9 +91,9 @@ impl<'a> StoreApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetOrderByIdResponse { status_code, data: None };
+        let mut result = GetOrderByIdResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -129,8 +129,8 @@ impl<'a> StoreApi<'a> {
         let req = self.client.delete(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = DeleteOrderResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = DeleteOrderResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -158,6 +158,7 @@ impl<'a> StoreApi<'a> {
 #[derive(Debug)]
 pub struct GetInventoryResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<std::collections::HashMap<String, i32>>,
 }
 
@@ -196,6 +197,7 @@ impl std::error::Error for GetInventoryError {
 #[derive(Debug)]
 pub struct PlaceOrderResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Order>,
 }
 
@@ -236,6 +238,7 @@ impl std::error::Error for PlaceOrderError {
 #[derive(Debug)]
 pub struct GetOrderByIdResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Order>,
 }
 
@@ -278,6 +281,7 @@ impl std::error::Error for GetOrderByIdError {
 #[derive(Debug)]
 pub struct DeleteOrderResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `delete_order`.

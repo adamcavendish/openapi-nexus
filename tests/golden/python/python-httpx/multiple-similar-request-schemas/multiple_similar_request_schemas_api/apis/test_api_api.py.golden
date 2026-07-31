@@ -11,7 +11,7 @@ from ..models.create_request_type_a import CreateRequestTypeA
 from ..models.create_request_type_b import CreateRequestTypeB
 from ..models.resource_type_a import ResourceTypeA
 from ..models.resource_type_b import ResourceTypeB
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateTypeAUnexpected:
@@ -55,8 +55,8 @@ class TestApiApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_type_a(self, *, body: CreateRequestTypeA) -> ResourceTypeA:
-        """Create TypeA resource."""
+    def create_type_a_with_http_info(self, *, body: CreateRequestTypeA) -> ApiResponse[ResourceTypeA]:
+        """Create TypeA resource, including HTTP response metadata."""
         path = "/api/v1/type-a/resources"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -64,10 +64,15 @@ class TestApiApi:
         if not (200 <= response.status_code < 300):
             detail = CreateTypeAUnexpected(response.status_code, response.headers, response.content)
             raise CreateTypeAError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return ResourceTypeA.from_dict(response.json())
+        data = ResourceTypeA.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def create_type_b(self, *, body: CreateRequestTypeB) -> ResourceTypeB:
-        """Create TypeB resource."""
+    def create_type_a(self, *, body: CreateRequestTypeA) -> ResourceTypeA:
+        """Create TypeA resource."""
+        return self.create_type_a_with_http_info(body=body).data
+
+    def create_type_b_with_http_info(self, *, body: CreateRequestTypeB) -> ApiResponse[ResourceTypeB]:
+        """Create TypeB resource, including HTTP response metadata."""
         path = "/api/v1/type-b/resources"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -75,4 +80,9 @@ class TestApiApi:
         if not (200 <= response.status_code < 300):
             detail = CreateTypeBUnexpected(response.status_code, response.headers, response.content)
             raise CreateTypeBError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return ResourceTypeB.from_dict(response.json())
+        data = ResourceTypeB.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def create_type_b(self, *, body: CreateRequestTypeB) -> ResourceTypeB:
+        """Create TypeB resource."""
+        return self.create_type_b_with_http_info(body=body).data

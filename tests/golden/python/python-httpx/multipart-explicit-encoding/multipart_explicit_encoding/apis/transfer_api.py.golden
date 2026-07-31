@@ -10,7 +10,7 @@ import json
 from collections.abc import Mapping
 
 from ..models.upload_encoded_asset_multipart_request_body import UploadEncodedAssetMultipartRequestBody
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class UploadEncodedAssetUnexpected:
@@ -36,7 +36,7 @@ class TransferApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def upload_encoded_asset(self, *, body: UploadEncodedAssetMultipartRequestBody) -> None:
+    def upload_encoded_asset_with_http_info(self, *, body: UploadEncodedAssetMultipartRequestBody) -> ApiResponse[None]:
         path = "/uploads/encoded"
         files: dict[str, object] = {}
         files["audit"] = (None, json.dumps(body.audit.to_dict()), "application/json")
@@ -47,4 +47,8 @@ class TransferApi:
         if not (200 <= response.status_code < 300):
             detail = UploadEncodedAssetUnexpected(response.status_code, response.headers, response.content)
             raise UploadEncodedAssetError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def upload_encoded_asset(self, *, body: UploadEncodedAssetMultipartRequestBody) -> None:
+        return self.upload_encoded_asset_with_http_info(body=body).data

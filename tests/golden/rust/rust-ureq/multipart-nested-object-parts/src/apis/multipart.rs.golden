@@ -41,8 +41,8 @@ impl<'a> MultipartApi<'a> {
         req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
         let resp = req.send(multipart_body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendNestedObjectPartResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendNestedObjectPartResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -62,6 +62,7 @@ impl<'a> MultipartApi<'a> {
 #[derive(Debug)]
 pub struct SendNestedObjectPartResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `send_nested_object_part`.

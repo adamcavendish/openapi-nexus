@@ -27,8 +27,8 @@ impl<'a> ResourcesApi<'a> {
         let req = self.client.request(reqwest::Method::GET, &path).await?;
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = CheckNoSuccessBodyResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = CheckNoSuccessBodyResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::Network)?;
             if !(200..300).contains(&status_code) {
@@ -57,9 +57,9 @@ impl<'a> ResourcesApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = CreateResourceResponse { status_code, created: None };
+        let mut result = CreateResourceResponse { status_code, headers: response_headers.clone(), created: None };
         match status_code {
             201 => {
                 result.created = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -88,6 +88,10 @@ impl<'a> ResourcesApi<'a> {
                     let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
                     return Err(CreateResourceError::Status424(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
                 }
+                429 => {
+                    let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
+                    return Err(CreateResourceError::TooManyRequests(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
+                }
                 500..=599 => {
                     let body = serde_json::from_slice(&body_bytes).map_err(Error::Deserialize);
                     return Err(CreateResourceError::ServerError(ApiError::new(status_code, response_headers.clone(), body_bytes.to_vec(), body)));
@@ -111,9 +115,9 @@ impl<'a> ResourcesApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = CreateResourceWithWildcardSuccessResponse { status_code, created: None, status_2xx: None };
+        let mut result = CreateResourceWithWildcardSuccessResponse { status_code, headers: response_headers.clone(), created: None, status_2xx: None };
         match status_code {
             201 => {
                 result.created = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -143,6 +147,13 @@ impl<'a> ResourcesApi<'a> {
 #[derive(Debug)]
 pub struct CheckNoSuccessBodyResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
+}
+
+impl CheckNoSuccessBodyResponse {
+    pub fn x_request_id_header(&self) -> Option<&str> {
+        self.headers.get("X-Request-Id")?.to_str().ok()
+    }
 }
 
 /// Error from `check_no_success_body`.
@@ -159,6 +170,20 @@ impl From<Error> for CheckNoSuccessBodyError {
     }
 }
 
+impl CheckNoSuccessBodyError {
+    fn response_headers(&self) -> Option<&reqwest::header::HeaderMap> {
+        match self {
+            Self::ServiceUnavailable(err) => Some(err.headers()),
+            Self::Unexpected(err) => Some(err.headers()),
+            Self::Transport(_) => None,
+        }
+    }
+
+    pub fn retry_after_header(&self) -> Option<&str> {
+        self.response_headers()?.get("Retry-After")?.to_str().ok()
+    }
+
+}
 impl std::fmt::Display for CheckNoSuccessBodyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -182,7 +207,22 @@ impl std::error::Error for CheckNoSuccessBodyError {
 #[derive(Debug)]
 pub struct CreateResourceResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub created: Option<crate::models::CreatedResource>,
+}
+
+impl CreateResourceResponse {
+    pub fn header_1_request_id_header(&self) -> Option<&str> {
+        self.headers.get("1-Request-Id")?.to_str().ok()
+    }
+
+    pub fn x_request_id_header(&self) -> Option<&str> {
+        self.headers.get("X-Request-Id")?.to_str().ok()
+    }
+
+    pub fn x_request_id_header2(&self) -> Option<&str> {
+        self.headers.get("X_Request_Id")?.to_str().ok()
+    }
 }
 
 /// Error from `create_resource`.
@@ -193,6 +233,7 @@ pub enum CreateResourceError {
     Validation(ApiError<crate::models::ValidationError>),
     Status423(ApiError<crate::models::ConflictError>),
     Status424(ApiError<crate::models::SameShapeValidationError>),
+    TooManyRequests(ApiError<crate::models::DefaultError>),
     ServerError(ApiError<crate::models::ServerError>),
     Default(ApiError<crate::models::DefaultError>),
     Unexpected(ApiError<Vec<u8>>),
@@ -205,6 +246,47 @@ impl From<Error> for CreateResourceError {
     }
 }
 
+impl CreateResourceError {
+    fn response_headers(&self) -> Option<&reqwest::header::HeaderMap> {
+        match self {
+            Self::BadRequest(err) => Some(err.headers()),
+            Self::Conflict(err) => Some(err.headers()),
+            Self::Validation(err) => Some(err.headers()),
+            Self::Status423(err) => Some(err.headers()),
+            Self::Status424(err) => Some(err.headers()),
+            Self::TooManyRequests(err) => Some(err.headers()),
+            Self::ServerError(err) => Some(err.headers()),
+            Self::Default(err) => Some(err.headers()),
+            Self::Unexpected(err) => Some(err.headers()),
+            Self::Transport(_) => None,
+        }
+    }
+
+    pub fn header_1_retry_after_header(&self) -> Option<&str> {
+        self.response_headers()?.get("1-Retry-After")?.to_str().ok()
+    }
+
+    pub fn retry_after_header(&self) -> Option<&str> {
+        self.response_headers()?.get("Retry-After")?.to_str().ok()
+    }
+
+    pub fn retry_after_header2(&self) -> Option<&str> {
+        self.response_headers()?.get("Retry_After")?.to_str().ok()
+    }
+
+    pub fn x_rate_limit_enabled_header(&self) -> Option<bool> {
+        self.response_headers()?.get("X-Rate-Limit-Enabled")?.to_str().ok()?.parse().ok()
+    }
+
+    pub fn x_rate_limit_ratio_header(&self) -> Option<f64> {
+        self.response_headers()?.get("X-Rate-Limit-Ratio")?.to_str().ok()?.parse().ok().filter(| value: &f64 | value.is_finite())
+    }
+
+    pub fn x_rate_limit_remaining_header(&self) -> Option<i64> {
+        self.response_headers()?.get("X-Rate-Limit-Remaining")?.to_str().ok()?.parse().ok()
+    }
+
+}
 impl std::fmt::Display for CreateResourceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -213,6 +295,7 @@ impl std::fmt::Display for CreateResourceError {
             Self::Validation(err) => write!(f, "HTTP error {}", err.status_code()),
             Self::Status423(err) => write!(f, "HTTP error {}", err.status_code()),
             Self::Status424(err) => write!(f, "HTTP error {}", err.status_code()),
+            Self::TooManyRequests(err) => write!(f, "HTTP error {}", err.status_code()),
             Self::ServerError(err) => write!(f, "HTTP error {}", err.status_code()),
             Self::Default(err) => write!(f, "HTTP error {}", err.status_code()),
             Self::Unexpected(err) => write!(f, "unexpected HTTP error {}", err.status_code()),
@@ -234,6 +317,7 @@ impl std::error::Error for CreateResourceError {
 #[derive(Debug)]
 pub struct CreateResourceWithWildcardSuccessResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub created: Option<crate::models::CreatedResource>,
     pub status_2xx: Option<crate::models::CreatedResource>,
 }

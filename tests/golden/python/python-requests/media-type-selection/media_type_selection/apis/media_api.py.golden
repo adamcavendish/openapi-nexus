@@ -9,7 +9,7 @@ from collections.abc import Mapping
 
 from ..models.payload import Payload
 from ..models.send_parameterized_multipart_multipart_request_body import SendParameterizedMultipartMultipartRequestBody
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class SendJsonPreferredUnexpected:
@@ -125,7 +125,7 @@ class MediaApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def send_json_preferred(self, *, body: Payload) -> None:
+    def send_json_preferred_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/request/json-vs-multipart"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -133,9 +133,13 @@ class MediaApi:
         if not (200 <= response.status_code < 300):
             detail = SendJsonPreferredUnexpected(response.status_code, response.headers, response.content)
             raise SendJsonPreferredError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_parameterized_multipart(self, *, body: SendParameterizedMultipartMultipartRequestBody) -> None:
+    def send_json_preferred(self, *, body: Payload) -> None:
+        return self.send_json_preferred_with_http_info(body=body).data
+
+    def send_parameterized_multipart_with_http_info(self, *, body: SendParameterizedMultipartMultipartRequestBody) -> ApiResponse[None]:
         path = "/request/parameterized-multipart"
         files: dict[str, object] = {}
         files["file"] = (body.file.filename_or_default("file"), body.file.data, "application/octet-stream")
@@ -146,9 +150,13 @@ class MediaApi:
         if not (200 <= response.status_code < 300):
             detail = SendParameterizedMultipartUnexpected(response.status_code, response.headers, response.content)
             raise SendParameterizedMultipartError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_vendor_json(self, *, body: Payload) -> None:
+    def send_parameterized_multipart(self, *, body: SendParameterizedMultipartMultipartRequestBody) -> None:
+        return self.send_parameterized_multipart_with_http_info(body=body).data
+
+    def send_vendor_json_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/request/vendor-json"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/vnd.example+json; charset=utf-8"
@@ -156,28 +164,44 @@ class MediaApi:
         if not (200 <= response.status_code < 300):
             detail = SendVendorJsonUnexpected(response.status_code, response.headers, response.content)
             raise SendVendorJsonError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_octet_preferred(self) -> bytes:
+    def send_vendor_json(self, *, body: Payload) -> None:
+        return self.send_vendor_json_with_http_info(body=body).data
+
+    def get_octet_preferred_with_http_info(self) -> ApiResponse[bytes]:
         path = "/response/octet-before-xml"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetOctetPreferredUnexpected(response.status_code, response.headers, response.content)
             raise GetOctetPreferredError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.content
+        data = response.content
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_text_preferred(self) -> str:
+    def get_octet_preferred(self) -> bytes:
+        return self.get_octet_preferred_with_http_info().data
+
+    def get_text_preferred_with_http_info(self) -> ApiResponse[str]:
         path = "/response/text-before-xml"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetTextPreferredUnexpected(response.status_code, response.headers, response.content)
             raise GetTextPreferredError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.text
+        data = response.text
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_vendor_json(self) -> Payload:
+    def get_text_preferred(self) -> str:
+        return self.get_text_preferred_with_http_info().data
+
+    def get_vendor_json_with_http_info(self) -> ApiResponse[Payload]:
         path = "/response/vendor-json"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetVendorJsonUnexpected(response.status_code, response.headers, response.content)
             raise GetVendorJsonError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return Payload.from_dict(response.json())
+        data = Payload.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_vendor_json(self) -> Payload:
+        return self.get_vendor_json_with_http_info().data

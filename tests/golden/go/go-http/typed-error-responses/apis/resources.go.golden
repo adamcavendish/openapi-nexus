@@ -10,7 +10,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"regexp"
+	"strconv"
 
 	"example.com/sdk/models"
 	"example.com/sdk/runtime"
@@ -30,6 +33,14 @@ func NewResourcesAPI(client *runtime.Client) *ResourcesAPI {
 type CheckNoSuccessBodyResponse struct {
 	StatusCode int
 	Raw *http.Response
+}
+
+func (r *CheckNoSuccessBodyResponse) XRequestIdHeader() (string, bool) {
+	values := r.Raw.Header.Values("X-Request-Id")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
 }
 
 type CheckNoSuccessBodyError struct {
@@ -75,6 +86,14 @@ func (d *CheckNoSuccessBodyUnexpected) Body() []byte {
 	return append([]byte(nil), d.RawBody...)
 }
 
+func (r *CheckNoSuccessBodyError) RetryAfterHeader() (string, bool) {
+	values := r.Header.Values("Retry-After")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
 // CheckNoSuccessBody calls GET /no-success-body.
 func (a *ResourcesAPI) CheckNoSuccessBody(ctx context.Context) (*CheckNoSuccessBodyResponse, error) {
 	path := "/no-success-body"
@@ -111,6 +130,30 @@ type CreateResourceResponse struct {
 	StatusCode int
 	Raw *http.Response
 	Status201 *models.CreatedResource
+}
+
+func (r *CreateResourceResponse) Header1RequestIdHeader() (string, bool) {
+	values := r.Raw.Header.Values("1-Request-Id")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
+func (r *CreateResourceResponse) XRequestIdHeader() (string, bool) {
+	values := r.Raw.Header.Values("X-Request-Id")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
+func (r *CreateResourceResponse) XRequestIdHeader2() (string, bool) {
+	values := r.Raw.Header.Values("X_Request_Id")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
 }
 
 type CreateResourceError struct {
@@ -204,6 +247,21 @@ func (d *CreateResourceStatus424) Body() (*models.SameShapeValidationError, erro
 	}
 	return &value, nil
 }
+type CreateResourceTooManyRequests struct {
+	StatusCode int
+	Header http.Header
+	RawBody []byte
+}
+
+func (*CreateResourceTooManyRequests) isCreateResourceErrorDetail() {}
+
+func (d *CreateResourceTooManyRequests) Body() (*models.DefaultError, error) {
+	var value models.DefaultError
+	if err := json.Unmarshal(d.RawBody, &value); err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
 type CreateResourceServerError struct {
 	StatusCode int
 	Header http.Header
@@ -244,6 +302,67 @@ func (*CreateResourceUnexpected) isCreateResourceErrorDetail() {}
 
 func (d *CreateResourceUnexpected) Body() []byte {
 	return append([]byte(nil), d.RawBody...)
+}
+
+func (r *CreateResourceError) Header1RetryAfterHeader() (string, bool) {
+	values := r.Header.Values("1-Retry-After")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
+func (r *CreateResourceError) RetryAfterHeader() (string, bool) {
+	values := r.Header.Values("Retry-After")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
+func (r *CreateResourceError) RetryAfterHeader2() (string, bool) {
+	values := r.Header.Values("Retry_After")
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0], true
+}
+
+func (r *CreateResourceError) XRateLimitEnabledHeader() (bool, bool) {
+	values := r.Header.Values("X-Rate-Limit-Enabled")
+	if len(values) == 0 {
+		return false, false
+	}
+	switch values[0] {
+		case "true":
+		return true, true
+		case "false":
+		return false, true
+		default:
+		return false, false
+	}
+}
+
+func (r *CreateResourceError) XRateLimitRatioHeader() (float64, bool) {
+	values := r.Header.Values("X-Rate-Limit-Ratio")
+	if len(values) == 0 {
+		return 0, false
+	}
+	matched, err := regexp.MatchString("^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$", values[0])
+	if err != nil || !matched {
+		return 0, false
+	}
+	value, err := strconv.ParseFloat(values[0], 64)
+	return value, err == nil && !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+func (r *CreateResourceError) XRateLimitRemainingHeader() (int64, bool) {
+	values := r.Header.Values("X-Rate-Limit-Remaining")
+	if len(values) == 0 {
+		return 0, false
+	}
+	value, err := strconv.ParseInt(values[0], 10, 64)
+	return value, err == nil
 }
 
 // CreateResource calls POST /resources.
@@ -289,6 +408,9 @@ func (a *ResourcesAPI) CreateResource(ctx context.Context, body *models.CreateRe
 				return nil, &CreateResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
 			case 424:
 				detail := &CreateResourceStatus424{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
+				return nil, &CreateResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
+			case 429:
+				detail := &CreateResourceTooManyRequests{StatusCode: httpResp.StatusCode, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...)}
 				return nil, &CreateResourceError{StatusCode: httpResp.StatusCode, Status: httpResp.Status, Header: httpResp.Header.Clone(), RawBody: append([]byte(nil), responseBody...), Detail: detail}
 			default:
 				if httpResp.StatusCode >= 500 && httpResp.StatusCode < 600 {

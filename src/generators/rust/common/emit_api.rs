@@ -13,6 +13,10 @@ use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::multipart_parts_for_request_body;
 pub use crate::generators::multipart::{MultipartPart, MultipartValueEncoding};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+    unique_response_header_accessor_names,
+};
 use crate::generators::response_names::{
     response_entry_name as response_variant_name, response_match_rank,
 };
@@ -21,12 +25,15 @@ use crate::ir::types::{
 };
 use heck::{ToPascalCase, ToSnakeCase};
 use sigil_stitch::code_block::{CodeBlock, CodeBlockBuilder};
+use sigil_stitch::lang::rust::Rust;
 use sigil_stitch::prelude::sigil_quote;
 use sigil_stitch::spec::annotation_spec::AnnotationSpec;
 use sigil_stitch::spec::field_spec::FieldSpec;
 use sigil_stitch::spec::file_spec::FileSpec;
+use sigil_stitch::spec::fun_spec::FunSpec;
 use sigil_stitch::spec::import_spec::ImportSpec;
-use sigil_stitch::spec::modifiers::{TypeKind, Visibility};
+use sigil_stitch::spec::modifiers::{DeclarationContext, TypeKind, Visibility};
+use sigil_stitch::spec::parameter_spec::ParameterSpec;
 use sigil_stitch::spec::type_spec::TypeSpec;
 use sigil_stitch::type_name::TypeName;
 
@@ -41,6 +48,10 @@ use super::emit_models::rust_type_str_qualified;
 pub struct RustBackendConfig {
     /// Whether methods are async (reqwest, aioduct) or sync (ureq).
     pub is_async: bool,
+    /// Module containing the native header-map type retained on generated responses.
+    pub response_headers_module: &'static str,
+    /// Native header-map type retained on generated responses.
+    pub response_headers_name: &'static str,
     /// Extra generic parameters on the Api struct, e.g., `"R: aioduct::RuntimePoll"`.
     /// `None` for reqwest and ureq.
     pub struct_generics: Option<String>,
@@ -213,8 +224,14 @@ fn emit_api_file(
 
     // Response structs -- add as TypeSpec members
     for plan in &plans {
-        fsb = fsb.add_type(emit_response_struct(plan, response_extra_derives));
-        fsb = fsb.add_code(emit_error_enum(plan));
+        let response_headers_type =
+            TypeName::qualified(config.response_headers_module, config.response_headers_name);
+        fsb = fsb.add_type(emit_response_struct(
+            plan,
+            &response_headers_type,
+            response_extra_derives,
+        ));
+        fsb = fsb.add_code(emit_error_enum(plan, &response_headers_type));
     }
 
     let file = fsb.build().expect("FileSpec builds");
@@ -236,6 +253,8 @@ pub struct OpPlan<'a> {
     pub body: Option<BodyBinding>,
     pub typed_responses: Vec<TypedResponse>,
     pub error_responses: Vec<ErrorResponse>,
+    pub success_headers: Vec<ResponseHeaderPlan>,
+    pub error_headers: Vec<ResponseHeaderPlan>,
 }
 
 pub struct ParamBinding<'a> {
@@ -340,6 +359,18 @@ pub fn plan_operation<'a>(
         .filter(|r| !is_success_status(&r.status))
         .map(|r| plan_error_response(r, ir))
         .collect();
+    let success_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| is_success_status(&response.status)),
+        ir,
+    );
+    let error_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| !is_success_status(&response.status)),
+        ir,
+    );
 
     OpPlan {
         op,
@@ -352,6 +383,8 @@ pub fn plan_operation<'a>(
         body,
         typed_responses,
         error_responses,
+        success_headers,
+        error_headers,
     }
 }
 
@@ -555,7 +588,11 @@ fn emit_operation(
     b.build().unwrap()
 }
 
-pub fn emit_response_struct(plan: &OpPlan<'_>, extra: Option<&ExtraDeriveConfig>) -> TypeSpec {
+pub fn emit_response_struct(
+    plan: &OpPlan<'_>,
+    response_headers_type: &TypeName,
+    extra: Option<&ExtraDeriveConfig>,
+) -> TypeSpec {
     let mut tb = TypeSpec::builder(&plan.response_type, TypeKind::Struct);
     tb = tb.visibility(Visibility::Public);
     tb = tb.doc(&format!("Response from `{}`.", plan.method_name));
@@ -569,6 +606,13 @@ pub fn emit_response_struct(plan: &OpPlan<'_>, extra: Option<&ExtraDeriveConfig>
     // status_code field
     {
         let fb = FieldSpec::builder("status_code", TypeName::primitive("u16"));
+        let fb = fb.visibility(Visibility::Public);
+        tb = tb.add_field(fb.build().expect("FieldSpec builds"));
+    }
+
+    // native response headers
+    {
+        let fb = FieldSpec::builder("headers", response_headers_type.clone());
         let fb = fb.visibility(Visibility::Public);
         tb = tb.add_field(fb.build().expect("FieldSpec builds"));
     }
@@ -587,10 +631,19 @@ pub fn emit_response_struct(plan: &OpPlan<'_>, extra: Option<&ExtraDeriveConfig>
         tb = tb.add_field(fb.build().expect("FieldSpec builds"));
     }
 
+    let method_names = rust_header_accessor_names(&plan.success_headers);
+    for (header, method_name) in plan.success_headers.iter().zip(method_names) {
+        tb = tb.add_method(build_rust_header_accessor(
+            header,
+            &method_name,
+            "self.headers",
+        ));
+    }
+
     tb.build().expect("TypeSpec builds")
 }
 
-pub fn emit_error_enum(plan: &OpPlan<'_>) -> CodeBlock {
+pub fn emit_error_enum(plan: &OpPlan<'_>, response_headers_type: &TypeName) -> CodeBlock {
     let mut cb = CodeBlock::builder();
     let mut variants = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
@@ -622,6 +675,14 @@ pub fn emit_error_enum(plan: &OpPlan<'_>) -> CodeBlock {
     cb.add(&format!("        Self::{transport_variant}(error)\n"), ());
     cb.add("    }\n", ());
     cb.add("}\n\n", ());
+
+    cb.add_code(emit_rust_error_header_impl(
+        plan,
+        response_headers_type,
+        &variants,
+        &unexpected_variant,
+        &transport_variant,
+    ));
 
     cb.add(
         &format!("impl std::fmt::Display for {} {{\n", plan.error_type),
@@ -668,6 +729,114 @@ pub fn emit_error_enum(plan: &OpPlan<'_>) -> CodeBlock {
     cb.add("}\n", ());
 
     cb.build().expect("error enum builds")
+}
+
+fn emit_rust_error_header_impl(
+    plan: &OpPlan<'_>,
+    response_headers_type: &TypeName,
+    variants: &[(String, String)],
+    unexpected_variant: &str,
+    transport_variant: &str,
+) -> CodeBlock {
+    if plan.error_headers.is_empty() {
+        return sigil_quote!(RustLang {}).expect("empty Rust error header impl builds");
+    }
+
+    let response_headers_body = sigil_quote!(RustLang {
+        match self {
+            $for((variant, _) in variants) {
+                Self::$N(variant.as_str())(err) => Some(err.headers()),
+            }
+            Self::$N(unexpected_variant)(err) => Some(err.headers()),
+            Self::$N(transport_variant)(_) => None,
+        }
+    })
+    .expect("Rust response headers body builds");
+    let response_headers = FunSpec::builder("response_headers")
+        .add_param(ParameterSpec::of("&self", TypeName::primitive("")))
+        .returns(TypeName::optional(TypeName::reference(
+            response_headers_type.clone(),
+        )))
+        .body(response_headers_body)
+        .build()
+        .expect("Rust response headers method builds");
+
+    let lang = Rust::new();
+    let response_headers = response_headers
+        .emit(&lang, DeclarationContext::Member)
+        .expect("Rust response headers method emits");
+    let method_names = rust_header_accessor_names(&plan.error_headers);
+    let header_accessors = plan
+        .error_headers
+        .iter()
+        .zip(method_names)
+        .map(|(header, method_name)| {
+            build_rust_header_accessor(header, &method_name, "self.response_headers()?")
+                .emit(&lang, DeclarationContext::Member)
+                .expect("Rust error header accessor emits")
+        })
+        .collect::<Vec<_>>();
+    sigil_quote!(RustLang {
+        impl $N(plan.error_type.as_str()) {
+            $L(response_headers)
+            $for(accessor in &header_accessors) {
+                $L((*accessor).clone())
+            }
+        }
+    })
+    .expect("Rust error header impl builds")
+}
+
+fn build_rust_header_accessor(
+    header: &ResponseHeaderPlan,
+    method_name: &str,
+    headers_expr: &str,
+) -> FunSpec {
+    FunSpec::builder(method_name)
+        .visibility(Visibility::Public)
+        .add_param(ParameterSpec::of("&self", TypeName::primitive("")))
+        .returns(rust_header_return_type(header.value_kind))
+        .body(rust_header_accessor_body(header, headers_expr))
+        .build()
+        .expect("Rust header accessor builds")
+}
+
+fn rust_header_accessor_body(header: &ResponseHeaderPlan, headers_expr: &str) -> CodeBlock {
+    let wire_name = header.wire_name.as_str();
+    match header.value_kind {
+        ResponseHeaderValueKind::String => sigil_quote!(RustLang {
+            $L(headers_expr).get($S(wire_name))?.to_str().ok()
+        }),
+        ResponseHeaderValueKind::Integer | ResponseHeaderValueKind::Boolean => {
+            sigil_quote!(RustLang {
+                $L(headers_expr).get($S(wire_name))?.to_str().ok()?.parse().ok()
+            })
+        }
+        ResponseHeaderValueKind::Number => sigil_quote!(RustLang {
+            $L(headers_expr).get($S(wire_name))?.to_str().ok()?.parse().ok().filter(|value: &f64| value.is_finite())
+        }),
+    }
+    .expect("Rust header accessor body builds")
+}
+
+fn rust_header_return_type(kind: ResponseHeaderValueKind) -> TypeName {
+    let inner = match kind {
+        ResponseHeaderValueKind::String => TypeName::reference(TypeName::primitive("str")),
+        ResponseHeaderValueKind::Integer => TypeName::primitive("i64"),
+        ResponseHeaderValueKind::Number => TypeName::primitive("f64"),
+        ResponseHeaderValueKind::Boolean => TypeName::primitive("bool"),
+    };
+    TypeName::optional(inner)
+}
+
+fn rust_header_accessor_names(headers: &[ResponseHeaderPlan]) -> Vec<String> {
+    unique_response_header_accessor_names(headers, |wire_name| {
+        let mut base = wire_name.to_snake_case();
+        if base.is_empty() || base.starts_with(|character: char| character.is_ascii_digit()) {
+            base = format!("header_{base}");
+        }
+        format!("{base}_header")
+    })
 }
 
 fn unique_variant_name(desired: &str, used: &mut HashSet<String>) -> String {
@@ -997,27 +1166,36 @@ pub fn emit_result_init(
     response_type: &str,
     typed_responses: &[TypedResponse],
 ) {
-    let mut fields = vec!["status_code".to_string()];
+    let mut field_names = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     for tr in typed_responses {
         if seen.insert(tr.field_name.clone()) {
-            fields.push(format!("{}: None", tr.field_name));
+            field_names.push(tr.field_name.as_str());
         }
     }
-    b.add(
-        &format!(
-            "let mut result = {response_type} {{ {} }};\n",
-            fields.join(", ")
-        ),
-        (),
+    b.add_code(
+        sigil_quote!(RustLang {
+            let mut result = $N(response_type)$L(" { status_code, headers: response_headers.clone()")$for(field_name in &field_names) { $L(", ")$N(*field_name)$L(": None") }$L(" }");
+        })
+        .expect("response result initializer builds"),
     );
 }
 
 pub fn emit_empty_result_init(b: &mut CodeBlockBuilder, response_type: &str) {
-    b.add(
-        &format!("let result = {response_type} {{ status_code }};\n"),
-        (),
+    b.add_code(
+        sigil_quote!(RustLang {
+            let result = $N(response_type)$L(" { status_code, headers: response_headers.clone() }");
+        })
+        .expect("empty response result initializer builds"),
     );
+}
+
+/// Clone the native response header map before the response body is consumed.
+pub fn response_headers_init() -> CodeBlock {
+    sigil_quote!(RustLang {
+        let response_headers = resp.headers().clone();
+    })
+    .expect("response headers init builds")
 }
 
 /// Emit `match status_code { ... }` dispatching deserialized bodies into result fields.

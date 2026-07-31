@@ -11,7 +11,7 @@ from collections.abc import Mapping
 
 from ..models.upload_asset_multipart_request_body import UploadAssetMultipartRequestBody
 from ..models.upload_metadata import UploadMetadata
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class DownloadAssetNotFound:
@@ -69,7 +69,7 @@ class TransferApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def download_asset(self, asset_id: str) -> bytes:
+    def download_asset_with_http_info(self, asset_id: str) -> ApiResponse[bytes]:
         path = f"/assets/{asset_id}/content"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -78,9 +78,13 @@ class TransferApi:
             else:
                 detail = DownloadAssetUnexpected(response.status_code, response.headers, response.content)
             raise DownloadAssetError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.content
+        data = response.content
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def upload_asset(self, *, body: UploadAssetMultipartRequestBody) -> UploadMetadata:
+    def download_asset(self, asset_id: str) -> bytes:
+        return self.download_asset_with_http_info(asset_id).data
+
+    def upload_asset_with_http_info(self, *, body: UploadAssetMultipartRequestBody) -> ApiResponse[UploadMetadata]:
         path = "/uploads"
         files: dict[str, object] = {}
         files["file"] = (body.file.filename_or_default("file"), body.file.data, "application/octet-stream")
@@ -93,4 +97,8 @@ class TransferApi:
             else:
                 detail = UploadAssetUnexpected(response.status_code, response.headers, response.content)
             raise UploadAssetError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return UploadMetadata.from_dict(response.json())
+        data = UploadMetadata.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def upload_asset(self, *, body: UploadAssetMultipartRequestBody) -> UploadMetadata:
+        return self.upload_asset_with_http_info(body=body).data

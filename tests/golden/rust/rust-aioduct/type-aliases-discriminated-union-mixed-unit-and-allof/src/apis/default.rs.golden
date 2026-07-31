@@ -35,9 +35,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = CreateResourceResponse { status_code, data: None };
+        let mut result = CreateResourceResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -60,6 +60,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
 #[derive(Debug)]
 pub struct CreateResourceResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Setup>,
 }
 

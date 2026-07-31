@@ -3,6 +3,10 @@ use std::collections::{BTreeMap, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+    unique_response_header_accessor_names,
+};
 use crate::generators::response_names::{
     response_entry_name as response_variant_name, response_match_rank,
 };
@@ -208,8 +212,32 @@ fn build_response_class(plan: &OpPlan<'_>) -> TypeSpec {
             .expect("param"),
         );
     }
+    let header_method_names =
+        unique_response_header_accessor_names(&plan.success_headers, kotlin_header_method_name);
+    for (header, method_name) in plan.success_headers.iter().zip(header_method_names) {
+        tb = tb.add_method(build_kotlin_header_accessor(
+            header,
+            &method_name,
+            "raw.headers",
+        ));
+    }
 
     tb.build().expect("response class builds")
+}
+
+fn build_kotlin_header_accessor(
+    header: &ResponseHeaderPlan,
+    method_name: &str,
+    headers_expr: &str,
+) -> FunSpec {
+    FunSpec::builder(method_name)
+        .visibility(Visibility::Public)
+        .returns(TypeName::optional(TypeName::primitive(kotlin_header_type(
+            header.value_kind,
+        ))))
+        .body(kotlin_header_accessor_body(header, headers_expr))
+        .build()
+        .expect("Kotlin header accessor builds")
 }
 
 fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
@@ -223,11 +251,22 @@ fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
     );
     cb.add(
         &format!(
-            "class {}(\n    val detail: {},\n    statusCode: Int,\n    status: String,\n    body: String,\n    val headers: okhttp3.Headers,\n    rawBodyBytes: ByteArray,\n) : ApiException(statusCode, status, body) {{\n    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()\n    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()\n}}\n\n",
-            plan.error_type, detail_interface
+            "class {}(\n    val detail: {},\n    statusCode: Int,\n    status: String,\n    body: String,\n    val headers: okhttp3.Headers,\n    rawBodyBytes: ByteArray,\n) : ApiException(statusCode, status, body) {{\n    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()\n    fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()\n",
+            plan.error_type, detail_interface,
         ),
         (),
     );
+    cb.add("%>", ());
+    let method_names =
+        unique_response_header_accessor_names(&plan.error_headers, kotlin_header_method_name);
+    for (header, method_name) in plan.error_headers.iter().zip(method_names) {
+        cb.add_code(
+            build_kotlin_header_accessor(header, &method_name, "headers")
+                .emit(&Kotlin::new(), DeclarationContext::Member)
+                .expect("Kotlin error header accessor emits"),
+        );
+    }
+    cb.add("%<}\n\n", ());
     let mut seen = HashSet::new();
     for response in &plan.error_responses {
         if !seen.insert(response.field_name.clone()) {
@@ -252,6 +291,44 @@ fn build_error_types_block(plan: &OpPlan<'_>) -> CodeBlock {
         (),
     );
     cb.build().expect("Kotlin error types block builds")
+}
+
+fn kotlin_header_method_name(wire_name: &str) -> String {
+    let mut base = wire_name.to_lower_camel_case();
+    if base.is_empty() || base.starts_with(|character: char| character.is_ascii_digit()) {
+        base = format!("header{base}");
+    }
+    format!("{base}Header")
+}
+
+fn kotlin_header_type(kind: ResponseHeaderValueKind) -> &'static str {
+    match kind {
+        ResponseHeaderValueKind::String => "String",
+        ResponseHeaderValueKind::Integer => "Long",
+        ResponseHeaderValueKind::Number => "Double",
+        ResponseHeaderValueKind::Boolean => "Boolean",
+    }
+}
+
+fn kotlin_header_accessor_body(header: &ResponseHeaderPlan, headers_expr: &str) -> CodeBlock {
+    let wire_name = header.wire_name.as_str();
+    let integer_pattern = r"[+-]?[0-9]+";
+    let number_pattern = r"[+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?";
+    match header.value_kind {
+        ResponseHeaderValueKind::String => sigil_quote!(Kotlin {
+            return $L(headers_expr)[$S(wire_name)]
+        }),
+        ResponseHeaderValueKind::Integer => sigil_quote!(Kotlin {
+            return $L(headers_expr)[$S(wire_name)]?.takeIf { it.matches(Regex($S(integer_pattern))) }?.toLongOrNull()
+        }),
+        ResponseHeaderValueKind::Number => sigil_quote!(Kotlin {
+            return $L(headers_expr)[$S(wire_name)]?.takeIf { it.matches(Regex($S(number_pattern))) }?.toDoubleOrNull()?.takeIf { it.isFinite() }
+        }),
+        ResponseHeaderValueKind::Boolean => sigil_quote!(Kotlin {
+            return $L(headers_expr)[$S(wire_name)]?.toBooleanStrictOrNull()
+        }),
+    }
+    .expect("Kotlin header accessor body builds")
 }
 
 fn kotlin_error_detail_class(
@@ -873,6 +950,8 @@ struct OpPlan<'a> {
     body: Option<BodyBinding>,
     typed_responses: Vec<TypedResponse>,
     error_responses: Vec<TypedResponse>,
+    success_headers: Vec<ResponseHeaderPlan>,
+    error_headers: Vec<ResponseHeaderPlan>,
 }
 
 struct ParamBinding<'a> {
@@ -977,6 +1056,18 @@ fn plan_operation<'a>(
         .filter(|r| !is_success_status(&r.status))
         .map(plan_error_response)
         .collect();
+    let success_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| is_success_status(&response.status)),
+        ir,
+    );
+    let error_headers = collect_response_headers(
+        op.responses
+            .iter()
+            .filter(|response| !is_success_status(&response.status)),
+        ir,
+    );
 
     OpPlan {
         op,
@@ -989,6 +1080,8 @@ fn plan_operation<'a>(
         body,
         typed_responses,
         error_responses,
+        success_headers,
+        error_headers,
     }
 }
 

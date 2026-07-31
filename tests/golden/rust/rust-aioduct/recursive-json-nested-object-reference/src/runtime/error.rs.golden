@@ -69,7 +69,7 @@ impl From<serde_xml_rs::Error> for Error {
 #[derive(Debug)]
 pub struct ApiError<T> {
     status_code: u16,
-    headers: Vec<(String, String)>,
+    headers: aioduct::HeaderMap,
     raw_body: Vec<u8>,
     body: Result<T, Error>,
 }
@@ -77,7 +77,7 @@ pub struct ApiError<T> {
 impl<T> ApiError<T> {
     pub fn new(
         status_code: u16,
-        headers: Vec<(String, String)>,
+        headers: aioduct::HeaderMap,
         raw_body: Vec<u8>,
         body: Result<T, Error>,
     ) -> Self {
@@ -93,7 +93,7 @@ impl<T> ApiError<T> {
         self.status_code
     }
 
-    pub fn headers(&self) -> &[(String, String)] {
+    pub fn headers(&self) -> &aioduct::HeaderMap {
         &self.headers
     }
 

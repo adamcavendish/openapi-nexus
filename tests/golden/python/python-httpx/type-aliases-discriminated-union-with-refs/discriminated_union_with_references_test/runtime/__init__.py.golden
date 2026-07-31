@@ -7,5 +7,6 @@
 from .auth import ApiKeyAuth as ApiKeyAuth
 from .auth import Authenticator as Authenticator
 from .auth import BearerAuth as BearerAuth
+from .client import ApiResponse as ApiResponse
 from .client import Client as Client
 from .errors import ApiError as ApiError

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class TestUnexpected:
@@ -33,11 +33,16 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def test(self) -> None:
-        """Test endpoint."""
+    def test_with_http_info(self) -> ApiResponse[None]:
+        """Test endpoint, including HTTP response metadata."""
         path = "/test"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = TestUnexpected(response.status_code, response.headers, response.content)
             raise TestError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def test(self) -> None:
+        """Test endpoint."""
+        return self.test_with_http_info().data

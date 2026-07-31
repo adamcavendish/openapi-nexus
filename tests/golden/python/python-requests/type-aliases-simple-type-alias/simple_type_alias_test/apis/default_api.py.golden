@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.foo import Foo
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class TestSimpleAliasUnexpected:
@@ -34,8 +34,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def test_simple_alias(self, *, body: Foo) -> Foo:
-        """Test endpoint with simple type alias."""
+    def test_simple_alias_with_http_info(self, *, body: Foo) -> ApiResponse[Foo]:
+        """Test endpoint with simple type alias, including HTTP response metadata."""
         path = "/test"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -43,4 +43,9 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = TestSimpleAliasUnexpected(response.status_code, response.headers, response.content)
             raise TestSimpleAliasError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def test_simple_alias(self, *, body: Foo) -> Foo:
+        """Test endpoint with simple type alias."""
+        return self.test_simple_alias_with_http_info(body=body).data
