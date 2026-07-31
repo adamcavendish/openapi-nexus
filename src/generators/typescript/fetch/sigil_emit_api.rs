@@ -21,6 +21,10 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::multipart::{MultipartValueEncoding, multipart_parts_for_request_body};
 use crate::generators::request_inputs::{RequestInputPlan, request_input_for_operation};
+use crate::generators::response_headers::{
+    ResponseHeaderPlan, ResponseHeaderValueKind, collect_response_headers,
+    unique_response_header_accessor_names, unique_response_header_accessor_names_with_used,
+};
 use crate::generators::response_names::response_entry_kind as response_detail_kind;
 use crate::ir::types::{
     IrOperation, IrParameter, IrPrimitive, IrRequestBody, IrResponse, IrSpec, IrTypeExpr,
@@ -33,7 +37,7 @@ use sigil_stitch::prelude::sigil_quote;
 use sigil_stitch::spec::field_spec::FieldSpec;
 use sigil_stitch::spec::file_spec::FileSpec;
 use sigil_stitch::spec::fun_spec::FunSpec;
-use sigil_stitch::spec::modifiers::{TypeKind, Visibility};
+use sigil_stitch::spec::modifiers::{DeclarationContext, TypeKind, Visibility};
 use sigil_stitch::spec::parameter_spec::ParameterSpec;
 use sigil_stitch::spec::type_spec::TypeSpec;
 use sigil_stitch::type_name::TypeName;
@@ -166,7 +170,10 @@ fn emit_api_file(
     // own line so readers can scan each `Wrapper & { status: N }` pair without
     // the pretty printer splitting intersections across lines.
     fb = fb.add_code(build_response_aliases_block(ops)?);
-    fb = fb.add_code(build_error_types_block(ops)?);
+    for accessor in build_success_header_accessors(ops, ir)? {
+        fb = fb.add_function(accessor);
+    }
+    fb = fb.add_code(build_error_types_block(ops, ir)?);
 
     // ApiInterface — emit as a raw CodeBlock so `%T` slots propagate imports
     // for every arrow-function parameter and return type. (TypeSpec with
@@ -271,7 +278,45 @@ fn build_response_aliases_block(ops: &[&IrOperation]) -> Result<CodeBlock, Strin
         .map_err(|e| format!("sigil_emit_api: response aliases block: {e}"))
 }
 
-fn build_error_types_block(ops: &[&IrOperation]) -> Result<CodeBlock, String> {
+fn build_success_header_accessors(
+    ops: &[&IrOperation],
+    ir: &IrSpec,
+) -> Result<Vec<FunSpec>, String> {
+    let mut accessors = Vec::new();
+    let mut used_accessor_names = HashSet::new();
+    for op in ops {
+        let alias = raw_response_alias_name(op);
+        let headers = collect_response_headers(
+            op.responses
+                .iter()
+                .filter(|response| is_success_status(&response.status)),
+            ir,
+        );
+        let function_names = unique_response_header_accessor_names_with_used(
+            &headers,
+            |wire_name| {
+                format!(
+                    "get{}{}Header",
+                    op.operation_id.to_lower_camel_case().to_pascal_case(),
+                    wire_name.to_pascal_case()
+                )
+            },
+            &mut used_accessor_names,
+        );
+        for (header, function_name) in headers.iter().zip(function_names) {
+            accessors.push(build_ts_header_accessor(
+                &function_name,
+                Some(ParameterSpec::of("response", TypeName::primitive(&alias))),
+                header,
+                "response.headers",
+                true,
+            )?);
+        }
+    }
+    Ok(accessors)
+}
+
+fn build_error_types_block(ops: &[&IrOperation], ir: &IrSpec) -> Result<CodeBlock, String> {
     let mut cb = CodeBlock::builder();
     for op in ops {
         let detail_alias = error_detail_alias_name(op);
@@ -313,16 +358,115 @@ fn build_error_types_block(ops: &[&IrOperation]) -> Result<CodeBlock, String> {
             ),
             vec![Arg::TypeName(TypeName::primitive("Blob"))],
         );
-        cb.add("\n", vec![]);
+        cb.add_line();
         cb.add(
             &format!(
-                "export class {class_name} extends %T {{\n  readonly detail: {detail_alias};\n\n  constructor(response: Response, detail: {detail_alias}, msg = 'Response returned an error code') {{\n    super(response, msg);\n    this.detail = detail;\n  }}\n}}\n\n"
+                "export class {class_name} extends %T {{\n  readonly detail: {detail_alias};\n\n  constructor(response: Response, detail: {detail_alias}, msg = 'Response returned an error code') {{\n    super(response, msg);\n    this.detail = detail;\n  }}\n"
             ),
             vec![Arg::TypeName(rt_value("ResponseError"))],
         );
+        cb.add("%>", ());
+        let headers = collect_response_headers(
+            op.responses
+                .iter()
+                .filter(|response| !is_success_status(&response.status)),
+            ir,
+        );
+        let method_names = unique_response_header_accessor_names(&headers, |wire_name| {
+            format!("get{}Header", wire_name.to_pascal_case())
+        });
+        for (header, method_name) in headers.iter().zip(method_names) {
+            cb.add_line();
+            cb.add_code(
+                build_ts_header_accessor(
+                    &method_name,
+                    None,
+                    header,
+                    "this.response.headers",
+                    false,
+                )?
+                .emit(&TypeScript::new(), DeclarationContext::Member)
+                .map_err(|error| {
+                    format!("sigil_emit_api: error header accessor {method_name}: {error}")
+                })?,
+            );
+        }
+        cb.add("%<}\n\n", ());
     }
     cb.build()
         .map_err(|e| format!("sigil_emit_api: error types block: {e}"))
+}
+
+fn build_ts_header_accessor(
+    name: &str,
+    parameter: Option<ParameterSpec>,
+    header: &ResponseHeaderPlan,
+    headers_expr: &str,
+    exported: bool,
+) -> Result<FunSpec, String> {
+    let mut accessor = FunSpec::builder(name)
+        .returns(TypeName::union(vec![
+            ts_header_type(header.value_kind),
+            TypeName::primitive("undefined"),
+        ]))
+        .body(ts_header_body(header, headers_expr)?);
+    if let Some(parameter) = parameter {
+        accessor = accessor.add_param(parameter);
+    }
+    if exported {
+        accessor = accessor.visibility(Visibility::Public);
+    }
+    accessor
+        .build()
+        .map_err(|error| format!("sigil_emit_api: response header accessor {name}: {error}"))
+}
+
+fn ts_header_type(kind: ResponseHeaderValueKind) -> TypeName {
+    match kind {
+        ResponseHeaderValueKind::String => TypeName::primitive("string"),
+        ResponseHeaderValueKind::Integer | ResponseHeaderValueKind::Number => {
+            TypeName::primitive("number")
+        }
+        ResponseHeaderValueKind::Boolean => TypeName::primitive("boolean"),
+    }
+}
+
+fn ts_header_body(header: &ResponseHeaderPlan, headers_expr: &str) -> Result<CodeBlock, String> {
+    let wire_name = header.wire_name.as_str();
+    let integer_regex = r"/^[+-]?\d+$/";
+    let number_regex = r"/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/";
+    let body = match header.value_kind {
+        ResponseHeaderValueKind::String => sigil_quote!(TypeScript {
+            return $L(headers_expr).get($S(wire_name)) ?? undefined;
+        }),
+        ResponseHeaderValueKind::Integer => sigil_quote!(TypeScript {
+            const value = $L(headers_expr).get($S(wire_name));
+            if (value === null || !$L(integer_regex).test(value)) {
+                return undefined;
+            }
+            const parsed = Number(value);
+            return Number.isSafeInteger(parsed) ? parsed : undefined;
+        }),
+        ResponseHeaderValueKind::Number => sigil_quote!(TypeScript {
+            const value = $L(headers_expr).get($S(wire_name));
+            if (value === null || !$L(number_regex).test(value)) {
+                return undefined;
+            }
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : undefined;
+        }),
+        ResponseHeaderValueKind::Boolean => sigil_quote!(TypeScript {
+            const value = $L(headers_expr).get($S(wire_name));
+            if (value === $S("true")) {
+                return true;
+            }
+            if (value === $S("false")) {
+                return false;
+            }
+            return undefined;
+        }),
+    };
+    body.map_err(|error| format!("sigil_emit_api: response header accessor body: {error}"))
 }
 
 /// Compute the deduplicated list of union members for an operation's raw
@@ -2058,6 +2202,22 @@ fn collect_convertible_named_refs(
 mod tests {
     use super::*;
 
+    fn render_header_accessor(kind: ResponseHeaderValueKind) -> String {
+        let header = ResponseHeaderPlan {
+            wire_name: "X-Value".to_string(),
+            value_kind: kind,
+        };
+        let accessor =
+            build_ts_header_accessor("getXValueHeader", None, &header, "response.headers", false)
+                .expect("TypeScript header accessor builds");
+        FileSpec::builder_with("header.ts", TypeScript::new())
+            .add_function(accessor)
+            .build()
+            .expect("TypeScript header accessor file builds")
+            .render(100)
+            .expect("TypeScript header accessor renders")
+    }
+
     fn type_json(ty: &TypeName) -> serde_json::Value {
         serde_json::to_value(ty).expect("TypeName serializes")
     }
@@ -2070,5 +2230,19 @@ mod tests {
         ]);
 
         assert_eq!(type_json(&ty), type_json(&TypeName::primitive("unknown")));
+    }
+
+    #[test]
+    fn numeric_response_header_accessors_reject_empty_values() {
+        for kind in [
+            ResponseHeaderValueKind::Integer,
+            ResponseHeaderValueKind::Number,
+        ] {
+            let accessor = render_header_accessor(kind);
+            assert!(accessor.contains(".test(value)"));
+        }
+
+        let integer = render_header_accessor(ResponseHeaderValueKind::Integer);
+        assert!(integer.contains("Number.isSafeInteger(parsed)"));
     }
 }

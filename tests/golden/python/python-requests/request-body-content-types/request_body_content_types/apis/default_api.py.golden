@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.payload import Payload
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class PostBinaryUnexpected:
@@ -160,7 +160,7 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def post_binary(self, *, body: bytes) -> None:
+    def post_binary_with_http_info(self, *, body: bytes) -> ApiResponse[None]:
         path = "/binary"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/octet-stream"
@@ -168,9 +168,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostBinaryUnexpected(response.status_code, response.headers, response.content)
             raise PostBinaryError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_form(self, *, body: Payload) -> None:
+    def post_binary(self, *, body: bytes) -> None:
+        return self.post_binary_with_http_info(body=body).data
+
+    def post_form_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/form"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -178,9 +182,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostFormUnexpected(response.status_code, response.headers, response.content)
             raise PostFormError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_json(self, *, body: Payload) -> None:
+    def post_form(self, *, body: Payload) -> None:
+        return self.post_form_with_http_info(body=body).data
+
+    def post_json_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/json"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -188,9 +196,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostJsonUnexpected(response.status_code, response.headers, response.content)
             raise PostJsonError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_json_or_xml(self, *, body: Payload) -> None:
+    def post_json(self, *, body: Payload) -> None:
+        return self.post_json_with_http_info(body=body).data
+
+    def post_json_or_xml_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/json-or-xml"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -198,9 +210,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostJsonOrXmlUnexpected(response.status_code, response.headers, response.content)
             raise PostJsonOrXmlError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def patch_merge_json(self, *, body: Payload) -> None:
+    def post_json_or_xml(self, *, body: Payload) -> None:
+        return self.post_json_or_xml_with_http_info(body=body).data
+
+    def patch_merge_json_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/merge-patch"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/merge-patch+json"
@@ -208,9 +224,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PatchMergeJsonUnexpected(response.status_code, response.headers, response.content)
             raise PatchMergeJsonError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_text(self, *, body: str) -> None:
+    def patch_merge_json(self, *, body: Payload) -> None:
+        return self.patch_merge_json_with_http_info(body=body).data
+
+    def post_text_with_http_info(self, *, body: str) -> ApiResponse[None]:
         path = "/text"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "text/plain"
@@ -218,9 +238,13 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostTextUnexpected(response.status_code, response.headers, response.content)
             raise PostTextError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def post_xml(self, *, body: Payload) -> None:
+    def post_text(self, *, body: str) -> None:
+        return self.post_text_with_http_info(body=body).data
+
+    def post_xml_with_http_info(self, *, body: Payload) -> ApiResponse[None]:
         path = "/xml"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/xml"
@@ -229,12 +253,20 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = PostXmlUnexpected(response.status_code, response.headers, response.content)
             raise PostXmlError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_xml_response(self) -> str:
+    def post_xml(self, *, body: Payload) -> None:
+        return self.post_xml_with_http_info(body=body).data
+
+    def get_xml_response_with_http_info(self) -> ApiResponse[str]:
         path = "/xml-response"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetXmlResponseUnexpected(response.status_code, response.headers, response.content)
             raise GetXmlResponseError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.text
+        data = response.text
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_xml_response(self) -> str:
+        return self.get_xml_response_with_http_info().data

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class HealthCheckUnexpected:
@@ -69,29 +69,44 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def health_check(self) -> None:
-        """Health check."""
+    def health_check_with_http_info(self) -> ApiResponse[None]:
+        """Health check, including HTTP response metadata."""
         path = "/health"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = HealthCheckUnexpected(response.status_code, response.headers, response.content)
             raise HealthCheckError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def list_users(self) -> None:
-        """List users."""
+    def health_check(self) -> None:
+        """Health check."""
+        return self.health_check_with_http_info().data
+
+    def list_users_with_http_info(self) -> ApiResponse[None]:
+        """List users, including HTTP response metadata."""
         path = "/users"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = ListUsersUnexpected(response.status_code, response.headers, response.content)
             raise ListUsersError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_user(self, user_id: str) -> None:
-        """Get user."""
+    def list_users(self) -> None:
+        """List users."""
+        return self.list_users_with_http_info().data
+
+    def get_user_with_http_info(self, user_id: str) -> ApiResponse[None]:
+        """Get user, including HTTP response metadata."""
         path = f"/users/{user_id}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetUserUnexpected(response.status_code, response.headers, response.content)
             raise GetUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_user(self, user_id: str) -> None:
+        """Get user."""
+        return self.get_user_with_http_info(user_id).data

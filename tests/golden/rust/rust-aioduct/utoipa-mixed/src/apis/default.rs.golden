@@ -30,9 +30,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = CreateFeedResponse { status_code, data: None };
+        let mut result = CreateFeedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -60,9 +60,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = CreatePaymentResponse { status_code, data: None };
+        let mut result = CreatePaymentResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -97,9 +97,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = ListPetsResponse { status_code, data: None };
+        let mut result = ListPetsResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -127,9 +127,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = CreatePetResponse { status_code, created: None };
+        let mut result = CreatePetResponse { status_code, headers: response_headers.clone(), created: None };
         match status_code {
             201 => {
                 result.created = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -152,6 +152,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> DefaultApi<'a, R, C
 #[derive(Debug)]
 pub struct CreateFeedResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::FeedSource>,
 }
 
@@ -190,6 +191,7 @@ impl std::error::Error for CreateFeedError {
 #[derive(Debug)]
 pub struct CreatePaymentResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::PaymentMethod>,
 }
 
@@ -228,6 +230,7 @@ impl std::error::Error for CreatePaymentError {
 #[derive(Debug)]
 pub struct ListPetsResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
@@ -266,6 +269,7 @@ impl std::error::Error for ListPetsError {
 #[derive(Debug)]
 pub struct CreatePetResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub created: Option<crate::models::Pet>,
 }
 

@@ -30,8 +30,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendJsonPreferredResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendJsonPreferredResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -61,8 +61,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         req = req.multipart(multipart);
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendParameterizedMultipartResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendParameterizedMultipartResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -87,8 +87,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendVendorJsonResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendVendorJsonResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -111,9 +111,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = GetOctetPreferredResponse { status_code, data: None };
+        let mut result = GetOctetPreferredResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(Ok::<Vec<u8>, Error>(body_bytes.to_vec())?);
@@ -139,9 +139,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = GetTextPreferredResponse { status_code, data: None };
+        let mut result = GetTextPreferredResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(Ok::<String, Error>(String::from_utf8_lossy(&body_bytes).into_owned())?);
@@ -167,9 +167,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = GetVendorJsonResponse { status_code, data: None };
+        let mut result = GetVendorJsonResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -192,6 +192,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> MediaApi<'a, R, C> 
 #[derive(Debug)]
 pub struct SendJsonPreferredResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `send_json_preferred`.
@@ -229,6 +230,7 @@ impl std::error::Error for SendJsonPreferredError {
 #[derive(Debug)]
 pub struct SendParameterizedMultipartResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `send_parameterized_multipart`.
@@ -266,6 +268,7 @@ impl std::error::Error for SendParameterizedMultipartError {
 #[derive(Debug)]
 pub struct SendVendorJsonResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `send_vendor_json`.
@@ -303,6 +306,7 @@ impl std::error::Error for SendVendorJsonError {
 #[derive(Debug)]
 pub struct GetOctetPreferredResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<Vec<u8>>,
 }
 
@@ -341,6 +345,7 @@ impl std::error::Error for GetOctetPreferredError {
 #[derive(Debug)]
 pub struct GetTextPreferredResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<String>,
 }
 
@@ -379,6 +384,7 @@ impl std::error::Error for GetTextPreferredError {
 #[derive(Debug)]
 pub struct GetVendorJsonResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Payload>,
 }
 

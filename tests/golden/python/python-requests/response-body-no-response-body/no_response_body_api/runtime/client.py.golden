@@ -7,11 +7,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, cast
+from dataclasses import dataclass
+from typing import Any, Generic, TypeVar, cast
 
 import requests
 
 from .auth import Authenticator
+
+ResponseData = TypeVar("ResponseData")
 
 
 class Response:
@@ -42,6 +45,16 @@ class Response:
 
     def json(self) -> Any:  # type: ignore[explicit-override]
         return self._raw.json()  # type: ignore[reportUnknownMemberType]
+
+
+@dataclass(frozen=True)
+class ApiResponse(Generic[ResponseData]):
+    """Decoded response data together with its HTTP metadata."""
+
+    data: ResponseData
+    status_code: int
+    headers: Mapping[str, str]
+    raw: Response
 
 
 class Client:

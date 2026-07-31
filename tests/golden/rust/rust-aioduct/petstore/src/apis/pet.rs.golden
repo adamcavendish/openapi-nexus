@@ -30,9 +30,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = UpdatePetResponse { status_code, data: None };
+        let mut result = UpdatePetResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -72,9 +72,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         req = req.json(&body).map_err(Error::from)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = AddPetResponse { status_code, data: None };
+        let mut result = AddPetResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -115,9 +115,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = FindPetsByStatusResponse { status_code, data: None };
+        let mut result = FindPetsByStatusResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -154,9 +154,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = FindPetsByTagsResponse { status_code, data: None };
+        let mut result = FindPetsByTagsResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -188,9 +188,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.get(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = GetPetByIdResponse { status_code, data: None };
+        let mut result = GetPetByIdResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -239,9 +239,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.post(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = UpdatePetWithFormResponse { status_code, data: None };
+        let mut result = UpdatePetWithFormResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -273,8 +273,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.delete(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = DeletePetResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = DeletePetResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -312,9 +312,9 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
         let req = self.client.post(&path)?;
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::from)?;
-        let mut result = UploadFileResponse { status_code, data: None };
+        let mut result = UploadFileResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -337,6 +337,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> PetApi<'a, R, C> {
 #[derive(Debug)]
 pub struct UpdatePetResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -381,6 +382,7 @@ impl std::error::Error for UpdatePetError {
 #[derive(Debug)]
 pub struct AddPetResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -423,6 +425,7 @@ impl std::error::Error for AddPetError {
 #[derive(Debug)]
 pub struct FindPetsByStatusResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
@@ -463,6 +466,7 @@ impl std::error::Error for FindPetsByStatusError {
 #[derive(Debug)]
 pub struct FindPetsByTagsResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
@@ -503,6 +507,7 @@ impl std::error::Error for FindPetsByTagsError {
 #[derive(Debug)]
 pub struct GetPetByIdResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -545,6 +550,7 @@ impl std::error::Error for GetPetByIdError {
 #[derive(Debug)]
 pub struct UpdatePetWithFormResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -585,6 +591,7 @@ impl std::error::Error for UpdatePetWithFormError {
 #[derive(Debug)]
 pub struct DeletePetResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `delete_pet`.
@@ -624,6 +631,7 @@ impl std::error::Error for DeletePetError {
 #[derive(Debug)]
 pub struct UploadFileResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
     pub data: Option<crate::models::UploadResponse>,
 }
 

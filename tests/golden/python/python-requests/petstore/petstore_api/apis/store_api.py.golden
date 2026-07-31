@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.order import Order
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetInventoryUnexpected:
@@ -123,17 +123,22 @@ class StoreApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_inventory(self) -> dict[str, int]:
-        """Returns pet inventories by status."""
+    def get_inventory_with_http_info(self) -> ApiResponse[dict[str, int]]:
+        """Returns pet inventories by status, including HTTP response metadata."""
         path = "/store/inventory"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetInventoryUnexpected(response.status_code, response.headers, response.content)
             raise GetInventoryError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def place_order(self, *, body: Order) -> Order:
-        """Place an order for a pet."""
+    def get_inventory(self) -> dict[str, int]:
+        """Returns pet inventories by status."""
+        return self.get_inventory_with_http_info().data
+
+    def place_order_with_http_info(self, *, body: Order) -> ApiResponse[Order]:
+        """Place an order for a pet, including HTTP response metadata."""
         path = "/store/order"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -144,10 +149,15 @@ class StoreApi:
             else:
                 detail = PlaceOrderUnexpected(response.status_code, response.headers, response.content)
             raise PlaceOrderError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return Order.from_dict(response.json())
+        data = Order.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_order_by_id(self, order_id: int) -> Order:
-        """Find purchase order by ID."""
+    def place_order(self, *, body: Order) -> Order:
+        """Place an order for a pet."""
+        return self.place_order_with_http_info(body=body).data
+
+    def get_order_by_id_with_http_info(self, order_id: int) -> ApiResponse[Order]:
+        """Find purchase order by ID, including HTTP response metadata."""
         path = f"/store/order/{order_id}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -158,10 +168,15 @@ class StoreApi:
             else:
                 detail = GetOrderByIdUnexpected(response.status_code, response.headers, response.content)
             raise GetOrderByIdError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return Order.from_dict(response.json())
+        data = Order.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def delete_order(self, order_id: int) -> None:
-        """Delete purchase order by ID."""
+    def get_order_by_id(self, order_id: int) -> Order:
+        """Find purchase order by ID."""
+        return self.get_order_by_id_with_http_info(order_id).data
+
+    def delete_order_with_http_info(self, order_id: int) -> ApiResponse[None]:
+        """Delete purchase order by ID, including HTTP response metadata."""
         path = f"/store/order/{order_id}"
         response = self._client.request("DELETE", path)
         if not (200 <= response.status_code < 300):
@@ -172,4 +187,9 @@ class StoreApi:
             else:
                 detail = DeleteOrderUnexpected(response.status_code, response.headers, response.content)
             raise DeleteOrderError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def delete_order(self, order_id: int) -> None:
+        """Delete purchase order by ID."""
+        return self.delete_order_with_http_info(order_id).data

@@ -18,6 +18,9 @@ import okhttp3.Response
  * CheckNoSuccessBodyResponse carries the response from checkNoSuccessBody.
  */
 data class CheckNoSuccessBodyResponse(val statusCode: Int, val raw: Response) {
+    fun xRequestIdHeader(): String? {
+        return raw.headers["X-Request-Id"]
+    }
 }
 
 sealed interface CheckNoSuccessBodyExceptionDetail {
@@ -36,6 +39,9 @@ class CheckNoSuccessBodyException(
 ) : ApiException(statusCode, status, body) {
     private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
     fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun retryAfterHeader(): String? {
+        return headers["Retry-After"]
+    }
 }
 
 class CheckNoSuccessBodyServiceUnavailable(
@@ -67,6 +73,17 @@ class CheckNoSuccessBodyUnexpected(
  */
 data class CreateResourceResponse(val statusCode: Int, val raw: Response,
 val status201: CreatedResource? = null) {
+    fun header1RequestIdHeader(): String? {
+        return raw.headers["1-Request-Id"]
+    }
+
+    fun xRequestIdHeader(): String? {
+        return raw.headers["X-Request-Id"]
+    }
+
+    fun xRequestIdHeader2(): String? {
+        return raw.headers["X_Request_Id"]
+    }
 }
 
 sealed interface CreateResourceExceptionDetail {
@@ -85,6 +102,32 @@ class CreateResourceException(
 ) : ApiException(statusCode, status, body) {
     private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
     fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    fun header1RetryAfterHeader(): String? {
+        return headers["1-Retry-After"]
+    }
+    fun retryAfterHeader(): String? {
+        return headers["Retry-After"]
+    }
+    fun retryAfterHeader2(): String? {
+        return headers["Retry_After"]
+    }
+    fun xRateLimitEnabledHeader(): Boolean? {
+        return headers["X-Rate-Limit-Enabled"]?.toBooleanStrictOrNull()
+    }
+    fun xRateLimitRatioHeader(): Double? {
+        return headers["X-Rate-Limit-Ratio"]?.takeIf {
+            it.matches(Regex("[+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?"))
+        }
+        ?.toDoubleOrNull()?.takeIf {
+            it.isFinite()
+        }
+    }
+    fun xRateLimitRemainingHeader(): Long? {
+        return headers["X-Rate-Limit-Remaining"]?.takeIf {
+            it.matches(Regex("[+-]?[0-9]+"))
+        }
+        ?.toLongOrNull()
+    }
 }
 
 class CreateResourceBadRequest(
@@ -155,6 +198,20 @@ class CreateResourceStatus424(
         return rawBodyBytes.toString(charset)
     }
     fun body(): SameShapeValidationError = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<SameShapeValidationError>() {}.type)
+}
+
+class CreateResourceTooManyRequests(
+    override val statusCode: Int,
+    override val headers: okhttp3.Headers,
+    rawBodyBytes: ByteArray,
+) : CreateResourceExceptionDetail {
+    private val rawBodyBytes: ByteArray = rawBodyBytes.copyOf()
+    override fun rawBody(): ByteArray = this.rawBodyBytes.copyOf()
+    private fun textBody(): String {
+        val charset = headers["Content-Type"]?.toMediaTypeOrNull()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+        return rawBodyBytes.toString(charset)
+    }
+    fun body(): DefaultError = Gson().fromJson(textBody().ifEmpty { "null" }, object : TypeToken<DefaultError>() {}.type)
 }
 
 class CreateResourceServerError(
@@ -296,6 +353,7 @@ class ResourcesApi(private val client: ApiClient) {
                 422 -> CreateResourceValidation(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
                 423 -> CreateResourceStatus423(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
                 424 -> CreateResourceStatus424(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
+                429 -> CreateResourceTooManyRequests(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)
                 else ->  {
                     if (response.code in 500..599)  {
                         CreateResourceServerError(statusCode = response.code, headers = response.headers, rawBodyBytes = responseBytes)

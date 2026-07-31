@@ -77,17 +77,55 @@ fn write_generated_project(files: &HashMap<String, String>, root: &Path) {
 
 const CHARSET_SMOKE_JAVA: &str = r#"
 import com.example.sdk.apis.CreateResourceServerError;
+import com.example.sdk.apis.CreateResourceException;
 import java.nio.charset.StandardCharsets;
 import okhttp3.Headers;
 
 public final class CharsetSmoke {
     public static void main(String[] args) {
         byte[] raw = "{\"message\":\"caf\u00e9\",\"retryable\":true}".getBytes(StandardCharsets.ISO_8859_1);
-        Headers headers = Headers.of("Content-Type", "application/json; charset=iso-8859-1");
+        Headers headers = Headers.of(
+            "Content-Type", "application/json; charset=iso-8859-1",
+            "Retry-After", "120"
+        );
         CreateResourceServerError detail = new CreateResourceServerError(503, headers, raw);
         String message = detail.body().getMessage();
         if (!"caf\u00e9".equals(message)) {
             throw new AssertionError("expected charset-aware message, got: " + message);
+        }
+        CreateResourceException error = new CreateResourceException(
+            503, "Service Unavailable", message, headers, raw, detail
+        );
+        if (!"120".equals(error.getRetryAfterHeader())) {
+            throw new AssertionError("expected Retry-After header");
+        }
+    }
+}
+"#;
+
+const CHARSET_SMOKE_KOTLIN_JAVA: &str = r#"
+import com.example.sdk.apis.CreateResourceException;
+import com.example.sdk.apis.CreateResourceServerError;
+import java.nio.charset.StandardCharsets;
+import okhttp3.Headers;
+
+public final class CharsetSmoke {
+    public static void main(String[] args) {
+        byte[] raw = "{\"message\":\"caf\u00e9\",\"retryable\":true}".getBytes(StandardCharsets.ISO_8859_1);
+        Headers headers = Headers.of(
+            "Content-Type", "application/json; charset=iso-8859-1",
+            "Retry-After", "120"
+        );
+        CreateResourceServerError detail = new CreateResourceServerError(503, headers, raw);
+        String message = detail.body().getMessage();
+        if (!"caf\u00e9".equals(message)) {
+            throw new AssertionError("expected charset-aware message, got: " + message);
+        }
+        CreateResourceException error = new CreateResourceException(
+            detail, 503, "Service Unavailable", message, headers, raw
+        );
+        if (!"120".equals(error.retryAfterHeader())) {
+            throw new AssertionError("expected Retry-After header");
         }
     }
 }
@@ -127,8 +165,11 @@ tasks.register("charsetSmoke", JavaExec) {
 fn add_kotlin_charset_smoke(root: &Path) {
     let smoke_dir = root.join("smoke");
     fs::create_dir_all(&smoke_dir).expect("smoke source directory should be created");
-    fs::write(smoke_dir.join("CharsetSmoke.java"), CHARSET_SMOKE_JAVA)
-        .expect("Kotlin smoke test should be written");
+    fs::write(
+        smoke_dir.join("CharsetSmoke.java"),
+        CHARSET_SMOKE_KOTLIN_JAVA,
+    )
+    .expect("Kotlin smoke test should be written");
 
     let build_gradle = root.join("build.gradle.kts");
     let mut build = fs::read_to_string(&build_gradle).expect("build.gradle.kts should be readable");

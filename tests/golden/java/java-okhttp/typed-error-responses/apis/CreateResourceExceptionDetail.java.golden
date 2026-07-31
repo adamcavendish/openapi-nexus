@@ -4,7 +4,7 @@
 
 package com.example.sdk.apis;
 
-public sealed interface CreateResourceExceptionDetail permits CreateResourceBadRequest, CreateResourceConflict, CreateResourceValidation, CreateResourceStatus423, CreateResourceStatus424, CreateResourceServerError, CreateResourceDefault, CreateResourceUnexpected {
+public sealed interface CreateResourceExceptionDetail permits CreateResourceBadRequest, CreateResourceConflict, CreateResourceValidation, CreateResourceStatus423, CreateResourceStatus424, CreateResourceTooManyRequests, CreateResourceServerError, CreateResourceDefault, CreateResourceUnexpected {
     int statusCode();
     okhttp3.Headers headers();
     byte[] rawBody();

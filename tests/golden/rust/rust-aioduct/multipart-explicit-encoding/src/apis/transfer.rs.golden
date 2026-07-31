@@ -35,8 +35,8 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> TransferApi<'a, R, 
         req = req.multipart(multipart);
         let resp = req.send().await.map_err(Error::from)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = UploadEncodedAssetResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = UploadEncodedAssetResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.bytes().await.map_err(Error::from)?;
             if !(200..300).contains(&status_code) {
@@ -56,6 +56,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> TransferApi<'a, R, 
 #[derive(Debug)]
 pub struct UploadEncodedAssetResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `upload_encoded_asset`.

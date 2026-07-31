@@ -29,9 +29,9 @@ impl<'a> UserApi<'a> {
         let req = self.client.post(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = CreateUserResponse { status_code, data: None };
+        let mut result = CreateUserResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -58,9 +58,9 @@ impl<'a> UserApi<'a> {
         let req = self.client.post(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = CreateUsersWithListInputResponse { status_code, data: None };
+        let mut result = CreateUsersWithListInputResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -94,8 +94,8 @@ impl<'a> UserApi<'a> {
         }
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = LoginUserResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = LoginUserResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -122,8 +122,8 @@ impl<'a> UserApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = LogoutUserResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = LogoutUserResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -148,9 +148,9 @@ impl<'a> UserApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetUserByNameResponse { status_code, data: None };
+        let mut result = GetUserByNameResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -187,8 +187,8 @@ impl<'a> UserApi<'a> {
         let req = self.client.put(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = UpdateUserResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = UpdateUserResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -221,8 +221,8 @@ impl<'a> UserApi<'a> {
         let req = self.client.delete(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = DeleteUserResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = DeleteUserResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -250,6 +250,7 @@ impl<'a> UserApi<'a> {
 #[derive(Debug)]
 pub struct CreateUserResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::User>,
 }
 
@@ -288,6 +289,7 @@ impl std::error::Error for CreateUserError {
 #[derive(Debug)]
 pub struct CreateUsersWithListInputResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::User>,
 }
 
@@ -326,6 +328,7 @@ impl std::error::Error for CreateUsersWithListInputError {
 #[derive(Debug)]
 pub struct LoginUserResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `login_user`.
@@ -365,6 +368,7 @@ impl std::error::Error for LoginUserError {
 #[derive(Debug)]
 pub struct LogoutUserResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `logout_user`.
@@ -402,6 +406,7 @@ impl std::error::Error for LogoutUserError {
 #[derive(Debug)]
 pub struct GetUserByNameResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::User>,
 }
 
@@ -444,6 +449,7 @@ impl std::error::Error for GetUserByNameError {
 #[derive(Debug)]
 pub struct UpdateUserResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `update_user`.
@@ -485,6 +491,7 @@ impl std::error::Error for UpdateUserError {
 #[derive(Debug)]
 pub struct DeleteUserResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `delete_user`.

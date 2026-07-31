@@ -95,7 +95,7 @@ fn multipart_wire_construction_is_pinned_across_clients() {
     );
     assert!(httpx_api.contains("files=files if files else None"));
     assert!(httpx_input.contains("file: UploadFile | None = None"));
-    assert!(!httpx_api.contains("data=data"));
+    assert!(!httpx_api.contains("path, data=data"));
     assert!(!httpx_api.contains("files[\"file\"] = (\"file\""));
 
     let requests_files =
@@ -113,7 +113,7 @@ fn multipart_wire_construction_is_pinned_across_clients() {
     );
     assert!(requests_api.contains("files=files if files else None"));
     assert!(requests_input.contains("file: UploadFile | None = None"));
-    assert!(!requests_api.contains("data=data"));
+    assert!(!requests_api.contains("path, data=data"));
     assert!(!requests_api.contains("files[\"file\"] = (\"file\""));
 
     let ts_files =
@@ -237,8 +237,8 @@ fn selected_media_types_drive_request_and_response_wire_code() {
             "headers[\"Content-Type\"] = \"application/vnd.example+json; charset=utf-8\""
         )
     );
-    assert!(httpx_api.contains("return response.content"));
-    assert!(httpx_api.contains("return response.text"));
+    assert!(httpx_api.contains("data = response.content"));
+    assert!(httpx_api.contains("data = response.text"));
 
     let requests_files = generate_files(
         &PythonRequestsCodeGenerator::new(empty_config()),
@@ -251,8 +251,8 @@ fn selected_media_types_drive_request_and_response_wire_code() {
             "headers[\"Content-Type\"] = \"application/vnd.example+json; charset=utf-8\""
         )
     );
-    assert!(requests_api.contains("return response.content"));
-    assert!(requests_api.contains("return response.text"));
+    assert!(requests_api.contains("data = response.content"));
+    assert!(requests_api.contains("data = response.text"));
 }
 
 #[test]

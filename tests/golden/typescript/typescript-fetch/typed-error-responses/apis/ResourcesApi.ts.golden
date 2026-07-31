@@ -36,6 +36,26 @@ export type CreateResourceWithWildcardSuccessRawResponse =
   | JSONApiResponse<unknown> & HttpSuccessResponse;
 
 
+export function getCheckNoSuccessBodyXRequestIdHeader(response: CheckNoSuccessBodyRawResponse): string
+| undefined {
+  return response.headers.get('X-Request-Id') ?? undefined;
+}
+
+export function getCreateResource1RequestIdHeader(response: CreateResourceRawResponse): string
+| undefined {
+  return response.headers.get('1-Request-Id') ?? undefined;
+}
+
+export function getCreateResourceXRequestIdHeader(response: CreateResourceRawResponse): string
+| undefined {
+  return response.headers.get('X-Request-Id') ?? undefined;
+}
+
+export function getCreateResourceXRequestIdHeader2(response: CreateResourceRawResponse): string
+| undefined {
+  return response.headers.get('X_Request_Id') ?? undefined;
+}
+
 export type CheckNoSuccessBodyErrorDetail =
   { kind: 'serviceUnavailable'; status: 503; raw: Response; value(): Promise<ServerError> }
   | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
@@ -47,6 +67,10 @@ export class CheckNoSuccessBodyError extends ResponseError {
     super(response, msg);
     this.detail = detail;
   }
+
+  getRetryAfterHeader(): string | undefined {
+    return this.response.headers.get('Retry-After') ?? undefined;
+  }
 }
 
 export type CreateResourceErrorDetail =
@@ -55,6 +79,7 @@ export type CreateResourceErrorDetail =
   | { kind: 'validation'; status: 422; raw: Response; value(): Promise<ValidationError> }
   | { kind: 'status423'; status: 423; raw: Response; value(): Promise<ConflictError> }
   | { kind: 'status424'; status: 424; raw: Response; value(): Promise<SameShapeValidationError> }
+  | { kind: 'tooManyRequests'; status: 429; raw: Response; value(): Promise<DefaultError> }
   | { kind: 'serverError'; status: number; raw: Response; value(): Promise<ServerError> }
   | { kind: 'default'; status: number; raw: Response; value(): Promise<DefaultError> }
   | { kind: 'unexpected'; status: number; raw: Response; value(): Promise<Blob> };
@@ -65,6 +90,47 @@ export class CreateResourceError extends ResponseError {
   constructor(response: Response, detail: CreateResourceErrorDetail, msg = 'Response returned an error code') {
     super(response, msg);
     this.detail = detail;
+  }
+
+  get1RetryAfterHeader(): string | undefined {
+    return this.response.headers.get('1-Retry-After') ?? undefined;
+  }
+
+  getRetryAfterHeader(): string | undefined {
+    return this.response.headers.get('Retry-After') ?? undefined;
+  }
+
+  getRetryAfterHeader2(): string | undefined {
+    return this.response.headers.get('Retry_After') ?? undefined;
+  }
+
+  getXRateLimitEnabledHeader(): boolean | undefined {
+    const value = this.response.headers.get('X-Rate-Limit-Enabled');
+    if (value === 'true') {
+      return true;
+    }
+    if (value === 'false') {
+      return false;
+    }
+    return undefined;
+  }
+
+  getXRateLimitRatioHeader(): number | undefined {
+    const value = this.response.headers.get('X-Rate-Limit-Ratio');
+    if (value === null || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)) {
+      return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  getXRateLimitRemainingHeader(): number | undefined {
+    const value = this.response.headers.get('X-Rate-Limit-Remaining');
+    if (value === null || !/^[+-]?\d+$/.test(value)) {
+      return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
   }
 }
 
@@ -192,6 +258,10 @@ export class ResourcesApi extends BaseAPI implements ResourcesApiInterface {
       else if (response.status === 424) {
         let errorValue: Promise<SameShapeValidationError> | undefined;
         throw new CreateResourceError(response, { kind: 'status424', status: response.status as 424, raw: response, value: () => errorValue ??= new JSONApiResponse<SameShapeValidationError>(errorRaw.clone()).value() });
+      }
+      else if (response.status === 429) {
+        let errorValue: Promise<DefaultError> | undefined;
+        throw new CreateResourceError(response, { kind: 'tooManyRequests', status: response.status as 429, raw: response, value: () => errorValue ??= new JSONApiResponse<DefaultError>(errorRaw.clone()).value() });
       }
       else if (response.status >= 500 && response.status < 600) {
         let errorValue: Promise<ServerError> | undefined;

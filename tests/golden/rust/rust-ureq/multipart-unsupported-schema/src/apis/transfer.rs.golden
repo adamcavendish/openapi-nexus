@@ -35,6 +35,7 @@ impl<'a> TransferApi<'a> {
 #[derive(Debug)]
 pub struct UploadRawMultipartResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `upload_raw_multipart`.

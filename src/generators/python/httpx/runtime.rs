@@ -40,6 +40,7 @@ fn runtime_init(header: &str, include_upload_file: bool) -> String {
     out.push_str("from .auth import ApiKeyAuth as ApiKeyAuth\n");
     out.push_str("from .auth import Authenticator as Authenticator\n");
     out.push_str("from .auth import BearerAuth as BearerAuth\n");
+    out.push_str("from .client import ApiResponse as ApiResponse\n");
     out.push_str("from .client import Client as Client\n");
     out.push_str("from .errors import ApiError as ApiError\n");
     if include_upload_file {

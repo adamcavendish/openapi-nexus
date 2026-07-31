@@ -29,9 +29,9 @@ impl<'a> PetApi<'a> {
         let req = self.client.put(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = UpdatePetResponse { status_code, data: None };
+        let mut result = UpdatePetResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -70,9 +70,9 @@ impl<'a> PetApi<'a> {
         let req = self.client.post(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = AddPetResponse { status_code, data: None };
+        let mut result = AddPetResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -108,9 +108,9 @@ impl<'a> PetApi<'a> {
         req = req.query("status", &status.to_string());
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = FindPetsByStatusResponse { status_code, data: None };
+        let mut result = FindPetsByStatusResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -144,9 +144,9 @@ impl<'a> PetApi<'a> {
         }
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = FindPetsByTagsResponse { status_code, data: None };
+        let mut result = FindPetsByTagsResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -178,9 +178,9 @@ impl<'a> PetApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetPetByIdResponse { status_code, data: None };
+        let mut result = GetPetByIdResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -224,9 +224,9 @@ impl<'a> PetApi<'a> {
         }
         let resp = req.send_empty().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = UpdatePetWithFormResponse { status_code, data: None };
+        let mut result = UpdatePetWithFormResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -258,8 +258,8 @@ impl<'a> PetApi<'a> {
         let req = self.client.delete(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = DeletePetResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = DeletePetResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -292,9 +292,9 @@ impl<'a> PetApi<'a> {
         }
         let resp = req.send_empty().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = UploadFileResponse { status_code, data: None };
+        let mut result = UploadFileResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -317,6 +317,7 @@ impl<'a> PetApi<'a> {
 #[derive(Debug)]
 pub struct UpdatePetResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -361,6 +362,7 @@ impl std::error::Error for UpdatePetError {
 #[derive(Debug)]
 pub struct AddPetResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -403,6 +405,7 @@ impl std::error::Error for AddPetError {
 #[derive(Debug)]
 pub struct FindPetsByStatusResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
@@ -443,6 +446,7 @@ impl std::error::Error for FindPetsByStatusError {
 #[derive(Debug)]
 pub struct FindPetsByTagsResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<Vec<crate::models::Pet>>,
 }
 
@@ -483,6 +487,7 @@ impl std::error::Error for FindPetsByTagsError {
 #[derive(Debug)]
 pub struct GetPetByIdResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -525,6 +530,7 @@ impl std::error::Error for GetPetByIdError {
 #[derive(Debug)]
 pub struct UpdatePetWithFormResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Pet>,
 }
 
@@ -565,6 +571,7 @@ impl std::error::Error for UpdatePetWithFormError {
 #[derive(Debug)]
 pub struct DeletePetResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `delete_pet`.
@@ -604,6 +611,7 @@ impl std::error::Error for DeletePetError {
 #[derive(Debug)]
 pub struct UploadFileResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::UploadResponse>,
 }
 

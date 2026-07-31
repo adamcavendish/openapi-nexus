@@ -30,9 +30,9 @@ impl<'a> EnumReprApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = HandleAdjacentlyTaggedResponse { status_code, data: None };
+        let mut result = HandleAdjacentlyTaggedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -64,9 +64,9 @@ impl<'a> EnumReprApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = HandleExternallyTaggedResponse { status_code, data: None };
+        let mut result = HandleExternallyTaggedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -98,9 +98,9 @@ impl<'a> EnumReprApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = HandleInternallyTaggedResponse { status_code, data: None };
+        let mut result = HandleInternallyTaggedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -132,9 +132,9 @@ impl<'a> EnumReprApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = HandleMixedResponse { status_code, data: None };
+        let mut result = HandleMixedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -166,9 +166,9 @@ impl<'a> EnumReprApi<'a> {
         req = req.json(&body);
         let resp = self.client.send(req).await?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.bytes().await.map_err(Error::Network)?;
-        let mut result = HandleUntaggedResponse { status_code, data: None };
+        let mut result = HandleUntaggedResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(&body_bytes).map_err(Error::Deserialize)?);
@@ -195,6 +195,7 @@ impl<'a> EnumReprApi<'a> {
 #[derive(Debug)]
 pub struct HandleAdjacentlyTaggedResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::AdjacentlyTaggedEnum>,
 }
 
@@ -235,6 +236,7 @@ impl std::error::Error for HandleAdjacentlyTaggedError {
 #[derive(Debug)]
 pub struct HandleExternallyTaggedResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::ExternallyTaggedEnum>,
 }
 
@@ -275,6 +277,7 @@ impl std::error::Error for HandleExternallyTaggedError {
 #[derive(Debug)]
 pub struct HandleInternallyTaggedResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::InternallyTaggedEnum>,
 }
 
@@ -315,6 +318,7 @@ impl std::error::Error for HandleInternallyTaggedError {
 #[derive(Debug)]
 pub struct HandleMixedResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::MixedEnum>,
 }
 
@@ -355,6 +359,7 @@ impl std::error::Error for HandleMixedError {
 #[derive(Debug)]
 pub struct HandleUntaggedResponse {
     pub status_code: u16,
+    pub headers: reqwest::header::HeaderMap,
     pub data: Option<crate::models::UntaggedEnum>,
 }
 

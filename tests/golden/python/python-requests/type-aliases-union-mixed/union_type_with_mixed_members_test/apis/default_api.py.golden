@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.foo import Foo
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class TestMixedUnionUnexpected:
@@ -34,8 +34,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def test_mixed_union(self, *, body: Foo) -> Foo:
-        """Test endpoint with mixed union type."""
+    def test_mixed_union_with_http_info(self, *, body: Foo) -> ApiResponse[Foo]:
+        """Test endpoint with mixed union type, including HTTP response metadata."""
         path = "/test"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -43,4 +43,9 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = TestMixedUnionUnexpected(response.status_code, response.headers, response.content)
             raise TestMixedUnionError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def test_mixed_union(self, *, body: Foo) -> Foo:
+        """Test endpoint with mixed union type."""
+        return self.test_mixed_union_with_http_info(body=body).data

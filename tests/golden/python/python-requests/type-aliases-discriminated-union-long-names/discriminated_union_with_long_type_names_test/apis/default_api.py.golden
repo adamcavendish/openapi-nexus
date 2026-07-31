@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.very_long_discriminated_union_type_name_for_testing20260630 import VeryLongDiscriminatedUnionTypeNameForTesting20260630
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateResourceUnexpected:
@@ -36,8 +36,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_resource(self, *, body: VeryLongDiscriminatedUnionTypeNameForTesting20260630) -> VeryLongDiscriminatedUnionTypeNameForTesting20260630:
-        """Create resource."""
+    def create_resource_with_http_info(self, *, body: VeryLongDiscriminatedUnionTypeNameForTesting20260630) -> ApiResponse[VeryLongDiscriminatedUnionTypeNameForTesting20260630]:
+        """Create resource, including HTTP response metadata."""
         path = "/resource"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -45,4 +45,9 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = CreateResourceUnexpected(response.status_code, response.headers, response.content)
             raise CreateResourceError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def create_resource(self, *, body: VeryLongDiscriminatedUnionTypeNameForTesting20260630) -> VeryLongDiscriminatedUnionTypeNameForTesting20260630:
+        """Create resource."""
+        return self.create_resource_with_http_info(body=body).data

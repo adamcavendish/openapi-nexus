@@ -61,7 +61,7 @@ fn spawn_one_response_server(status: &str, body: &'static str) -> String {
         let mut request = [0_u8; 4096];
         let _ = stream.read(&mut request);
         let response = format!(
-            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nX-Trace-Id: typed-error-test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nRetry-After: 120\r\nX-Request-Id: typed-response-test\r\nX-Trace-Id: typed-error-test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
         );
         stream
@@ -78,7 +78,7 @@ fn spawn_incomplete_success_body_server() -> String {
         let (mut stream, _) = listener.accept().expect("test server should accept one request");
         let mut request = [0_u8; 4096];
         let _ = stream.read(&mut request);
-        let response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 999999\r\nConnection: close\r\n\r\n";
+        let response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nX-Request-Id: typed-response-test\r\nContent-Length: 999999\r\nConnection: close\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .expect("test response headers should be written");
@@ -128,14 +128,26 @@ async fn http_503_returns_operation_error_with_typed_body() {
         .create_resource(&request)
         .await
         .expect_err("HTTP 503 must not be returned as success");
+    assert_eq!(err.retry_after_header(), Some("120"));
 
     match err {
         CreateResourceError::ServerError(api_error) => {
             assert_eq!(api_error.status_code(), 503);
             assert_eq!(api_error.raw_body(), body.as_bytes());
-            assert!(api_error.headers().iter().any(|(name, value)| {
-                name.eq_ignore_ascii_case("x-trace-id") && value == "typed-error-test"
-            }));
+            assert_eq!(
+                api_error
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                Some("120")
+            );
+            assert_eq!(
+                api_error
+                    .headers()
+                    .get("x-trace-id")
+                    .and_then(|value| value.to_str().ok()),
+                Some("typed-error-test")
+            );
             let typed_body = api_error
                 .body()
                 .expect("documented 5XX error body should decode lazily");
@@ -191,6 +203,13 @@ async fn exact_success_status_wins_over_2xx_wildcard() {
         .expect("201 must match the exact branch before 2XX wildcard");
     assert_eq!(created.id, "exact-created");
     assert!(response.status_2xx.is_none());
+    assert_eq!(
+        response
+            .headers
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok()),
+        Some("typed-response-test")
+    );
 }
 
 #[tokio::test]
@@ -229,6 +248,14 @@ async fn success_without_documented_body_does_not_drain_body() {
         .expect("success without a documented body must not read an incomplete body");
 
     assert_eq!(response.status_code, 200);
+    assert_eq!(response.x_request_id_header(), Some("typed-response-test"));
+    assert_eq!(
+        response
+            .headers
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok()),
+        Some("typed-response-test")
+    );
 }
 "##,
         ]
@@ -262,14 +289,26 @@ fn http_503_returns_operation_error_with_typed_body() {
     let err = api
         .create_resource(&request)
         .expect_err("HTTP 503 must not be returned as transport or success");
+    assert_eq!(err.retry_after_header(), Some("120"));
 
     match err {
         CreateResourceError::ServerError(api_error) => {
             assert_eq!(api_error.status_code(), 503);
             assert_eq!(api_error.raw_body(), body.as_bytes());
-            assert!(api_error.headers().iter().any(|(name, value)| {
-                name.eq_ignore_ascii_case("x-trace-id") && value == "typed-error-test"
-            }));
+            assert_eq!(
+                api_error
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|value| value.to_str().ok()),
+                Some("120")
+            );
+            assert_eq!(
+                api_error
+                    .headers()
+                    .get("x-trace-id")
+                    .and_then(|value| value.to_str().ok()),
+                Some("typed-error-test")
+            );
             let typed_body = api_error
                 .body()
                 .expect("documented 5XX error body should decode");
@@ -291,6 +330,14 @@ fn success_without_documented_body_does_not_drain_body() {
         .expect("success without a documented body must not read an incomplete body");
 
     assert_eq!(response.status_code, 200);
+    assert_eq!(response.x_request_id_header(), Some("typed-response-test"));
+    assert_eq!(
+        response
+            .headers
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok()),
+        Some("typed-response-test")
+    );
 }
 "##,
         ]

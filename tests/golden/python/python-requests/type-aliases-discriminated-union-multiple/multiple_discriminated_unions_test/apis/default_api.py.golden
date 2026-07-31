@@ -12,7 +12,7 @@ from collections.abc import Mapping
 
 from ..models.container_kind import ContainerKind
 from ..models.volume_kind import VolumeKind
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateContainerUnexpected:
@@ -56,8 +56,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_container(self, *, body: ContainerKind) -> ContainerKind:
-        """Create container with ContainerKind discriminated union."""
+    def create_container_with_http_info(self, *, body: ContainerKind) -> ApiResponse[ContainerKind]:
+        """Create container with ContainerKind discriminated union, including HTTP response metadata."""
         path = "/container"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -65,10 +65,15 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = CreateContainerUnexpected(response.status_code, response.headers, response.content)
             raise CreateContainerError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def create_volume(self, *, body: VolumeKind) -> VolumeKind:
-        """Create volume with VolumeKind discriminated union."""
+    def create_container(self, *, body: ContainerKind) -> ContainerKind:
+        """Create container with ContainerKind discriminated union."""
+        return self.create_container_with_http_info(body=body).data
+
+    def create_volume_with_http_info(self, *, body: VolumeKind) -> ApiResponse[VolumeKind]:
+        """Create volume with VolumeKind discriminated union, including HTTP response metadata."""
         path = "/volume"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -76,4 +81,9 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = CreateVolumeUnexpected(response.status_code, response.headers, response.content)
             raise CreateVolumeError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def create_volume(self, *, body: VolumeKind) -> VolumeKind:
+        """Create volume with VolumeKind discriminated union."""
+        return self.create_volume_with_http_info(body=body).data

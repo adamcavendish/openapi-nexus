@@ -1,5 +1,7 @@
 //! OpenAPI v3.0 → IR lowering.
 
+use std::collections::HashSet;
+
 use heck::ToPascalCase;
 use indexmap::IndexMap;
 
@@ -1030,20 +1032,7 @@ impl<'a> LowerCtx<'a> {
 
         let mut headers = IndexMap::new();
         for (name, header_ref) in &resp.headers {
-            if let ObjectOrReference::Object(header) = header_ref {
-                let type_expr = match &header.schema {
-                    Some(schema_ref) => self.lower_schema_ref(schema_ref)?,
-                    None => IrTypeExpr::Any,
-                };
-                headers.insert(
-                    name.clone(),
-                    IrHeader {
-                        description: header.description.clone(),
-                        type_expr,
-                        required: header.required.unwrap_or(false),
-                    },
-                );
-            }
+            headers.insert(name.clone(), self.lower_response_header_ref(header_ref)?);
         }
 
         Ok(IrResponse {
@@ -1052,6 +1041,51 @@ impl<'a> LowerCtx<'a> {
             content,
             item_content: IndexMap::new(),
             headers,
+        })
+    }
+
+    fn lower_response_header_ref(
+        &mut self,
+        header_ref: &ObjectOrReference<oas::Header>,
+    ) -> Result<IrHeader, LowerError> {
+        self.lower_response_header_ref_inner(header_ref, &mut HashSet::new())
+    }
+
+    fn lower_response_header_ref_inner(
+        &mut self,
+        header_ref: &ObjectOrReference<oas::Header>,
+        visited: &mut HashSet<String>,
+    ) -> Result<IrHeader, LowerError> {
+        match header_ref {
+            ObjectOrReference::Object(header) => self.lower_response_header(header),
+            ObjectOrReference::Ref { ref_path, .. } => {
+                if !visited.insert(ref_path.clone()) {
+                    return Err(LowerError::Other {
+                        message: format!("cyclic response header reference: {ref_path}"),
+                    });
+                }
+                if let Some(components) = &self.spec.components {
+                    let name = extract_component_name(ref_path);
+                    if let Some(header_ref) = components.headers.get(&name) {
+                        return self.lower_response_header_ref_inner(header_ref, visited);
+                    }
+                }
+                Err(LowerError::UnresolvedReference {
+                    reference: ref_path.clone(),
+                })
+            }
+        }
+    }
+
+    fn lower_response_header(&mut self, header: &oas::Header) -> Result<IrHeader, LowerError> {
+        let type_expr = match &header.schema {
+            Some(schema_ref) => self.lower_schema_ref(schema_ref)?,
+            None => IrTypeExpr::Any,
+        };
+        Ok(IrHeader {
+            description: header.description.clone(),
+            type_expr,
+            required: header.required.unwrap_or(false),
         })
     }
 }
@@ -1526,6 +1560,83 @@ paths:
         assert_eq!(op.parameters[0].name, "limit");
         assert_eq!(op.responses.len(), 1);
         assert_eq!(op.responses[0].status, "200");
+    }
+
+    #[test]
+    fn test_lower_inline_and_referenced_response_headers() {
+        let ir = lower_yaml(
+            r##"
+openapi: "3.0.0"
+info:
+  title: Test
+  version: "1.0"
+paths:
+  /limited:
+    get:
+      operationId: getLimited
+      responses:
+        "429":
+          description: Too many requests
+          headers:
+            X-Request-Id:
+              description: Request correlation identifier
+              required: true
+              schema:
+                type: string
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+components:
+  headers:
+    RetryAfter:
+      description: Delay before retrying
+      schema:
+        type: integer
+"##,
+        );
+
+        let headers = &ir.operations[0].responses[0].headers;
+        assert_eq!(headers.len(), 2);
+        assert_eq!(
+            headers["X-Request-Id"].type_expr,
+            IrTypeExpr::Primitive(IrPrimitive::String)
+        );
+        assert!(headers["X-Request-Id"].required);
+        assert_eq!(
+            headers["Retry-After"].type_expr,
+            IrTypeExpr::Primitive(IrPrimitive::Integer)
+        );
+        assert!(!headers["Retry-After"].required);
+    }
+
+    #[test]
+    fn test_cyclic_response_header_reference_returns_error() {
+        let yaml = r##"
+openapi: "3.0.0"
+info:
+  title: Test
+  version: "1.0"
+paths:
+  /limited:
+    get:
+      responses:
+        "429":
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+components:
+  headers:
+    RetryAfter:
+      $ref: "#/components/headers/RetryAfter"
+"##;
+        let parsed = crate::parser::parse_content_yaml(yaml).unwrap();
+        let error = lower_v30(parsed.as_v30().unwrap()).unwrap_err();
+
+        assert!(matches!(
+            error,
+            LowerError::Other { message }
+                if message.contains("cyclic response header reference")
+        ));
     }
 
     #[test]

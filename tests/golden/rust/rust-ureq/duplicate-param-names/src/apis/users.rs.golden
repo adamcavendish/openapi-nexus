@@ -38,9 +38,9 @@ impl<'a> UsersApi<'a> {
         }
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetUserByIdDuplicateResponse { status_code, data: None };
+        let mut result = GetUserByIdDuplicateResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -71,6 +71,7 @@ impl<'a> UsersApi<'a> {
 #[derive(Debug)]
 pub struct GetUserByIdDuplicateResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::GetUserByIdDuplicateResponse200>,
 }
 

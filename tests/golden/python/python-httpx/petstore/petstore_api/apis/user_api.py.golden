@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.user import User
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateUserUnexpected:
@@ -191,8 +191,8 @@ class UserApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_user(self, *, body: User) -> User:
-        """Create user."""
+    def create_user_with_http_info(self, *, body: User) -> ApiResponse[User]:
+        """Create user, including HTTP response metadata."""
         path = "/user"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -200,10 +200,15 @@ class UserApi:
         if not (200 <= response.status_code < 300):
             detail = CreateUserUnexpected(response.status_code, response.headers, response.content)
             raise CreateUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return User.from_dict(response.json())
+        data = User.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def create_users_with_list_input(self, *, body: list[User]) -> User:
-        """Creates list of users with given input array."""
+    def create_user(self, *, body: User) -> User:
+        """Create user."""
+        return self.create_user_with_http_info(body=body).data
+
+    def create_users_with_list_input_with_http_info(self, *, body: list[User]) -> ApiResponse[User]:
+        """Creates list of users with given input array, including HTTP response metadata."""
         path = "/user/createWithList"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -211,10 +216,15 @@ class UserApi:
         if not (200 <= response.status_code < 300):
             detail = CreateUsersWithListInputUnexpected(response.status_code, response.headers, response.content)
             raise CreateUsersWithListInputError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return User.from_dict(response.json())
+        data = User.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def login_user(self, *, username: str | None = None, password: str | None = None) -> None:
-        """Logs user into the system."""
+    def create_users_with_list_input(self, *, body: list[User]) -> User:
+        """Creates list of users with given input array."""
+        return self.create_users_with_list_input_with_http_info(body=body).data
+
+    def login_user_with_http_info(self, *, username: str | None = None, password: str | None = None) -> ApiResponse[None]:
+        """Logs user into the system, including HTTP response metadata."""
         path = "/user/login"
         params: dict[str, str] = {}
         if username is not None:
@@ -228,19 +238,29 @@ class UserApi:
             else:
                 detail = LoginUserUnexpected(response.status_code, response.headers, response.content)
             raise LoginUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def logout_user(self) -> None:
-        """Logs out current logged in user session."""
+    def login_user(self, *, username: str | None = None, password: str | None = None) -> None:
+        """Logs user into the system."""
+        return self.login_user_with_http_info(username=username, password=password).data
+
+    def logout_user_with_http_info(self) -> ApiResponse[None]:
+        """Logs out current logged in user session, including HTTP response metadata."""
         path = "/user/logout"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = LogoutUserUnexpected(response.status_code, response.headers, response.content)
             raise LogoutUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_user_by_name(self, username: str) -> User:
-        """Get user by user name."""
+    def logout_user(self) -> None:
+        """Logs out current logged in user session."""
+        return self.logout_user_with_http_info().data
+
+    def get_user_by_name_with_http_info(self, username: str) -> ApiResponse[User]:
+        """Get user by user name, including HTTP response metadata."""
         path = f"/user/{username}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -251,10 +271,15 @@ class UserApi:
             else:
                 detail = GetUserByNameUnexpected(response.status_code, response.headers, response.content)
             raise GetUserByNameError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return User.from_dict(response.json())
+        data = User.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def update_user(self, username: str, *, body: User) -> None:
-        """Update user."""
+    def get_user_by_name(self, username: str) -> User:
+        """Get user by user name."""
+        return self.get_user_by_name_with_http_info(username).data
+
+    def update_user_with_http_info(self, username: str, *, body: User) -> ApiResponse[None]:
+        """Update user, including HTTP response metadata."""
         path = f"/user/{username}"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -267,10 +292,15 @@ class UserApi:
             else:
                 detail = UpdateUserUnexpected(response.status_code, response.headers, response.content)
             raise UpdateUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def delete_user(self, username: str) -> None:
-        """Delete user."""
+    def update_user(self, username: str, *, body: User) -> None:
+        """Update user."""
+        return self.update_user_with_http_info(username, body=body).data
+
+    def delete_user_with_http_info(self, username: str) -> ApiResponse[None]:
+        """Delete user, including HTTP response metadata."""
         path = f"/user/{username}"
         response = self._client.request("DELETE", path)
         if not (200 <= response.status_code < 300):
@@ -281,4 +311,9 @@ class UserApi:
             else:
                 detail = DeleteUserUnexpected(response.status_code, response.headers, response.content)
             raise DeleteUserError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def delete_user(self, username: str) -> None:
+        """Delete user."""
+        return self.delete_user_with_http_info(username).data

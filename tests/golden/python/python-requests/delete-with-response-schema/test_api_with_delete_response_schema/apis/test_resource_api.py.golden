@@ -13,7 +13,7 @@ from ..models.create_test_resource_request import CreateTestResourceRequest
 from ..models.create_test_resource_response import CreateTestResourceResponse
 from ..models.delete_test_resource_response import DeleteTestResourceResponse
 from ..models.http_error_response import HttpErrorResponse
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateTestResourceUnexpected:
@@ -103,7 +103,7 @@ class TestResourceApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_test_resource(self, *, body: CreateTestResourceRequest) -> CreateTestResourceResponse:
+    def create_test_resource_with_http_info(self, *, body: CreateTestResourceRequest) -> ApiResponse[CreateTestResourceResponse]:
         path = "/v1/api/test-resource"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -111,9 +111,13 @@ class TestResourceApi:
         if not (200 <= response.status_code < 300):
             detail = CreateTestResourceUnexpected(response.status_code, response.headers, response.content)
             raise CreateTestResourceError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return CreateTestResourceResponse.from_dict(response.json())
+        data = CreateTestResourceResponse.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def delete_test_resource(self, resource_id: str) -> DeleteTestResourceResponse:
+    def create_test_resource(self, *, body: CreateTestResourceRequest) -> CreateTestResourceResponse:
+        return self.create_test_resource_with_http_info(body=body).data
+
+    def delete_test_resource_with_http_info(self, resource_id: str) -> ApiResponse[DeleteTestResourceResponse]:
         path = f"/v1/api/test-resource/{resource_id}"
         response = self._client.request("DELETE", path)
         if not (200 <= response.status_code < 300):
@@ -124,4 +128,8 @@ class TestResourceApi:
             else:
                 detail = DeleteTestResourceUnexpected(response.status_code, response.headers, response.content)
             raise DeleteTestResourceError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return DeleteTestResourceResponse.from_dict(response.json())
+        data = DeleteTestResourceResponse.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def delete_test_resource(self, resource_id: str) -> DeleteTestResourceResponse:
+        return self.delete_test_resource_with_http_info(resource_id).data

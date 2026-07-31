@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..models.setup import Setup
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class CreateResourceUnexpected:
@@ -39,8 +39,8 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def create_resource(self, *, body: Setup) -> Setup:
-        """Create resource."""
+    def create_resource_with_http_info(self, *, body: Setup) -> ApiResponse[Setup]:
+        """Create resource, including HTTP response metadata."""
         path = "/resource"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -48,4 +48,9 @@ class DefaultApi:
         if not (200 <= response.status_code < 300):
             detail = CreateResourceUnexpected(response.status_code, response.headers, response.content)
             raise CreateResourceError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return response.json()  # type: ignore[return-value]
+        data = response.json()  # type: ignore[return-value]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def create_resource(self, *, body: Setup) -> Setup:
+        """Create resource."""
+        return self.create_resource_with_http_info(body=body).data

@@ -11,7 +11,7 @@ from collections.abc import Mapping
 
 from ..models.send_optional_parts_multipart_request_body import SendOptionalPartsMultipartRequestBody
 from ..models.send_text_fields_multipart_request_body import SendTextFieldsMultipartRequestBody
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class SendOptionalPartsUnexpected:
@@ -55,7 +55,7 @@ class MultipartApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def send_optional_parts(self, *, body: SendOptionalPartsMultipartRequestBody | None = None) -> None:
+    def send_optional_parts_with_http_info(self, *, body: SendOptionalPartsMultipartRequestBody | None = None) -> ApiResponse[None]:
         path = "/multipart/optional"
         files: dict[str, object] = {}
         if body is not None:
@@ -79,9 +79,13 @@ class MultipartApi:
         if not (200 <= response.status_code < 300):
             detail = SendOptionalPartsUnexpected(response.status_code, response.headers, response.content)
             raise SendOptionalPartsError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def send_text_fields(self, *, body: SendTextFieldsMultipartRequestBody) -> None:
+    def send_optional_parts(self, *, body: SendOptionalPartsMultipartRequestBody | None = None) -> None:
+        return self.send_optional_parts_with_http_info(body=body).data
+
+    def send_text_fields_with_http_info(self, *, body: SendTextFieldsMultipartRequestBody) -> ApiResponse[None]:
         path = "/multipart/text-only"
         files: dict[str, object] = {}
         files["enabled"] = (None, str(body.enabled), "text/plain")
@@ -91,4 +95,8 @@ class MultipartApi:
         if not (200 <= response.status_code < 300):
             detail = SendTextFieldsUnexpected(response.status_code, response.headers, response.content)
             raise SendTextFieldsError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def send_text_fields(self, *, body: SendTextFieldsMultipartRequestBody) -> None:
+        return self.send_text_fields_with_http_info(body=body).data

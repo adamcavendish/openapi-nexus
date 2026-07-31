@@ -29,8 +29,8 @@ impl<'a> MediaApi<'a> {
         let req = self.client.post(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendJsonPreferredResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendJsonPreferredResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -68,8 +68,8 @@ impl<'a> MediaApi<'a> {
         req = req.header("Content-Type", &format!("multipart/form-data; boundary={}", boundary));
         let resp = req.send(multipart_body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendParameterizedMultipartResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendParameterizedMultipartResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -93,8 +93,8 @@ impl<'a> MediaApi<'a> {
         let req = self.client.patch(&path);
         let resp = req.send_json(&body).map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
-        let result = SendVendorJsonResponse { status_code };
+        let response_headers = resp.headers().clone();
+        let result = SendVendorJsonResponse { status_code, headers: response_headers.clone() };
         if !(200..300).contains(&status_code) {
             let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
             if !(200..300).contains(&status_code) {
@@ -117,9 +117,9 @@ impl<'a> MediaApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetOctetPreferredResponse { status_code, data: None };
+        let mut result = GetOctetPreferredResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(Ok::<Vec<u8>, Error>(body_bytes.as_slice().to_vec())?);
@@ -145,9 +145,9 @@ impl<'a> MediaApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetTextPreferredResponse { status_code, data: None };
+        let mut result = GetTextPreferredResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(Ok::<String, Error>(String::from_utf8_lossy(body_bytes.as_slice()).into_owned())?);
@@ -173,9 +173,9 @@ impl<'a> MediaApi<'a> {
         let req = self.client.get(&path);
         let resp = req.call().map_err(Error::Http)?;
         let status_code = resp.status().as_u16();
-        let response_headers: Vec<(String, String)> = resp.headers().iter().filter_map(| (name, value)| {value.to_str().ok().map(| value | (name.to_string(), value.to_string()))}).collect();
+        let response_headers = resp.headers().clone();
         let body_bytes = resp.into_body().read_to_vec().map_err(Error::Http)?;
-        let mut result = GetVendorJsonResponse { status_code, data: None };
+        let mut result = GetVendorJsonResponse { status_code, headers: response_headers.clone(), data: None };
         match status_code {
             200 => {
                 result.data = Some(serde_json::from_slice(body_bytes.as_slice()).map_err(Error::Deserialize)?);
@@ -198,6 +198,7 @@ impl<'a> MediaApi<'a> {
 #[derive(Debug)]
 pub struct SendJsonPreferredResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `send_json_preferred`.
@@ -235,6 +236,7 @@ impl std::error::Error for SendJsonPreferredError {
 #[derive(Debug)]
 pub struct SendParameterizedMultipartResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `send_parameterized_multipart`.
@@ -272,6 +274,7 @@ impl std::error::Error for SendParameterizedMultipartError {
 #[derive(Debug)]
 pub struct SendVendorJsonResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
 }
 
 /// Error from `send_vendor_json`.
@@ -309,6 +312,7 @@ impl std::error::Error for SendVendorJsonError {
 #[derive(Debug)]
 pub struct GetOctetPreferredResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<Vec<u8>>,
 }
 
@@ -347,6 +351,7 @@ impl std::error::Error for GetOctetPreferredError {
 #[derive(Debug)]
 pub struct GetTextPreferredResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<String>,
 }
 
@@ -385,6 +390,7 @@ impl std::error::Error for GetTextPreferredError {
 #[derive(Debug)]
 pub struct GetVendorJsonResponse {
     pub status_code: u16,
+    pub headers: ureq::http::HeaderMap,
     pub data: Option<crate::models::Payload>,
 }
 

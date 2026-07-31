@@ -10,7 +10,7 @@ import json
 from collections.abc import Mapping
 
 from ..models.send_nested_object_part_multipart_request_body import SendNestedObjectPartMultipartRequestBody
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class SendNestedObjectPartUnexpected:
@@ -36,7 +36,7 @@ class MultipartApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def send_nested_object_part(self, *, body: SendNestedObjectPartMultipartRequestBody) -> None:
+    def send_nested_object_part_with_http_info(self, *, body: SendNestedObjectPartMultipartRequestBody) -> ApiResponse[None]:
         path = "/multipart/nested-object"
         files: dict[str, object] = {}
         files["file"] = (body.file.filename_or_default("file"), body.file.data, "application/octet-stream")
@@ -45,4 +45,8 @@ class MultipartApi:
         if not (200 <= response.status_code < 300):
             detail = SendNestedObjectPartUnexpected(response.status_code, response.headers, response.content)
             raise SendNestedObjectPartError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def send_nested_object_part(self, *, body: SendNestedObjectPartMultipartRequestBody) -> None:
+        return self.send_nested_object_part_with_http_info(body=body).data

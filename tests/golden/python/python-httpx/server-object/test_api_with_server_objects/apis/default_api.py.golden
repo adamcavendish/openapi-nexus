@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from ..models.get_all_users_response200_item import GetAllUsersResponse200Item
 from ..models.get_user_by_id_response200 import GetUserByIdResponse200
 from ..models.get_user_by_id_response404 import GetUserByIdResponse404
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
 
 class GetAllUsersUnexpected:
@@ -79,17 +79,22 @@ class DefaultApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_all_users(self) -> list[GetAllUsersResponse200Item]:
-        """Get all users."""
+    def get_all_users_with_http_info(self) -> ApiResponse[list[GetAllUsersResponse200Item]]:
+        """Get all users, including HTTP response metadata."""
         path = "/users"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
             detail = GetAllUsersUnexpected(response.status_code, response.headers, response.content)
             raise GetAllUsersError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return [GetAllUsersResponse200Item.from_dict(item) for item in response.json()]
+        data = [GetAllUsersResponse200Item.from_dict(item) for item in response.json()]
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def get_user_by_id(self, id: int) -> GetUserByIdResponse200:
-        """Get user by ID."""
+    def get_all_users(self) -> list[GetAllUsersResponse200Item]:
+        """Get all users."""
+        return self.get_all_users_with_http_info().data
+
+    def get_user_by_id_with_http_info(self, id: int) -> ApiResponse[GetUserByIdResponse200]:
+        """Get user by ID, including HTTP response metadata."""
         path = f"/users/{id}"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -98,4 +103,9 @@ class DefaultApi:
             else:
                 detail = GetUserByIdUnexpected(response.status_code, response.headers, response.content)
             raise GetUserByIdError(response.status_code, response.reason_phrase, response.content, detail, headers=response.headers, response=response)
-        return GetUserByIdResponse200.from_dict(response.json())
+        data = GetUserByIdResponse200.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def get_user_by_id(self, id: int) -> GetUserByIdResponse200:
+        """Get user by ID."""
+        return self.get_user_by_id_with_http_info(id).data

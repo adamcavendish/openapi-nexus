@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import json
+import re
+import math
 
 from collections.abc import Mapping
 
@@ -16,8 +18,30 @@ from ..models.default_error import DefaultError
 from ..models.same_shape_validation_error import SameShapeValidationError
 from ..models.server_error import ServerError
 from ..models.validation_error import ValidationError
-from ..runtime.client import Client
+from ..runtime.client import ApiResponse, Client
 from ..runtime.errors import ApiError
+
+class CheckNoSuccessBodyApiResponse(ApiResponse[None]):
+    @property
+    def x_request_id_header(self) -> str | None:
+        value = self.headers.get('X-Request-Id')
+        return value
+
+class CreateResourceApiResponse(ApiResponse[CreatedResource]):
+    @property
+    def header_1_request_id_header(self) -> str | None:
+        value = self.headers.get('1-Request-Id')
+        return value
+
+    @property
+    def x_request_id_header(self) -> str | None:
+        value = self.headers.get('X-Request-Id')
+        return value
+
+    @property
+    def x_request_id_header2(self) -> str | None:
+        value = self.headers.get('X_Request_Id')
+        return value
 
 class CheckNoSuccessBodyServiceUnavailable:
     def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
@@ -59,6 +83,13 @@ class CheckNoSuccessBodyError(ApiError):
     def __init__(self, status_code: int, status: str, body: bytes, detail: CheckNoSuccessBodyErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
         self.detail: CheckNoSuccessBodyErrorDetail = detail
         super().__init__(status_code, status, body, headers=headers, response=response)
+    @property
+    def retry_after_header(self) -> str | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('Retry-After')
+        return value
 
 class CreateResourceBadRequest:
     def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
@@ -170,6 +201,28 @@ class CreateResourceStatus424:
             raise RuntimeError("error body was not decoded")
         return self._body_value
 
+class CreateResourceTooManyRequests:
+    def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
+        self.status_code: int = status_code
+        self.headers: Mapping[str, str] = headers
+        self.raw_body: bytes = raw_body
+        self._body_loaded: bool = False
+        self._body_value: DefaultError | None = None
+        self._body_error: Exception | None = None
+    @property
+    def body(self) -> DefaultError:
+        if not self._body_loaded:
+            try:
+                self._body_value = DefaultError.from_dict(json.loads(self.raw_body.decode("utf-8")))
+            except Exception as exc:
+                self._body_error = exc
+            self._body_loaded = True
+        if self._body_error is not None:
+            raise self._body_error
+        if self._body_value is None:
+            raise RuntimeError("error body was not decoded")
+        return self._body_value
+
 class CreateResourceServerError:
     def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
         self.status_code: int = status_code
@@ -229,6 +282,7 @@ type CreateResourceErrorDetail = (
     | CreateResourceValidation
     | CreateResourceStatus423
     | CreateResourceStatus424
+    | CreateResourceTooManyRequests
     | CreateResourceServerError
     | CreateResourceDefault
     | CreateResourceUnexpected
@@ -238,6 +292,80 @@ class CreateResourceError(ApiError):
     def __init__(self, status_code: int, status: str, body: bytes, detail: CreateResourceErrorDetail, headers: Mapping[str, str] | None = None, response: object | None = None) -> None:
         self.detail: CreateResourceErrorDetail = detail
         super().__init__(status_code, status, body, headers=headers, response=response)
+    @property
+    def header_1_retry_after_header(self) -> str | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('1-Retry-After')
+        return value
+    @property
+    def retry_after_header(self) -> str | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('Retry-After')
+        return value
+    @property
+    def retry_after_header2(self) -> str | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('Retry_After')
+        return value
+    @property
+    def x_rate_limit_enabled_header(self) -> bool | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('X-Rate-Limit-Enabled')
+        if value is None:
+            return None
+
+        if value == 'true':
+            return True
+
+        if value == 'false':
+            return False
+
+        return None
+    @property
+    def x_rate_limit_ratio_header(self) -> float | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('X-Rate-Limit-Ratio')
+        if value is None:
+            return None
+
+        if re.fullmatch('[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?', value) is None:
+            return None
+
+        try:
+            parsed = float(value)
+            return parsed if math.isfinite(parsed) else None
+
+        except ValueError:
+            return None
+
+    @property
+    def x_rate_limit_remaining_header(self) -> int | None:
+        if self.headers is None:
+            return None
+
+        value = self.headers.get('X-Rate-Limit-Remaining')
+        if value is None:
+            return None
+
+        if re.fullmatch('[+-]?[0-9]+', value) is None:
+            return None
+
+        try:
+            return int(value)
+
+        except ValueError:
+            return None
+
 
 class CreateResourceWithWildcardSuccessBadRequest:
     def __init__(self, status_code: int, headers: Mapping[str, str], raw_body: bytes) -> None:
@@ -285,7 +413,7 @@ class ResourcesApi:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def check_no_success_body(self) -> None:
+    def check_no_success_body_with_http_info(self) -> CheckNoSuccessBodyApiResponse:
         path = "/no-success-body"
         response = self._client.request("GET", path)
         if not (200 <= response.status_code < 300):
@@ -294,9 +422,13 @@ class ResourcesApi:
             else:
                 detail = CheckNoSuccessBodyUnexpected(response.status_code, response.headers, response.content)
             raise CheckNoSuccessBodyError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return None
+        data = None
+        return CheckNoSuccessBodyApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def create_resource(self, *, body: CreateResourceRequest) -> CreatedResource:
+    def check_no_success_body(self) -> None:
+        return self.check_no_success_body_with_http_info().data
+
+    def create_resource_with_http_info(self, *, body: CreateResourceRequest) -> CreateResourceApiResponse:
         path = "/resources"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -312,14 +444,20 @@ class ResourcesApi:
                 detail = CreateResourceStatus423(response.status_code, response.headers, response.content)
             elif response.status_code == 424:
                 detail = CreateResourceStatus424(response.status_code, response.headers, response.content)
+            elif response.status_code == 429:
+                detail = CreateResourceTooManyRequests(response.status_code, response.headers, response.content)
             elif 500 <= response.status_code < 600:
                 detail = CreateResourceServerError(response.status_code, response.headers, response.content)
             else:
                 detail = CreateResourceDefault(response.status_code, response.headers, response.content)
             raise CreateResourceError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return CreatedResource.from_dict(response.json())
+        data = CreatedResource.from_dict(response.json())
+        return CreateResourceApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
 
-    def create_resource_with_wildcard_success(self, *, body: CreateResourceRequest) -> CreatedResource:
+    def create_resource(self, *, body: CreateResourceRequest) -> CreatedResource:
+        return self.create_resource_with_http_info(body=body).data
+
+    def create_resource_with_wildcard_success_with_http_info(self, *, body: CreateResourceRequest) -> ApiResponse[CreatedResource]:
         path = "/resources-with-wildcard-success"
         headers: dict[str, str] = {}
         headers["Content-Type"] = "application/json"
@@ -330,4 +468,8 @@ class ResourcesApi:
             else:
                 detail = CreateResourceWithWildcardSuccessUnexpected(response.status_code, response.headers, response.content)
             raise CreateResourceWithWildcardSuccessError(response.status_code, response.reason, response.content, detail, headers=response.headers, response=response)
-        return CreatedResource.from_dict(response.json())
+        data = CreatedResource.from_dict(response.json())
+        return ApiResponse(data=data, status_code=response.status_code, headers=response.headers, raw=response)
+
+    def create_resource_with_wildcard_success(self, *, body: CreateResourceRequest) -> CreatedResource:
+        return self.create_resource_with_wildcard_success_with_http_info(body=body).data

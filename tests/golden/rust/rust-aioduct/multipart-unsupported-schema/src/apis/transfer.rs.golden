@@ -35,6 +35,7 @@ impl<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> TransferApi<'a, R, 
 #[derive(Debug)]
 pub struct UploadRawMultipartResponse {
     pub status_code: u16,
+    pub headers: aioduct::HeaderMap,
 }
 
 /// Error from `upload_raw_multipart`.
