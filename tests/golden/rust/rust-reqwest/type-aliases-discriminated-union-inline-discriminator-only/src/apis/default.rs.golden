@@ -14,7 +14,7 @@
 // "EventKindUnspecified" instead of generic "Kind".
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -78,6 +78,15 @@ pub enum CreateEventError {
 impl From<Error> for CreateEventError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateEventError> for ApiCallError {
+    fn from(error: CreateEventError) -> Self {
+        match error {
+            CreateEventError::Unexpected(error) => Self::from_api_error("create_event", error),
+            CreateEventError::Transport(error) => Self::from_runtime_error("create_event", error),
+        }
     }
 }
 

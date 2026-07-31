@@ -676,6 +676,20 @@ pub fn emit_error_enum(plan: &OpPlan<'_>, response_headers_type: &TypeName) -> C
     cb.add("    }\n", ());
     cb.add("}\n\n", ());
 
+    let operation_id = if plan.op.operation_id.is_empty() {
+        plan.method_name.as_str()
+    } else {
+        plan.op.operation_id.as_str()
+    };
+    cb.add_code(emit_api_call_error_conversion(
+        &plan.error_type,
+        operation_id,
+        &variants,
+        &unexpected_variant,
+        &transport_variant,
+    ));
+    cb.add_line();
+
     cb.add_code(emit_rust_error_header_impl(
         plan,
         response_headers_type,
@@ -729,6 +743,32 @@ pub fn emit_error_enum(plan: &OpPlan<'_>, response_headers_type: &TypeName) -> C
     cb.add("}\n", ());
 
     cb.build().expect("error enum builds")
+}
+
+fn emit_api_call_error_conversion(
+    operation_error_type: &str,
+    operation_id: &str,
+    variants: &[(String, String)],
+    unexpected_variant: &str,
+    transport_variant: &str,
+) -> CodeBlock {
+    let operation_error_type = TypeName::primitive(operation_error_type);
+    let api_call_error_type = TypeName::importable("crate::runtime::error", "ApiCallError");
+
+    sigil_quote!(RustLang {
+        impl From<$T(operation_error_type.clone())> for $T(api_call_error_type) {
+            fn from(error: $T(operation_error_type.clone())) -> Self {
+                match error {
+                    $for((variant, _) in variants) {
+                        $T(operation_error_type.clone())::$N(variant.as_str())(error) => Self::from_api_error($S(operation_id), error),
+                    }
+                    $T(operation_error_type.clone())::$N(unexpected_variant)(error) => Self::from_api_error($S(operation_id), error),
+                    $T(operation_error_type)::$N(transport_variant)(error) => Self::from_runtime_error($S(operation_id), error),
+                }
+            }
+        }
+    })
+    .expect("Rust API call error conversion builds")
 }
 
 fn emit_rust_error_header_impl(
@@ -1322,5 +1362,46 @@ pub fn error_response_value_expr(er: &ErrorResponse, bytes_var: &str) -> String 
             format!("serde_json::from_slice({bytes_var}).map_err(Error::Deserialize)")
         }
         None => "Ok::<(), Error>(())".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sigil_stitch::assert_rendered;
+
+    use super::*;
+
+    #[test]
+    fn api_call_error_conversion_renders_structured_rust() {
+        let variants = vec![
+            ("BadRequest".to_string(), "BadRequestError".to_string()),
+            ("Conflict".to_string(), "ConflictError".to_string()),
+        ];
+        let conversion = emit_api_call_error_conversion(
+            "CreateResourceError",
+            "createResource",
+            &variants,
+            "Unexpected",
+            "Transport",
+        );
+
+        assert_rendered!(
+            Rust::new(),
+            width = 100,
+            conversion,
+            r#"use crate::runtime::error::ApiCallError;
+
+impl From<CreateResourceError> for ApiCallError {
+    fn from(error: CreateResourceError) -> Self {
+        match error {
+            CreateResourceError::BadRequest(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Conflict(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Unexpected(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Transport(error) => Self::from_runtime_error("createResource", error),
+        }
+    }
+}
+"#,
+        );
     }
 }

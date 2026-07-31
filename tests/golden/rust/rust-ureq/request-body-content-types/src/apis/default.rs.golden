@@ -5,7 +5,7 @@
 // Covers non-JSON request body media types to pin Content-Type emission.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -260,6 +260,15 @@ impl From<Error> for PostBinaryError {
     }
 }
 
+impl From<PostBinaryError> for ApiCallError {
+    fn from(error: PostBinaryError) -> Self {
+        match error {
+            PostBinaryError::Unexpected(error) => Self::from_api_error("postBinary", error),
+            PostBinaryError::Transport(error) => Self::from_runtime_error("postBinary", error),
+        }
+    }
+}
+
 impl std::fmt::Display for PostBinaryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -295,6 +304,15 @@ pub enum PostFormError {
 impl From<Error> for PostFormError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<PostFormError> for ApiCallError {
+    fn from(error: PostFormError) -> Self {
+        match error {
+            PostFormError::Unexpected(error) => Self::from_api_error("postForm", error),
+            PostFormError::Transport(error) => Self::from_runtime_error("postForm", error),
+        }
     }
 }
 
@@ -336,6 +354,15 @@ impl From<Error> for PostJsonError {
     }
 }
 
+impl From<PostJsonError> for ApiCallError {
+    fn from(error: PostJsonError) -> Self {
+        match error {
+            PostJsonError::Unexpected(error) => Self::from_api_error("postJson", error),
+            PostJsonError::Transport(error) => Self::from_runtime_error("postJson", error),
+        }
+    }
+}
+
 impl std::fmt::Display for PostJsonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -371,6 +398,15 @@ pub enum PostJsonOrXmlError {
 impl From<Error> for PostJsonOrXmlError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<PostJsonOrXmlError> for ApiCallError {
+    fn from(error: PostJsonOrXmlError) -> Self {
+        match error {
+            PostJsonOrXmlError::Unexpected(error) => Self::from_api_error("postJsonOrXml", error),
+            PostJsonOrXmlError::Transport(error) => Self::from_runtime_error("postJsonOrXml", error),
+        }
     }
 }
 
@@ -412,6 +448,15 @@ impl From<Error> for PatchMergeJsonError {
     }
 }
 
+impl From<PatchMergeJsonError> for ApiCallError {
+    fn from(error: PatchMergeJsonError) -> Self {
+        match error {
+            PatchMergeJsonError::Unexpected(error) => Self::from_api_error("patchMergeJson", error),
+            PatchMergeJsonError::Transport(error) => Self::from_runtime_error("patchMergeJson", error),
+        }
+    }
+}
+
 impl std::fmt::Display for PatchMergeJsonError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -447,6 +492,15 @@ pub enum PostTextError {
 impl From<Error> for PostTextError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<PostTextError> for ApiCallError {
+    fn from(error: PostTextError) -> Self {
+        match error {
+            PostTextError::Unexpected(error) => Self::from_api_error("postText", error),
+            PostTextError::Transport(error) => Self::from_runtime_error("postText", error),
+        }
     }
 }
 
@@ -488,6 +542,15 @@ impl From<Error> for PostXmlError {
     }
 }
 
+impl From<PostXmlError> for ApiCallError {
+    fn from(error: PostXmlError) -> Self {
+        match error {
+            PostXmlError::Unexpected(error) => Self::from_api_error("postXml", error),
+            PostXmlError::Transport(error) => Self::from_runtime_error("postXml", error),
+        }
+    }
+}
+
 impl std::fmt::Display for PostXmlError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -524,6 +587,15 @@ pub enum GetXmlResponseError {
 impl From<Error> for GetXmlResponseError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetXmlResponseError> for ApiCallError {
+    fn from(error: GetXmlResponseError) -> Self {
+        match error {
+            GetXmlResponseError::Unexpected(error) => Self::from_api_error("getXmlResponse", error),
+            GetXmlResponseError::Transport(error) => Self::from_runtime_error("getXmlResponse", error),
+        }
     }
 }
 

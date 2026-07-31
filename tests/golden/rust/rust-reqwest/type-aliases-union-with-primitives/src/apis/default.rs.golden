@@ -5,7 +5,7 @@
 // Test fixture for union types with primitive members
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -69,6 +69,15 @@ pub enum TestUnionPrimitivesError {
 impl From<Error> for TestUnionPrimitivesError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<TestUnionPrimitivesError> for ApiCallError {
+    fn from(error: TestUnionPrimitivesError) -> Self {
+        match error {
+            TestUnionPrimitivesError::Unexpected(error) => Self::from_api_error("test_union_primitives", error),
+            TestUnionPrimitivesError::Transport(error) => Self::from_runtime_error("test_union_primitives", error),
+        }
     }
 }
 

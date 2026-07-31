@@ -5,7 +5,7 @@
 // Test fixture for complex union types
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -68,6 +68,15 @@ pub enum TestComplexUnionError {
 impl From<Error> for TestComplexUnionError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<TestComplexUnionError> for ApiCallError {
+    fn from(error: TestComplexUnionError) -> Self {
+        match error {
+            TestComplexUnionError::Unexpected(error) => Self::from_api_error("test_complex_union", error),
+            TestComplexUnionError::Transport(error) => Self::from_runtime_error("test_complex_union", error),
+        }
     }
 }
 

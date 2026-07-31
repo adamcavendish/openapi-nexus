@@ -5,7 +5,7 @@
 // Test case for array of referenced model types with recursive FromJSON calls
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -62,6 +62,15 @@ pub enum TestError {
 impl From<Error> for TestError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<TestError> for ApiCallError {
+    fn from(error: TestError) -> Self {
+        match error {
+            TestError::Unexpected(error) => Self::from_api_error("test", error),
+            TestError::Transport(error) => Self::from_runtime_error("test", error),
+        }
     }
 }
 

@@ -5,7 +5,7 @@
 // Covers multipart request bodies that are not object-shaped.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -48,6 +48,15 @@ pub enum UploadRawMultipartError {
 impl From<Error> for UploadRawMultipartError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<UploadRawMultipartError> for ApiCallError {
+    fn from(error: UploadRawMultipartError) -> Self {
+        match error {
+            UploadRawMultipartError::Unexpected(error) => Self::from_api_error("upload_raw_multipart", error),
+            UploadRawMultipartError::Transport(error) => Self::from_runtime_error("upload_raw_multipart", error),
+        }
     }
 }
 

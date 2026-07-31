@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "user" tag.
 pub struct UserApi<'a> {
@@ -275,6 +275,15 @@ impl From<Error> for CreateUserError {
     }
 }
 
+impl From<CreateUserError> for ApiCallError {
+    fn from(error: CreateUserError) -> Self {
+        match error {
+            CreateUserError::Unexpected(error) => Self::from_api_error("create_user", error),
+            CreateUserError::Transport(error) => Self::from_runtime_error("create_user", error),
+        }
+    }
+}
+
 impl std::fmt::Display for CreateUserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -311,6 +320,15 @@ pub enum CreateUsersWithListInputError {
 impl From<Error> for CreateUsersWithListInputError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateUsersWithListInputError> for ApiCallError {
+    fn from(error: CreateUsersWithListInputError) -> Self {
+        match error {
+            CreateUsersWithListInputError::Unexpected(error) => Self::from_api_error("create_users_with_list_input", error),
+            CreateUsersWithListInputError::Transport(error) => Self::from_runtime_error("create_users_with_list_input", error),
+        }
     }
 }
 
@@ -353,6 +371,16 @@ impl From<Error> for LoginUserError {
     }
 }
 
+impl From<LoginUserError> for ApiCallError {
+    fn from(error: LoginUserError) -> Self {
+        match error {
+            LoginUserError::BadRequest(error) => Self::from_api_error("login_user", error),
+            LoginUserError::Unexpected(error) => Self::from_api_error("login_user", error),
+            LoginUserError::Transport(error) => Self::from_runtime_error("login_user", error),
+        }
+    }
+}
+
 impl std::fmt::Display for LoginUserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -389,6 +417,15 @@ pub enum LogoutUserError {
 impl From<Error> for LogoutUserError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<LogoutUserError> for ApiCallError {
+    fn from(error: LogoutUserError) -> Self {
+        match error {
+            LogoutUserError::Unexpected(error) => Self::from_api_error("logout_user", error),
+            LogoutUserError::Transport(error) => Self::from_runtime_error("logout_user", error),
+        }
     }
 }
 
@@ -430,6 +467,17 @@ pub enum GetUserByNameError {
 impl From<Error> for GetUserByNameError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetUserByNameError> for ApiCallError {
+    fn from(error: GetUserByNameError) -> Self {
+        match error {
+            GetUserByNameError::BadRequest(error) => Self::from_api_error("get_user_by_name", error),
+            GetUserByNameError::NotFound(error) => Self::from_api_error("get_user_by_name", error),
+            GetUserByNameError::Unexpected(error) => Self::from_api_error("get_user_by_name", error),
+            GetUserByNameError::Transport(error) => Self::from_runtime_error("get_user_by_name", error),
+        }
     }
 }
 
@@ -475,6 +523,17 @@ impl From<Error> for UpdateUserError {
     }
 }
 
+impl From<UpdateUserError> for ApiCallError {
+    fn from(error: UpdateUserError) -> Self {
+        match error {
+            UpdateUserError::BadRequest(error) => Self::from_api_error("update_user", error),
+            UpdateUserError::NotFound(error) => Self::from_api_error("update_user", error),
+            UpdateUserError::Unexpected(error) => Self::from_api_error("update_user", error),
+            UpdateUserError::Transport(error) => Self::from_runtime_error("update_user", error),
+        }
+    }
+}
+
 impl std::fmt::Display for UpdateUserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -514,6 +573,17 @@ pub enum DeleteUserError {
 impl From<Error> for DeleteUserError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<DeleteUserError> for ApiCallError {
+    fn from(error: DeleteUserError) -> Self {
+        match error {
+            DeleteUserError::BadRequest(error) => Self::from_api_error("delete_user", error),
+            DeleteUserError::NotFound(error) => Self::from_api_error("delete_user", error),
+            DeleteUserError::Unexpected(error) => Self::from_api_error("delete_user", error),
+            DeleteUserError::Transport(error) => Self::from_runtime_error("delete_user", error),
+        }
     }
 }
 

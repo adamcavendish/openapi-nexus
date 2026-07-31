@@ -66,7 +66,11 @@ impl RustUreqCodeGenerator {
             .map_err(|msg| Box::<dyn Error + Send + Sync>::from(format!("emit_api: {msg}")))?,
         );
 
-        files.extend(runtime_files(&header, request_inputs.has_uploads()));
+        files.extend(runtime_files(
+            &header,
+            !ir.operations.is_empty(),
+            request_inputs.has_uploads(),
+        ));
 
         files.push(cargo_toml_file(&crate_name, &ir.info, &self.config));
         files.push(project_files::lib_rs_file(&header));

@@ -5,7 +5,7 @@
 // Test API with duplicate parameter names across different locations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "items" tag.
 pub struct ItemsApi<'a> {
@@ -79,6 +79,16 @@ pub enum CreateItemWithBodyConflictError {
 impl From<Error> for CreateItemWithBodyConflictError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateItemWithBodyConflictError> for ApiCallError {
+    fn from(error: CreateItemWithBodyConflictError) -> Self {
+        match error {
+            CreateItemWithBodyConflictError::BadRequest(error) => Self::from_api_error("create_item_with_body_conflict", error),
+            CreateItemWithBodyConflictError::Unexpected(error) => Self::from_api_error("create_item_with_body_conflict", error),
+            CreateItemWithBodyConflictError::Transport(error) => Self::from_runtime_error("create_item_with_body_conflict", error),
+        }
     }
 }
 

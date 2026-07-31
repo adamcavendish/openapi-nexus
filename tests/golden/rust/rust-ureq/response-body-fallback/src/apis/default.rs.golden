@@ -4,7 +4,7 @@
 // Response Fallback Test API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -101,6 +101,16 @@ impl From<Error> for GetFallbackNoBodyError {
     }
 }
 
+impl From<GetFallbackNoBodyError> for ApiCallError {
+    fn from(error: GetFallbackNoBodyError) -> Self {
+        match error {
+            GetFallbackNoBodyError::BadRequest(error) => Self::from_api_error("get_fallback_no_body", error),
+            GetFallbackNoBodyError::Unexpected(error) => Self::from_api_error("get_fallback_no_body", error),
+            GetFallbackNoBodyError::Transport(error) => Self::from_runtime_error("get_fallback_no_body", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetFallbackNoBodyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -139,6 +149,16 @@ pub enum GetFallbackWithBodyError {
 impl From<Error> for GetFallbackWithBodyError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetFallbackWithBodyError> for ApiCallError {
+    fn from(error: GetFallbackWithBodyError) -> Self {
+        match error {
+            GetFallbackWithBodyError::NotFound(error) => Self::from_api_error("get_fallback_with_body", error),
+            GetFallbackWithBodyError::Unexpected(error) => Self::from_api_error("get_fallback_with_body", error),
+            GetFallbackWithBodyError::Transport(error) => Self::from_runtime_error("get_fallback_with_body", error),
+        }
     }
 }
 

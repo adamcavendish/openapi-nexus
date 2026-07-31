@@ -6,7 +6,7 @@
 // This is similar to the ContainerImage pattern in the infiron API.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -70,6 +70,15 @@ pub enum CreateContainerError {
 impl From<Error> for CreateContainerError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateContainerError> for ApiCallError {
+    fn from(error: CreateContainerError) -> Self {
+        match error {
+            CreateContainerError::Unexpected(error) => Self::from_api_error("create_container", error),
+            CreateContainerError::Transport(error) => Self::from_runtime_error("create_container", error),
+        }
     }
 }
 

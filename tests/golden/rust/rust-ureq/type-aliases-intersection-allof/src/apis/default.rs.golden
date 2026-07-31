@@ -5,7 +5,7 @@
 // Test fixture for allOf intersection types
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -68,6 +68,15 @@ pub enum TestIntersectionError {
 impl From<Error> for TestIntersectionError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<TestIntersectionError> for ApiCallError {
+    fn from(error: TestIntersectionError) -> Self {
+        match error {
+            TestIntersectionError::Unexpected(error) => Self::from_api_error("test_intersection", error),
+            TestIntersectionError::Transport(error) => Self::from_runtime_error("test_intersection", error),
+        }
     }
 }
 

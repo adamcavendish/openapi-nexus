@@ -5,7 +5,7 @@
 // Test API with duplicate parameter names across different locations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "users" tag.
 pub struct UsersApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -92,6 +92,17 @@ pub enum GetUserByIdDuplicateError {
 impl From<Error> for GetUserByIdDuplicateError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetUserByIdDuplicateError> for ApiCallError {
+    fn from(error: GetUserByIdDuplicateError) -> Self {
+        match error {
+            GetUserByIdDuplicateError::BadRequest(error) => Self::from_api_error("get_user_by_id_duplicate", error),
+            GetUserByIdDuplicateError::NotFound(error) => Self::from_api_error("get_user_by_id_duplicate", error),
+            GetUserByIdDuplicateError::Unexpected(error) => Self::from_api_error("get_user_by_id_duplicate", error),
+            GetUserByIdDuplicateError::Transport(error) => Self::from_runtime_error("get_user_by_id_duplicate", error),
+        }
     }
 }
 

@@ -5,7 +5,7 @@
 // This is a test API specification that includes various server configurations
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -108,6 +108,15 @@ impl From<Error> for GetAllUsersError {
     }
 }
 
+impl From<GetAllUsersError> for ApiCallError {
+    fn from(error: GetAllUsersError) -> Self {
+        match error {
+            GetAllUsersError::Unexpected(error) => Self::from_api_error("getAllUsers", error),
+            GetAllUsersError::Transport(error) => Self::from_runtime_error("getAllUsers", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetAllUsersError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -145,6 +154,16 @@ pub enum GetUserByIdError {
 impl From<Error> for GetUserByIdError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetUserByIdError> for ApiCallError {
+    fn from(error: GetUserByIdError) -> Self {
+        match error {
+            GetUserByIdError::NotFound(error) => Self::from_api_error("getUserById", error),
+            GetUserByIdError::Unexpected(error) => Self::from_api_error("getUserById", error),
+            GetUserByIdError::Transport(error) => Self::from_runtime_error("getUserById", error),
+        }
     }
 }
 

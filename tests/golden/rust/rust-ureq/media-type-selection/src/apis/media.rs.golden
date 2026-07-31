@@ -5,7 +5,7 @@
 // Covers normalized media-type selection for requests and responses.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "media" tag.
 pub struct MediaApi<'a> {
@@ -214,6 +214,15 @@ impl From<Error> for SendJsonPreferredError {
     }
 }
 
+impl From<SendJsonPreferredError> for ApiCallError {
+    fn from(error: SendJsonPreferredError) -> Self {
+        match error {
+            SendJsonPreferredError::Unexpected(error) => Self::from_api_error("send_json_preferred", error),
+            SendJsonPreferredError::Transport(error) => Self::from_runtime_error("send_json_preferred", error),
+        }
+    }
+}
+
 impl std::fmt::Display for SendJsonPreferredError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -252,6 +261,15 @@ impl From<Error> for SendParameterizedMultipartError {
     }
 }
 
+impl From<SendParameterizedMultipartError> for ApiCallError {
+    fn from(error: SendParameterizedMultipartError) -> Self {
+        match error {
+            SendParameterizedMultipartError::Unexpected(error) => Self::from_api_error("send_parameterized_multipart", error),
+            SendParameterizedMultipartError::Transport(error) => Self::from_runtime_error("send_parameterized_multipart", error),
+        }
+    }
+}
+
 impl std::fmt::Display for SendParameterizedMultipartError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -287,6 +305,15 @@ pub enum SendVendorJsonError {
 impl From<Error> for SendVendorJsonError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<SendVendorJsonError> for ApiCallError {
+    fn from(error: SendVendorJsonError) -> Self {
+        match error {
+            SendVendorJsonError::Unexpected(error) => Self::from_api_error("send_vendor_json", error),
+            SendVendorJsonError::Transport(error) => Self::from_runtime_error("send_vendor_json", error),
+        }
     }
 }
 
@@ -329,6 +356,15 @@ impl From<Error> for GetOctetPreferredError {
     }
 }
 
+impl From<GetOctetPreferredError> for ApiCallError {
+    fn from(error: GetOctetPreferredError) -> Self {
+        match error {
+            GetOctetPreferredError::Unexpected(error) => Self::from_api_error("get_octet_preferred", error),
+            GetOctetPreferredError::Transport(error) => Self::from_runtime_error("get_octet_preferred", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetOctetPreferredError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -368,6 +404,15 @@ impl From<Error> for GetTextPreferredError {
     }
 }
 
+impl From<GetTextPreferredError> for ApiCallError {
+    fn from(error: GetTextPreferredError) -> Self {
+        match error {
+            GetTextPreferredError::Unexpected(error) => Self::from_api_error("get_text_preferred", error),
+            GetTextPreferredError::Transport(error) => Self::from_runtime_error("get_text_preferred", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetTextPreferredError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -404,6 +449,15 @@ pub enum GetVendorJsonError {
 impl From<Error> for GetVendorJsonError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetVendorJsonError> for ApiCallError {
+    fn from(error: GetVendorJsonError) -> Self {
+        match error {
+            GetVendorJsonError::Unexpected(error) => Self::from_api_error("get_vendor_json", error),
+            GetVendorJsonError::Transport(error) => Self::from_runtime_error("get_vendor_json", error),
+        }
     }
 }
 

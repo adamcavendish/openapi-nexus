@@ -4,7 +4,7 @@
 // Minimal API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -61,6 +61,15 @@ pub enum GetTestError {
 impl From<Error> for GetTestError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetTestError> for ApiCallError {
+    fn from(error: GetTestError) -> Self {
+        match error {
+            GetTestError::Unexpected(error) => Self::from_api_error("getTest", error),
+            GetTestError::Transport(error) => Self::from_runtime_error("getTest", error),
+        }
     }
 }
 

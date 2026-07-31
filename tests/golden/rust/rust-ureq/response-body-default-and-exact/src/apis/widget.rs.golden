@@ -4,7 +4,7 @@
 // Default And Exact Response API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "Widget" tag.
 pub struct WidgetApi<'a> {
@@ -67,6 +67,16 @@ pub enum GetWidgetError {
 impl From<Error> for GetWidgetError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetWidgetError> for ApiCallError {
+    fn from(error: GetWidgetError) -> Self {
+        match error {
+            GetWidgetError::Default(error) => Self::from_api_error("getWidget", error),
+            GetWidgetError::Unexpected(error) => Self::from_api_error("getWidget", error),
+            GetWidgetError::Transport(error) => Self::from_runtime_error("getWidget", error),
+        }
     }
 }
 

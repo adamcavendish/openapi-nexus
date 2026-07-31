@@ -6,7 +6,7 @@
 // and primitive type alias suppression.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -111,6 +111,15 @@ impl From<Error> for AcceptNodeError {
     }
 }
 
+impl From<AcceptNodeError> for ApiCallError {
+    fn from(error: AcceptNodeError) -> Self {
+        match error {
+            AcceptNodeError::Unexpected(error) => Self::from_api_error("acceptNode", error),
+            AcceptNodeError::Transport(error) => Self::from_runtime_error("acceptNode", error),
+        }
+    }
+}
+
 impl std::fmt::Display for AcceptNodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -147,6 +156,15 @@ pub enum GetNodeNameError {
 impl From<Error> for GetNodeNameError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetNodeNameError> for ApiCallError {
+    fn from(error: GetNodeNameError) -> Self {
+        match error {
+            GetNodeNameError::Unexpected(error) => Self::from_api_error("getNodeName", error),
+            GetNodeNameError::Transport(error) => Self::from_runtime_error("getNodeName", error),
+        }
     }
 }
 
