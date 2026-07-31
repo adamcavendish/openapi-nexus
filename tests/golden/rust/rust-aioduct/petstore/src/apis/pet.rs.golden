@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "pet" tag.
 pub struct PetApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -357,6 +357,18 @@ impl From<Error> for UpdatePetError {
     }
 }
 
+impl From<UpdatePetError> for ApiCallError {
+    fn from(error: UpdatePetError) -> Self {
+        match error {
+            UpdatePetError::BadRequest(error) => Self::from_api_error("update_pet", error),
+            UpdatePetError::NotFound(error) => Self::from_api_error("update_pet", error),
+            UpdatePetError::Validation(error) => Self::from_api_error("update_pet", error),
+            UpdatePetError::Unexpected(error) => Self::from_api_error("update_pet", error),
+            UpdatePetError::Transport(error) => Self::from_runtime_error("update_pet", error),
+        }
+    }
+}
+
 impl std::fmt::Display for UpdatePetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -398,6 +410,17 @@ pub enum AddPetError {
 impl From<Error> for AddPetError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<AddPetError> for ApiCallError {
+    fn from(error: AddPetError) -> Self {
+        match error {
+            AddPetError::BadRequest(error) => Self::from_api_error("add_pet", error),
+            AddPetError::Validation(error) => Self::from_api_error("add_pet", error),
+            AddPetError::Unexpected(error) => Self::from_api_error("add_pet", error),
+            AddPetError::Transport(error) => Self::from_runtime_error("add_pet", error),
+        }
     }
 }
 
@@ -443,6 +466,16 @@ impl From<Error> for FindPetsByStatusError {
     }
 }
 
+impl From<FindPetsByStatusError> for ApiCallError {
+    fn from(error: FindPetsByStatusError) -> Self {
+        match error {
+            FindPetsByStatusError::BadRequest(error) => Self::from_api_error("find_pets_by_status", error),
+            FindPetsByStatusError::Unexpected(error) => Self::from_api_error("find_pets_by_status", error),
+            FindPetsByStatusError::Transport(error) => Self::from_runtime_error("find_pets_by_status", error),
+        }
+    }
+}
+
 impl std::fmt::Display for FindPetsByStatusError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -481,6 +514,16 @@ pub enum FindPetsByTagsError {
 impl From<Error> for FindPetsByTagsError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<FindPetsByTagsError> for ApiCallError {
+    fn from(error: FindPetsByTagsError) -> Self {
+        match error {
+            FindPetsByTagsError::BadRequest(error) => Self::from_api_error("find_pets_by_tags", error),
+            FindPetsByTagsError::Unexpected(error) => Self::from_api_error("find_pets_by_tags", error),
+            FindPetsByTagsError::Transport(error) => Self::from_runtime_error("find_pets_by_tags", error),
+        }
     }
 }
 
@@ -526,6 +569,17 @@ impl From<Error> for GetPetByIdError {
     }
 }
 
+impl From<GetPetByIdError> for ApiCallError {
+    fn from(error: GetPetByIdError) -> Self {
+        match error {
+            GetPetByIdError::BadRequest(error) => Self::from_api_error("get_pet_by_id", error),
+            GetPetByIdError::NotFound(error) => Self::from_api_error("get_pet_by_id", error),
+            GetPetByIdError::Unexpected(error) => Self::from_api_error("get_pet_by_id", error),
+            GetPetByIdError::Transport(error) => Self::from_runtime_error("get_pet_by_id", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetPetByIdError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -565,6 +619,16 @@ pub enum UpdatePetWithFormError {
 impl From<Error> for UpdatePetWithFormError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<UpdatePetWithFormError> for ApiCallError {
+    fn from(error: UpdatePetWithFormError) -> Self {
+        match error {
+            UpdatePetWithFormError::BadRequest(error) => Self::from_api_error("update_pet_with_form", error),
+            UpdatePetWithFormError::Unexpected(error) => Self::from_api_error("update_pet_with_form", error),
+            UpdatePetWithFormError::Transport(error) => Self::from_runtime_error("update_pet_with_form", error),
+        }
     }
 }
 
@@ -608,6 +672,16 @@ impl From<Error> for DeletePetError {
     }
 }
 
+impl From<DeletePetError> for ApiCallError {
+    fn from(error: DeletePetError) -> Self {
+        match error {
+            DeletePetError::BadRequest(error) => Self::from_api_error("delete_pet", error),
+            DeletePetError::Unexpected(error) => Self::from_api_error("delete_pet", error),
+            DeletePetError::Transport(error) => Self::from_runtime_error("delete_pet", error),
+        }
+    }
+}
+
 impl std::fmt::Display for DeletePetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -645,6 +719,15 @@ pub enum UploadFileError {
 impl From<Error> for UploadFileError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<UploadFileError> for ApiCallError {
+    fn from(error: UploadFileError) -> Self {
+        match error {
+            UploadFileError::Unexpected(error) => Self::from_api_error("upload_file", error),
+            UploadFileError::Transport(error) => Self::from_runtime_error("upload_file", error),
+        }
     }
 }
 

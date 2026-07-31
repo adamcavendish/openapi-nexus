@@ -4,7 +4,7 @@
 // Typed Error Responses API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "Resources" tag.
 pub struct ResourcesApi<'a> {
@@ -168,6 +168,16 @@ impl From<Error> for CheckNoSuccessBodyError {
     }
 }
 
+impl From<CheckNoSuccessBodyError> for ApiCallError {
+    fn from(error: CheckNoSuccessBodyError) -> Self {
+        match error {
+            CheckNoSuccessBodyError::ServiceUnavailable(error) => Self::from_api_error("checkNoSuccessBody", error),
+            CheckNoSuccessBodyError::Unexpected(error) => Self::from_api_error("checkNoSuccessBody", error),
+            CheckNoSuccessBodyError::Transport(error) => Self::from_runtime_error("checkNoSuccessBody", error),
+        }
+    }
+}
+
 impl CheckNoSuccessBodyError {
     fn response_headers(&self) -> Option<&ureq::http::HeaderMap> {
         match self {
@@ -241,6 +251,23 @@ pub enum CreateResourceError {
 impl From<Error> for CreateResourceError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateResourceError> for ApiCallError {
+    fn from(error: CreateResourceError) -> Self {
+        match error {
+            CreateResourceError::BadRequest(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Conflict(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Validation(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Status423(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Status424(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::TooManyRequests(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::ServerError(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Default(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Unexpected(error) => Self::from_api_error("createResource", error),
+            CreateResourceError::Transport(error) => Self::from_runtime_error("createResource", error),
+        }
     }
 }
 
@@ -331,6 +358,16 @@ pub enum CreateResourceWithWildcardSuccessError {
 impl From<Error> for CreateResourceWithWildcardSuccessError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateResourceWithWildcardSuccessError> for ApiCallError {
+    fn from(error: CreateResourceWithWildcardSuccessError) -> Self {
+        match error {
+            CreateResourceWithWildcardSuccessError::BadRequest(error) => Self::from_api_error("createResourceWithWildcardSuccess", error),
+            CreateResourceWithWildcardSuccessError::Unexpected(error) => Self::from_api_error("createResourceWithWildcardSuccess", error),
+            CreateResourceWithWildcardSuccessError::Transport(error) => Self::from_runtime_error("createResourceWithWildcardSuccess", error),
+        }
     }
 }
 

@@ -7,7 +7,7 @@
 // See: https://www.openapis.org/understanding-openapi/specification/models/
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -71,6 +71,15 @@ pub enum CreateResourceError {
 impl From<Error> for CreateResourceError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateResourceError> for ApiCallError {
+    fn from(error: CreateResourceError) -> Self {
+        match error {
+            CreateResourceError::Unexpected(error) => Self::from_api_error("create_resource", error),
+            CreateResourceError::Transport(error) => Self::from_runtime_error("create_resource", error),
+        }
     }
 }
 

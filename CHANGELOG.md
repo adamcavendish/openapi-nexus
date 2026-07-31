@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add a common Rust `ApiCallError` with conversions from every generated
+  operation error, while retaining operation-specific typed errors for callers
+  that need to match individual responses.
 - Preserve successful response headers across every generator. Python clients
   add `*_with_http_info()` methods while keeping existing body-only methods
   unchanged.

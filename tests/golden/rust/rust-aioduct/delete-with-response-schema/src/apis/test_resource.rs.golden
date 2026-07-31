@@ -5,7 +5,7 @@
 // Test fixture for DELETE operations with JSON response schemas and type alias request bodies
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "test-resource" tag.
 pub struct TestResourceApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -110,6 +110,15 @@ impl From<Error> for CreateTestResourceError {
     }
 }
 
+impl From<CreateTestResourceError> for ApiCallError {
+    fn from(error: CreateTestResourceError) -> Self {
+        match error {
+            CreateTestResourceError::Unexpected(error) => Self::from_api_error("create_test_resource", error),
+            CreateTestResourceError::Transport(error) => Self::from_runtime_error("create_test_resource", error),
+        }
+    }
+}
+
 impl std::fmt::Display for CreateTestResourceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -148,6 +157,17 @@ pub enum DeleteTestResourceError {
 impl From<Error> for DeleteTestResourceError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<DeleteTestResourceError> for ApiCallError {
+    fn from(error: DeleteTestResourceError) -> Self {
+        match error {
+            DeleteTestResourceError::ClientError(error) => Self::from_api_error("delete_test_resource", error),
+            DeleteTestResourceError::ServerError(error) => Self::from_api_error("delete_test_resource", error),
+            DeleteTestResourceError::Unexpected(error) => Self::from_api_error("delete_test_resource", error),
+            DeleteTestResourceError::Transport(error) => Self::from_runtime_error("delete_test_resource", error),
+        }
     }
 }
 

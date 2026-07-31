@@ -5,7 +5,7 @@
 // Test fixture covering all schema kinds with utoipa enabled
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -169,6 +169,15 @@ impl From<Error> for CreateFeedError {
     }
 }
 
+impl From<CreateFeedError> for ApiCallError {
+    fn from(error: CreateFeedError) -> Self {
+        match error {
+            CreateFeedError::Unexpected(error) => Self::from_api_error("create_feed", error),
+            CreateFeedError::Transport(error) => Self::from_runtime_error("create_feed", error),
+        }
+    }
+}
+
 impl std::fmt::Display for CreateFeedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -205,6 +214,15 @@ pub enum CreatePaymentError {
 impl From<Error> for CreatePaymentError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreatePaymentError> for ApiCallError {
+    fn from(error: CreatePaymentError) -> Self {
+        match error {
+            CreatePaymentError::Unexpected(error) => Self::from_api_error("create_payment", error),
+            CreatePaymentError::Transport(error) => Self::from_runtime_error("create_payment", error),
+        }
     }
 }
 
@@ -247,6 +265,15 @@ impl From<Error> for ListPetsError {
     }
 }
 
+impl From<ListPetsError> for ApiCallError {
+    fn from(error: ListPetsError) -> Self {
+        match error {
+            ListPetsError::Unexpected(error) => Self::from_api_error("list_pets", error),
+            ListPetsError::Transport(error) => Self::from_runtime_error("list_pets", error),
+        }
+    }
+}
+
 impl std::fmt::Display for ListPetsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -283,6 +310,15 @@ pub enum CreatePetError {
 impl From<Error> for CreatePetError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreatePetError> for ApiCallError {
+    fn from(error: CreatePetError) -> Self {
+        match error {
+            CreatePetError::Unexpected(error) => Self::from_api_error("create_pet", error),
+            CreatePetError::Transport(error) => Self::from_runtime_error("create_pet", error),
+        }
     }
 }
 

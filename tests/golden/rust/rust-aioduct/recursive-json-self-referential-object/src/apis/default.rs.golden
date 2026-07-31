@@ -4,7 +4,7 @@
 // Self-Referential Object Test — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -66,6 +66,15 @@ pub enum GetFooError {
 impl From<Error> for GetFooError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<GetFooError> for ApiCallError {
+    fn from(error: GetFooError) -> Self {
+        match error {
+            GetFooError::Unexpected(error) => Self::from_api_error("getFoo", error),
+            GetFooError::Transport(error) => Self::from_runtime_error("getFoo", error),
+        }
     }
 }
 

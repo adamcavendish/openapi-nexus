@@ -4,6 +4,81 @@ All three Rust backends (`rust-reqwest`, `rust-ureq`, `rust-aioduct`) share the 
 
 The `rust-aioduct` backend has an additional `[aioduct]` section for controlling aioduct-specific features.
 
+## Generated Error Handling
+
+Every operation keeps its generated error enum, so callers can match a specific status and use its typed body:
+
+```rust
+match api.create_resource(&request).await {
+    Err(CreateResourceError::NotFound(error)) => {
+        if let Ok(body) = error.body() {
+            println!("missing resource: {}", body.message);
+        }
+    }
+    Err(error) => return Err(error.into()),
+    Ok(response) => use_response(response),
+}
+```
+
+Each operation error also implements `Into<ApiCallError>`. Use the common type when a workflow calls multiple operations and does not need their distinct body types:
+
+```rust
+use generated_sdk::runtime::error::ApiCallError;
+
+async fn run_workflow(
+    api: &ResourcesApi<'_>,
+    request: &CreateResourceRequest,
+    resource_id: &str,
+) -> Result<(), ApiCallError> {
+    api.create_resource(request).await?;
+    api.refresh_resource(resource_id).await?;
+    Ok(())
+}
+```
+
+`ApiCallError` exposes the operation identifier (generated from the HTTP method and path if the OpenAPI document omits one) and optional HTTP status, native headers, and raw response body. Transport errors and error-body decoding failures remain available through `std::error::Error::source()`.
+
+Conversion consumes the operation-specific error and erases its decoded payload type. Match the operation error before conversion when that payload is needed.
+
+### `thiserror`
+
+`thiserror` does not chain two `From` conversions for `?`. A single generic adapter on the application error converts every generated operation error directly:
+
+```rust
+#[derive(Debug, thiserror::Error)]
+#[error("SDK request failed: {source}")]
+struct AppError {
+    #[source]
+    source: ApiCallError,
+}
+
+impl<E> From<E> for AppError
+where
+    E: Into<ApiCallError>,
+{
+    fn from(error: E) -> Self {
+        Self {
+            source: error.into(),
+        }
+    }
+}
+```
+
+Do not also put `#[from]` on the `ApiCallError` field; the generic implementation already includes `ApiCallError` itself.
+
+### SNAFU
+
+SNAFU 0.9's generic source conversion provides the same direct `?` behavior:
+
+```rust
+#[derive(Debug, snafu::Snafu)]
+#[snafu(context(false))]
+struct AppError {
+    #[snafu(source(from(generic)))]
+    source: ApiCallError,
+}
+```
+
 ## Full Example
 
 ```toml

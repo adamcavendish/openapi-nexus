@@ -4,7 +4,7 @@
 // No Response Body API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "Foo" tag.
 pub struct FooApi<'a> {
@@ -74,6 +74,17 @@ pub enum UpdateFooBarError {
 impl From<Error> for UpdateFooBarError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<UpdateFooBarError> for ApiCallError {
+    fn from(error: UpdateFooBarError) -> Self {
+        match error {
+            UpdateFooBarError::BadRequest(error) => Self::from_api_error("updateFooBar", error),
+            UpdateFooBarError::InternalServerError(error) => Self::from_api_error("updateFooBar", error),
+            UpdateFooBarError::Unexpected(error) => Self::from_api_error("updateFooBar", error),
+            UpdateFooBarError::Transport(error) => Self::from_runtime_error("updateFooBar", error),
+        }
     }
 }
 

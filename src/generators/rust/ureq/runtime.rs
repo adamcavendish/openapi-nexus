@@ -2,6 +2,8 @@
 
 use crate::codegen::traits::file_writer::FileInfo;
 use crate::generators::rust::common::project_files::with_header;
+use crate::generators::rust::common::runtime::render_api_call_error;
+use sigil_stitch::type_name::TypeName;
 
 const CLIENT_RS: &str = include_str!("runtime/client.rs.txt");
 const ERROR_RS: &str = include_str!("runtime/error.rs.txt");
@@ -10,11 +12,23 @@ const MOD_RS: &str = include_str!("runtime/mod.rs.txt");
 const UPLOAD_FILE_RS: &str = include_str!("runtime/upload_file.rs.txt");
 
 /// Returns runtime files ready to write.
-pub fn runtime_files(header: &str, include_upload_file: bool) -> Vec<FileInfo> {
+pub fn runtime_files(
+    header: &str,
+    include_api_call_error: bool,
+    include_upload_file: bool,
+) -> Vec<FileInfo> {
     let mut mod_rs = MOD_RS.to_string();
+    let mut error_rs = ERROR_RS.to_string();
+    if include_api_call_error {
+        error_rs.push('\n');
+        error_rs.push_str(
+            &render_api_call_error(TypeName::qualified("ureq::http", "HeaderMap"))
+                .expect("ureq ApiCallError runtime renders"),
+        );
+    }
     let mut files = vec![
         FileInfo::runtime("client.rs".to_string(), with_header(header, CLIENT_RS)),
-        FileInfo::runtime("error.rs".to_string(), with_header(header, ERROR_RS)),
+        FileInfo::runtime("error.rs".to_string(), with_header(header, &error_rs)),
         FileInfo::runtime("auth.rs".to_string(), with_header(header, AUTH_RS)),
     ];
     if include_upload_file {

@@ -5,7 +5,7 @@
 // Covers explicit multipart part content types.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "transfer" tag.
 pub struct TransferApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -69,6 +69,15 @@ pub enum UploadEncodedAssetError {
 impl From<Error> for UploadEncodedAssetError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<UploadEncodedAssetError> for ApiCallError {
+    fn from(error: UploadEncodedAssetError) -> Self {
+        match error {
+            UploadEncodedAssetError::Unexpected(error) => Self::from_api_error("upload_encoded_asset", error),
+            UploadEncodedAssetError::Transport(error) => Self::from_runtime_error("upload_encoded_asset", error),
+        }
     }
 }
 

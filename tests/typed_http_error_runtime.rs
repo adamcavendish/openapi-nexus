@@ -96,6 +96,8 @@ fn add_reqwest_runtime_test(root: &Path) {
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+thiserror = "2"
+snafu = "0.9.1"
 "#,
     );
     fs::write(cargo_toml, manifest).expect("generated Cargo.toml should be updated");
@@ -112,7 +114,62 @@ use typed_error_responses_api::apis::{
 };
 use typed_error_responses_api::models::CreateResourceRequest;
 use typed_error_responses_api::runtime::client::Client;
-use typed_error_responses_api::runtime::error::Error;
+use typed_error_responses_api::runtime::error::{ApiCallError, Error};
+
+#[allow(dead_code)]
+async fn propagate_uniformly(
+    api: &ResourcesApi<'_>,
+    request: &CreateResourceRequest,
+) -> Result<(), ApiCallError> {
+    api.create_resource(request).await?;
+    api.check_no_success_body().await?;
+    Ok(())
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("SDK request failed: {source}")]
+struct ThisErrorAppError {
+    #[source]
+    source: ApiCallError,
+}
+
+impl<E> From<E> for ThisErrorAppError
+where
+    E: Into<ApiCallError>,
+{
+    fn from(error: E) -> Self {
+        Self {
+            source: error.into(),
+        }
+    }
+}
+
+#[allow(dead_code)]
+async fn propagate_with_thiserror(
+    api: &ResourcesApi<'_>,
+    request: &CreateResourceRequest,
+) -> Result<(), ThisErrorAppError> {
+    api.create_resource(request).await?;
+    api.check_no_success_body().await?;
+    Ok(())
+}
+
+#[derive(Debug, snafu::Snafu)]
+#[snafu(context(false))]
+struct SnafuAppError {
+    #[snafu(source(from(generic)))]
+    source: ApiCallError,
+}
+
+#[allow(dead_code)]
+async fn propagate_with_snafu(
+    api: &ResourcesApi<'_>,
+    request: &CreateResourceRequest,
+) -> Result<(), SnafuAppError> {
+    api.create_resource(request).await?;
+    api.check_no_success_body().await?;
+    Ok(())
+}
 
 #[tokio::test]
 async fn http_503_returns_operation_error_with_typed_body() {
@@ -178,9 +235,66 @@ async fn invalid_error_body_keeps_http_error_and_raw_body() {
             assert_eq!(api_error.status_code(), 503);
             assert_eq!(api_error.raw_body(), body.as_bytes());
             assert!(matches!(api_error.body(), Err(Error::Deserialize(_))));
+
+            let error: ApiCallError = CreateResourceError::ServerError(api_error).into();
+            assert_eq!(error.operation_id(), "createResource");
+            assert_eq!(error.status_code(), Some(503));
+            assert_eq!(error.raw_body(), Some(body.as_bytes()));
+            assert!(matches!(
+                std::error::Error::source(&error).and_then(|source| source.downcast_ref::<Error>()),
+                Some(Error::Deserialize(_))
+            ));
         }
         other => panic!("expected ServerError variant, got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn operation_error_converts_to_uniform_api_call_error() {
+    let body = r#"{"message":"temporarily unavailable","retryable":true}"#;
+    let base_url = spawn_one_response_server("503 Service Unavailable", body);
+    let client = Client::new(&base_url);
+    let api = ResourcesApi::new(&client);
+    let request = CreateResourceRequest {
+        name: "resource".to_string(),
+    };
+
+    let error: ApiCallError = api
+        .create_resource(&request)
+        .await
+        .expect_err("HTTP 503 must be returned as an operation error")
+        .into();
+
+    assert_eq!(error.operation_id(), "createResource");
+    assert_eq!(error.status_code(), Some(503));
+    assert_eq!(error.raw_body(), Some(body.as_bytes()));
+    assert_eq!(
+        error
+            .headers()
+            .and_then(|headers| headers.get("retry-after"))
+            .and_then(|value| value.to_str().ok()),
+        Some("120")
+    );
+    assert_eq!(
+        error.to_string(),
+        "operation createResource failed with HTTP status 503"
+    );
+    assert!(std::error::Error::source(&error).is_none());
+}
+
+#[test]
+fn transport_error_converts_to_uniform_api_call_error() {
+    let error: ApiCallError =
+        CreateResourceError::Transport(Error::Unsupported("test transport failure")).into();
+
+    assert_eq!(error.operation_id(), "createResource");
+    assert_eq!(error.status_code(), None);
+    assert!(error.headers().is_none());
+    assert!(error.raw_body().is_none());
+    assert!(matches!(
+        std::error::Error::source(&error).and_then(|source| source.downcast_ref::<Error>()),
+        Some(Error::Unsupported("test transport failure"))
+    ));
 }
 
 #[tokio::test]
@@ -275,6 +389,17 @@ fn add_ureq_runtime_test(root: &Path) {
 use typed_error_responses_api::apis::{CreateResourceError, ResourcesApi};
 use typed_error_responses_api::models::CreateResourceRequest;
 use typed_error_responses_api::runtime::client::Client;
+use typed_error_responses_api::runtime::error::ApiCallError;
+
+#[allow(dead_code)]
+fn propagate_uniformly(
+    api: &ResourcesApi<'_>,
+    request: &CreateResourceRequest,
+) -> Result<(), ApiCallError> {
+    api.create_resource(request)?;
+    api.check_no_success_body()?;
+    Ok(())
+}
 
 #[test]
 fn http_503_returns_operation_error_with_typed_body() {
@@ -317,6 +442,33 @@ fn http_503_returns_operation_error_with_typed_body() {
         }
         other => panic!("expected ServerError variant, got {other:?}"),
     }
+}
+
+#[test]
+fn operation_error_converts_to_uniform_api_call_error() {
+    let body = r#"{"message":"temporarily unavailable","retryable":true}"#;
+    let base_url = spawn_one_response_server("503 Service Unavailable", body);
+    let client = Client::new(&base_url);
+    let api = ResourcesApi::new(&client);
+    let request = CreateResourceRequest {
+        name: "resource".to_string(),
+    };
+
+    let error: ApiCallError = api
+        .create_resource(&request)
+        .expect_err("HTTP 503 must be returned as an operation error")
+        .into();
+
+    assert_eq!(error.operation_id(), "createResource");
+    assert_eq!(error.status_code(), Some(503));
+    assert_eq!(error.raw_body(), Some(body.as_bytes()));
+    assert_eq!(
+        error
+            .headers()
+            .and_then(|headers| headers.get("retry-after"))
+            .and_then(|value| value.to_str().ok()),
+        Some("120")
+    );
 }
 
 #[test]

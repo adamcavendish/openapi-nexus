@@ -5,7 +5,7 @@
 // Covers optional multipart bodies, optional parts, and text-only multipart fields.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "multipart" tag.
 pub struct MultipartApi<'a> {
@@ -115,6 +115,15 @@ impl From<Error> for SendOptionalPartsError {
     }
 }
 
+impl From<SendOptionalPartsError> for ApiCallError {
+    fn from(error: SendOptionalPartsError) -> Self {
+        match error {
+            SendOptionalPartsError::Unexpected(error) => Self::from_api_error("send_optional_parts", error),
+            SendOptionalPartsError::Transport(error) => Self::from_runtime_error("send_optional_parts", error),
+        }
+    }
+}
+
 impl std::fmt::Display for SendOptionalPartsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -150,6 +159,15 @@ pub enum SendTextFieldsError {
 impl From<Error> for SendTextFieldsError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<SendTextFieldsError> for ApiCallError {
+    fn from(error: SendTextFieldsError) -> Self {
+        match error {
+            SendTextFieldsError::Unexpected(error) => Self::from_api_error("send_text_fields", error),
+            SendTextFieldsError::Transport(error) => Self::from_runtime_error("send_text_fields", error),
+        }
     }
 }
 

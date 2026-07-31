@@ -5,7 +5,7 @@
 // This API demonstrates all 4 kinds of enum representation types: Externally Tagged, Internally Tagged, Adjacently Tagged, and Untagged
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "enum-repr" tag.
 pub struct EnumReprApi<'a> {
@@ -208,6 +208,16 @@ impl From<Error> for HandleAdjacentlyTaggedError {
     }
 }
 
+impl From<HandleAdjacentlyTaggedError> for ApiCallError {
+    fn from(error: HandleAdjacentlyTaggedError) -> Self {
+        match error {
+            HandleAdjacentlyTaggedError::BadRequest(error) => Self::from_api_error("handle_adjacently_tagged", error),
+            HandleAdjacentlyTaggedError::Unexpected(error) => Self::from_api_error("handle_adjacently_tagged", error),
+            HandleAdjacentlyTaggedError::Transport(error) => Self::from_runtime_error("handle_adjacently_tagged", error),
+        }
+    }
+}
+
 impl std::fmt::Display for HandleAdjacentlyTaggedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -246,6 +256,16 @@ pub enum HandleExternallyTaggedError {
 impl From<Error> for HandleExternallyTaggedError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<HandleExternallyTaggedError> for ApiCallError {
+    fn from(error: HandleExternallyTaggedError) -> Self {
+        match error {
+            HandleExternallyTaggedError::BadRequest(error) => Self::from_api_error("handle_externally_tagged", error),
+            HandleExternallyTaggedError::Unexpected(error) => Self::from_api_error("handle_externally_tagged", error),
+            HandleExternallyTaggedError::Transport(error) => Self::from_runtime_error("handle_externally_tagged", error),
+        }
     }
 }
 
@@ -290,6 +310,16 @@ impl From<Error> for HandleInternallyTaggedError {
     }
 }
 
+impl From<HandleInternallyTaggedError> for ApiCallError {
+    fn from(error: HandleInternallyTaggedError) -> Self {
+        match error {
+            HandleInternallyTaggedError::BadRequest(error) => Self::from_api_error("handle_internally_tagged", error),
+            HandleInternallyTaggedError::Unexpected(error) => Self::from_api_error("handle_internally_tagged", error),
+            HandleInternallyTaggedError::Transport(error) => Self::from_runtime_error("handle_internally_tagged", error),
+        }
+    }
+}
+
 impl std::fmt::Display for HandleInternallyTaggedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -331,6 +361,16 @@ impl From<Error> for HandleMixedError {
     }
 }
 
+impl From<HandleMixedError> for ApiCallError {
+    fn from(error: HandleMixedError) -> Self {
+        match error {
+            HandleMixedError::BadRequest(error) => Self::from_api_error("handle_mixed", error),
+            HandleMixedError::Unexpected(error) => Self::from_api_error("handle_mixed", error),
+            HandleMixedError::Transport(error) => Self::from_runtime_error("handle_mixed", error),
+        }
+    }
+}
+
 impl std::fmt::Display for HandleMixedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -369,6 +409,16 @@ pub enum HandleUntaggedError {
 impl From<Error> for HandleUntaggedError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<HandleUntaggedError> for ApiCallError {
+    fn from(error: HandleUntaggedError) -> Self {
+        match error {
+            HandleUntaggedError::BadRequest(error) => Self::from_api_error("handle_untagged", error),
+            HandleUntaggedError::Unexpected(error) => Self::from_api_error("handle_untagged", error),
+            HandleUntaggedError::Transport(error) => Self::from_runtime_error("handle_untagged", error),
+        }
     }
 }
 

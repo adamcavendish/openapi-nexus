@@ -5,7 +5,7 @@
 // Test that utoipa::ToSchema is additive alongside user extra_derives
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "default" tag.
 pub struct DefaultApi<'a> {
@@ -68,6 +68,15 @@ pub enum CreateItemError {
 impl From<Error> for CreateItemError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateItemError> for ApiCallError {
+    fn from(error: CreateItemError) -> Self {
+        match error {
+            CreateItemError::Unexpected(error) => Self::from_api_error("create_item", error),
+            CreateItemError::Transport(error) => Self::from_runtime_error("create_item", error),
+        }
     }
 }
 

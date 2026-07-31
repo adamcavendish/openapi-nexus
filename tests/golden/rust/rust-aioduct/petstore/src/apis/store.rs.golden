@@ -5,7 +5,7 @@
 // This is a sample Pet Store Server based on the OpenAPI 3.1 specification
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "store" tag.
 pub struct StoreApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -176,6 +176,15 @@ impl From<Error> for GetInventoryError {
     }
 }
 
+impl From<GetInventoryError> for ApiCallError {
+    fn from(error: GetInventoryError) -> Self {
+        match error {
+            GetInventoryError::Unexpected(error) => Self::from_api_error("get_inventory", error),
+            GetInventoryError::Transport(error) => Self::from_runtime_error("get_inventory", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetInventoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -213,6 +222,16 @@ pub enum PlaceOrderError {
 impl From<Error> for PlaceOrderError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<PlaceOrderError> for ApiCallError {
+    fn from(error: PlaceOrderError) -> Self {
+        match error {
+            PlaceOrderError::BadRequest(error) => Self::from_api_error("place_order", error),
+            PlaceOrderError::Unexpected(error) => Self::from_api_error("place_order", error),
+            PlaceOrderError::Transport(error) => Self::from_runtime_error("place_order", error),
+        }
     }
 }
 
@@ -258,6 +277,17 @@ impl From<Error> for GetOrderByIdError {
     }
 }
 
+impl From<GetOrderByIdError> for ApiCallError {
+    fn from(error: GetOrderByIdError) -> Self {
+        match error {
+            GetOrderByIdError::BadRequest(error) => Self::from_api_error("get_order_by_id", error),
+            GetOrderByIdError::NotFound(error) => Self::from_api_error("get_order_by_id", error),
+            GetOrderByIdError::Unexpected(error) => Self::from_api_error("get_order_by_id", error),
+            GetOrderByIdError::Transport(error) => Self::from_runtime_error("get_order_by_id", error),
+        }
+    }
+}
+
 impl std::fmt::Display for GetOrderByIdError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -297,6 +327,17 @@ pub enum DeleteOrderError {
 impl From<Error> for DeleteOrderError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<DeleteOrderError> for ApiCallError {
+    fn from(error: DeleteOrderError) -> Self {
+        match error {
+            DeleteOrderError::BadRequest(error) => Self::from_api_error("delete_order", error),
+            DeleteOrderError::NotFound(error) => Self::from_api_error("delete_order", error),
+            DeleteOrderError::Unexpected(error) => Self::from_api_error("delete_order", error),
+            DeleteOrderError::Transport(error) => Self::from_runtime_error("delete_order", error),
+        }
     }
 }
 

@@ -4,7 +4,7 @@
 // Multi Status API — 1.0.0
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "Widget" tag.
 pub struct WidgetApi<'a> {
@@ -75,6 +75,16 @@ pub enum ListWidgetsError {
 impl From<Error> for ListWidgetsError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<ListWidgetsError> for ApiCallError {
+    fn from(error: ListWidgetsError) -> Self {
+        match error {
+            ListWidgetsError::NotFound(error) => Self::from_api_error("listWidgets", error),
+            ListWidgetsError::Unexpected(error) => Self::from_api_error("listWidgets", error),
+            ListWidgetsError::Transport(error) => Self::from_runtime_error("listWidgets", error),
+        }
     }
 }
 

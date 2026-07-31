@@ -5,7 +5,7 @@
 // Test API with multiple operations having similar request body schema names
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "test-api" tag.
 pub struct TestApiApi<'a> {
@@ -102,6 +102,15 @@ impl From<Error> for CreateTypeAError {
     }
 }
 
+impl From<CreateTypeAError> for ApiCallError {
+    fn from(error: CreateTypeAError) -> Self {
+        match error {
+            CreateTypeAError::Unexpected(error) => Self::from_api_error("create_type_a", error),
+            CreateTypeAError::Transport(error) => Self::from_runtime_error("create_type_a", error),
+        }
+    }
+}
+
 impl std::fmt::Display for CreateTypeAError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -138,6 +147,15 @@ pub enum CreateTypeBError {
 impl From<Error> for CreateTypeBError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<CreateTypeBError> for ApiCallError {
+    fn from(error: CreateTypeBError) -> Self {
+        match error {
+            CreateTypeBError::Unexpected(error) => Self::from_api_error("create_type_b", error),
+            CreateTypeBError::Transport(error) => Self::from_runtime_error("create_type_b", error),
+        }
     }
 }
 

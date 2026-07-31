@@ -74,6 +74,7 @@ impl RustAioductCodeGenerator {
         files.extend(runtime_files(
             &header,
             aioduct_cfg,
+            !ir.operations.is_empty(),
             request_inputs.has_uploads(),
         ));
 

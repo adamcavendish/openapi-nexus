@@ -5,7 +5,7 @@
 // Covers multipart object parts whose wire names differ from ergonomic names.
 
 use crate::runtime::client::Client;
-use crate::runtime::error::{ApiError, Error};
+use crate::runtime::error::{ApiCallError, ApiError, Error};
 
 /// API operations under the "multipart" tag.
 pub struct MultipartApi<'a, R: aioduct::RuntimePoll, C: aioduct::ConnectorSend> {
@@ -67,6 +67,15 @@ pub enum SendNestedObjectPartError {
 impl From<Error> for SendNestedObjectPartError {
     fn from(error: Error) -> Self {
         Self::Transport(error)
+    }
+}
+
+impl From<SendNestedObjectPartError> for ApiCallError {
+    fn from(error: SendNestedObjectPartError) -> Self {
+        match error {
+            SendNestedObjectPartError::Unexpected(error) => Self::from_api_error("send_nested_object_part", error),
+            SendNestedObjectPartError::Transport(error) => Self::from_runtime_error("send_nested_object_part", error),
+        }
     }
 }
 
