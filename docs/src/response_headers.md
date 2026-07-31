@@ -39,6 +39,44 @@ paths:
               $ref: "#/components/headers/RetryAfter"
 ```
 
+## Reading headers
+
+Generated accessor names follow the operation and header names in the OpenAPI
+document. This Rust example uses an accessor for each declared header and falls
+back to the backend-native header map for an undeclared tracing header:
+
+```rust
+match api.create_resource(&request).await {
+    Ok(response) => {
+        let request_id = response.x_request_id_header();
+        let traceparent = response
+            .headers
+            .get("traceparent")
+            .and_then(|value| value.to_str().ok());
+
+        println!("request_id={request_id:?} traceparent={traceparent:?}");
+    }
+    Err(error) => {
+        let retry_after = error.retry_after_header().map(str::to_owned);
+
+        // Erase the payload type when only common response metadata is needed.
+        let error: ApiCallError = error.into();
+        let traceparent = error
+            .headers()
+            .and_then(|headers| headers.get("traceparent"))
+            .and_then(|value| value.to_str().ok());
+
+        eprintln!("retry_after={retry_after:?} traceparent={traceparent:?}");
+    }
+}
+```
+
+In this example, `X-Request-Id` and `Retry-After` are declared in OpenAPI, so
+the generator provides typed accessors. `traceparent` is undeclared and remains
+available through the native header map. Match the operation-specific error
+before converting it to `ApiCallError` when its decoded body is needed; see
+[Generated Error Handling](rust_config.md#generated-error-handling).
+
 ## Generated access
 
 | Generator | Successful response headers | Error response headers |
