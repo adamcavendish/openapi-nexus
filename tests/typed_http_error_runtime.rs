@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use openapi_nexus::generators::rust::aioduct::RustAioductCodeGenerator;
 use openapi_nexus::generators::rust::reqwest::RustReqwestCodeGenerator;
 use openapi_nexus::generators::rust::ureq::RustUreqCodeGenerator;
 use openapi_nexus::test_utils::{generate_files, read_fixture};
@@ -115,6 +116,14 @@ use typed_error_responses_api::apis::{
 use typed_error_responses_api::models::CreateResourceRequest;
 use typed_error_responses_api::runtime::client::Client;
 use typed_error_responses_api::runtime::error::{ApiCallError, Error};
+
+#[test]
+fn api_call_error_is_pointer_sized() {
+    assert_eq!(
+        std::mem::size_of::<ApiCallError>(),
+        std::mem::size_of::<Box<()>>()
+    );
+}
 
 #[allow(dead_code)]
 async fn propagate_uniformly(
@@ -391,6 +400,14 @@ use typed_error_responses_api::models::CreateResourceRequest;
 use typed_error_responses_api::runtime::client::Client;
 use typed_error_responses_api::runtime::error::ApiCallError;
 
+#[test]
+fn api_call_error_is_pointer_sized() {
+    assert_eq!(
+        std::mem::size_of::<ApiCallError>(),
+        std::mem::size_of::<Box<()>>()
+    );
+}
+
 #[allow(dead_code)]
 fn propagate_uniformly(
     api: &ResourcesApi<'_>,
@@ -498,6 +515,25 @@ fn success_without_documented_body_does_not_drain_body() {
     .expect("generated runtime test should be written");
 }
 
+fn add_aioduct_layout_test(root: &Path) {
+    let tests_dir = root.join("tests");
+    fs::create_dir_all(&tests_dir).expect("generated tests directory should be created");
+    fs::write(
+        tests_dir.join("api_call_error_layout.rs"),
+        r#"use typed_error_responses_api::runtime::error::ApiCallError;
+
+#[test]
+fn api_call_error_is_pointer_sized() {
+    assert_eq!(
+        std::mem::size_of::<ApiCallError>(),
+        std::mem::size_of::<Box<()>>()
+    );
+}
+"#,
+    )
+    .expect("generated layout test should be written");
+}
+
 #[test]
 fn reqwest_http_503_is_not_success_and_preserves_error_detail() {
     let fixture = read_fixture("valid/typed-error-responses.yaml");
@@ -542,6 +578,31 @@ fn ureq_http_503_is_not_transport_and_preserves_error_detail() {
     assert!(
         output.status.success(),
         "generated ureq runtime test failed\nstatus: {}\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn aioduct_api_call_error_is_pointer_sized() {
+    let fixture = read_fixture("valid/typed-error-responses.yaml");
+    let files = generate_files(&RustAioductCodeGenerator::new(empty_config()), &fixture)
+        .expect("typed error fixture should generate");
+    let temp = TempDir::new("api-call-error-layout-aioduct");
+    write_generated_crate(&files, &temp.path);
+    add_aioduct_layout_test(&temp.path);
+
+    let output = Command::new("cargo")
+        .arg("test")
+        .arg("--quiet")
+        .current_dir(&temp.path)
+        .output()
+        .expect("generated crate cargo test should run");
+
+    assert!(
+        output.status.success(),
+        "generated aioduct layout test failed\nstatus: {}\nstdout:\n{}\nstderr:\n{}",
         output.status,
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)

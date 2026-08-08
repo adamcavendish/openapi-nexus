@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Store the private representation of generated Rust `ApiCallError` values behind
+  a `Box`, making the common erased error pointer-sized. Derived `Debug` output now
+  reflects the private inner wrapper.
+
 ## [0.2.1]
 
 ### Breaking Changes
