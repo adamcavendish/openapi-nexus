@@ -20,6 +20,7 @@ pub(crate) fn render_api_call_error(
     FileSpec::builder("error.rs")
         .add_type(api_call_http_error(response_headers_type.clone())?)
         .add_type(api_call_error_kind()?)
+        .add_type(api_call_error_inner()?)
         .add_type(api_call_error(response_headers_type)?)
         .add_code(api_call_error_display()?)
         .add_code(api_call_error_source()?)
@@ -83,6 +84,56 @@ fn api_call_error_kind() -> Result<TypeSpec, SigilStitchError> {
         .build()
 }
 
+fn api_call_error_inner() -> Result<TypeSpec, SigilStitchError> {
+    let api_error_of_t = TypeName::generic(
+        TypeName::primitive("ApiError"),
+        vec![TypeName::primitive("T")],
+    );
+    let from_api_error = FunSpec::builder("from_api_error")
+        .add_type_param(TypeParamSpec::new("T"))
+        .add_param(ParameterSpec::of("operation_id", operation_id_type()))
+        .add_param(ParameterSpec::of("error", api_error_of_t))
+        .returns(TypeName::primitive("Self"))
+        .body(
+            sigil_quote!(RustLang {
+                Self {
+                    operation_id,
+                    kind: ApiCallErrorKind::Http(ApiCallHttpError::from_api_error(error)),
+                }
+            })
+            .map_err(|error| SigilStitchError::Render {
+                context: "ApiCallErrorInner::from_api_error body".into(),
+                message: error.to_string(),
+            })?,
+        )
+        .build()?;
+    let from_runtime_error = FunSpec::builder("from_runtime_error")
+        .add_param(ParameterSpec::of("operation_id", operation_id_type()))
+        .add_param(ParameterSpec::of("error", TypeName::primitive("Error")))
+        .returns(TypeName::primitive("Self"))
+        .body(
+            sigil_quote!(RustLang {
+                Self {
+                    operation_id,
+                    kind: ApiCallErrorKind::Runtime(error),
+                }
+            })
+            .map_err(|error| SigilStitchError::Render {
+                context: "ApiCallErrorInner::from_runtime_error body".into(),
+                message: error.to_string(),
+            })?,
+        )
+        .build()?;
+
+    TypeSpec::builder("ApiCallErrorInner", TypeKind::Struct)
+        .annotate(AnnotationSpec::new("derive").args(["Debug"]))
+        .add_field(FieldSpec::builder("operation_id", operation_id_type()).build()?)
+        .add_field(FieldSpec::builder("kind", TypeName::primitive("ApiCallErrorKind")).build()?)
+        .add_method(from_api_error)
+        .add_method(from_runtime_error)
+        .build()
+}
+
 fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStitchError> {
     let static_str = operation_id_type();
     let api_error_of_t = TypeName::generic(
@@ -99,24 +150,34 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         .add_param(ParameterSpec::of("operation_id", static_str.clone()))
         .add_param(ParameterSpec::of("error", api_error_of_t))
         .returns(TypeName::primitive("Self"))
-        .body(sigil_quote!(RustLang {
-            Self {
-                operation_id,
-                kind: ApiCallErrorKind::Http(ApiCallHttpError::from_api_error(error)),
-            }
-        })?)
+        .body(
+            sigil_quote!(RustLang {
+                Self {
+                    inner: Box::new(ApiCallErrorInner::from_api_error(operation_id, error)),
+                }
+            })
+            .map_err(|error| SigilStitchError::Render {
+                context: "ApiCallError::from_api_error body".into(),
+                message: error.to_string(),
+            })?,
+        )
         .build()?;
     let from_runtime_error = FunSpec::builder("from_runtime_error")
         .visibility(Visibility::PublicCrate)
         .add_param(ParameterSpec::of("operation_id", static_str.clone()))
         .add_param(ParameterSpec::of("error", TypeName::primitive("Error")))
         .returns(TypeName::primitive("Self"))
-        .body(sigil_quote!(RustLang {
-            Self {
-                operation_id,
-                kind: ApiCallErrorKind::Runtime(error),
-            }
-        })?)
+        .body(
+            sigil_quote!(RustLang {
+                Self {
+                    inner: Box::new(ApiCallErrorInner::from_runtime_error(operation_id, error)),
+                }
+            })
+            .map_err(|error| SigilStitchError::Render {
+                context: "ApiCallError::from_runtime_error body".into(),
+                message: error.to_string(),
+            })?,
+        )
         .build()?;
     let operation_id = FunSpec::builder("operation_id")
         .visibility(Visibility::Public)
@@ -125,7 +186,7 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         )
         .add_param(ParameterSpec::of("&self", TypeName::primitive("")))
         .returns(static_str)
-        .body(sigil_quote!(RustLang { self.operation_id })?)
+        .body(sigil_quote!(RustLang { self.inner.operation_id })?)
         .build()?;
     let status_code = FunSpec::builder("status_code")
         .visibility(Visibility::Public)
@@ -134,7 +195,7 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         .returns(optional_status)
         .body(
             sigil_quote!(RustLang {
-                match &self.kind {
+                match &self.inner.kind {
                     ApiCallErrorKind::Http(error) => Some(error.status_code),
                     ApiCallErrorKind::Runtime(_) => None,
                 }
@@ -147,7 +208,7 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         .add_param(ParameterSpec::of("&self", TypeName::primitive("")))
         .returns(optional_headers)
         .body(sigil_quote!(RustLang {
-            match &self.kind {
+            match &self.inner.kind {
                 ApiCallErrorKind::Http(error) => Some(&error.headers),
                 ApiCallErrorKind::Runtime(_) => None,
             }
@@ -159,7 +220,7 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         .add_param(ParameterSpec::of("&self", TypeName::primitive("")))
         .returns(optional_body)
         .body(sigil_quote!(RustLang {
-            match &self.kind {
+            match &self.inner.kind {
                 ApiCallErrorKind::Http(error) => Some(&error.raw_body),
                 ApiCallErrorKind::Runtime(_) => None,
             }
@@ -170,8 +231,7 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
         .visibility(Visibility::Public)
         .doc("Type-erased error from any generated API operation.")
         .annotate(AnnotationSpec::new("derive").args(["Debug"]))
-        .add_field(FieldSpec::builder("operation_id", operation_id_type()).build()?)
-        .add_field(FieldSpec::builder("kind", TypeName::primitive("ApiCallErrorKind")).build()?)
+        .add_field(FieldSpec::builder("inner", api_call_error_inner_type()).build()?)
         .add_method(from_api_error)
         .add_method(from_runtime_error)
         .add_method(operation_id)
@@ -183,6 +243,13 @@ fn api_call_error(response_headers_type: TypeName) -> Result<TypeSpec, SigilStit
 
 fn operation_id_type() -> TypeName {
     TypeName::reference_with_lifetime(TypeName::primitive("str"), "'static")
+}
+
+fn api_call_error_inner_type() -> TypeName {
+    TypeName::generic(
+        TypeName::primitive("Box"),
+        vec![TypeName::primitive("ApiCallErrorInner")],
+    )
 }
 
 fn api_call_headers_type(response_headers_type: TypeName) -> TypeName {
@@ -197,12 +264,12 @@ fn api_call_error_display() -> Result<CodeBlock, SigilStitchError> {
     sigil_quote!(RustLang {
         impl std::fmt::Display for ApiCallError {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match &self.kind {
+                match &self.inner.kind {
                     ApiCallErrorKind::Http(error) => {
-                        write!(f, "operation {} failed with HTTP status {}", self.operation_id, error.status_code)
+                        write!(f, "operation {} failed with HTTP status {}", self.inner.operation_id, error.status_code)
                     }
                     ApiCallErrorKind::Runtime(error) => {
-                        write!(f, "operation {} failed: {error}", self.operation_id)
+                        write!(f, "operation {} failed: {error}", self.inner.operation_id)
                     }
                 }
             }
@@ -214,12 +281,12 @@ fn api_call_error_source() -> Result<CodeBlock, SigilStitchError> {
     sigil_quote!(RustLang {
         impl std::error::Error for ApiCallError {
             fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-                if let ApiCallErrorKind::Http(error) = &self.kind {
+                if let ApiCallErrorKind::Http(error) = &self.inner.kind {
                     if let Some(error) = &error.body_error {
                         return Some(error);
                     }
                 }
-                if let ApiCallErrorKind::Runtime(error) = &self.kind {
+                if let ApiCallErrorKind::Runtime(error) = &self.inner.kind {
                     return Some(error);
                 }
                 None
@@ -255,6 +322,27 @@ mod tests {
             block,
             r#"fn inspect(operation_id: &'static str) -> (Option<&reqwest::header::HeaderMap>, Option<&[u8]>) {
     todo!()
+}
+"#,
+        );
+    }
+
+    #[test]
+    fn api_call_error_owned_type_renders_exactly() {
+        let inner = api_call_error_inner_type();
+        let block = sigil_quote!(RustLang {
+            struct ApiCallError {
+                inner: $T(inner),
+            }
+        })
+        .expect("ApiCallError owned type probe builds");
+
+        assert_rendered!(
+            Rust::new(),
+            width = 100,
+            block,
+            r#"struct ApiCallError {
+    inner: Box<ApiCallErrorInner>,
 }
 "#,
         );
