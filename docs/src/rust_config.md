@@ -38,7 +38,10 @@ async fn run_workflow(
 
 `ApiCallError` exposes the operation identifier (generated from the HTTP method and path if the OpenAPI document omits one) and optional HTTP status, native headers, and raw response body. Transport errors and error-body decoding failures remain available through `std::error::Error::source()`.
 
-Conversion consumes the operation-specific error and erases its decoded payload type. Match the operation error before conversion when that payload is needed.
+Conversion consumes the operation-specific error, performs one heap allocation
+for the pointer-sized erased representation, and erases its decoded payload
+type. Operation-specific errors remain inline until conversion. Match the
+operation error before conversion when its decoded payload is needed.
 
 ### `thiserror`
 
