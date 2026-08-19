@@ -1886,4 +1886,49 @@ paths:
         assert!(!resp.item_content.is_empty());
         assert!(resp.item_content.contains_key("text/event-stream"));
     }
+
+    #[test]
+    fn test_lower_tagged_union_with_plain_internal_variants() {
+        let ir = lower_yaml(
+            r#"
+openapi: "3.2.0"
+info:
+  title: Test
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    ScheduleRule:
+      oneOf:
+        - type: object
+          required: [type, at]
+          properties:
+            type:
+              type: string
+              enum: [once]
+            at:
+              type: string
+        - type: object
+          required: [type, every_minutes, anchor_at]
+          properties:
+            type:
+              type: string
+              enum: [interval]
+            every_minutes:
+              type: integer
+              format: int32
+            anchor_at:
+              type: string
+"#,
+        );
+        let schedule_rule = &ir.schemas["ScheduleRule"];
+        let IrSchemaKind::TaggedUnion(tu) = &schedule_rule.kind else {
+            panic!("Expected TaggedUnion, got {:?}", schedule_rule.kind);
+        };
+        assert!(matches!(tu.tagging, TaggingStyle::Internal));
+        assert_eq!(tu.discriminator_field, "type");
+        assert_eq!(tu.variants.len(), 2);
+        assert_eq!(tu.variants[0].discriminator_value, "once");
+        assert_eq!(tu.variants[1].discriminator_value, "interval");
+    }
 }

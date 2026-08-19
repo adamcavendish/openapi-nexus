@@ -1,0 +1,64 @@
+openapi: 3.1.0
+info:
+  title: Discriminated Union Plain Internal Tagging Test
+  description: |
+    Internally tagged oneOf whose inline variant objects carry the required
+    discriminator plus their content properties directly (no allOf wrapper).
+  version: 1.0.0
+paths:
+  /preview:
+    post:
+      summary: Preview a schedule rule
+      operationId: preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewRequest'
+components:
+  schemas:
+    ScheduleRule:
+      oneOf:
+        - type: object
+          required: [type, at]
+          properties:
+            type:
+              type: string
+              enum: [once]
+            at:
+              type: string
+        - type: object
+          required: [type, every_minutes, anchor_at]
+          properties:
+            type:
+              type: string
+              enum: [interval]
+            every_minutes:
+              type: integer
+              format: int32
+            anchor_at:
+              type: string
+        - type: object
+          required: [type, expression, timezone]
+          properties:
+            type:
+              type: string
+              enum: [cron]
+            expression:
+              type: string
+            timezone:
+              type: string
+    PreviewRequest:
+      type: object
+      required: [rule]
+      properties:
+        rule:
+          $ref: '#/components/schemas/ScheduleRule'

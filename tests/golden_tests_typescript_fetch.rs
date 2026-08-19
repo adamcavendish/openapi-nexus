@@ -317,6 +317,25 @@ property_naming = "camelCase"
 
 #[test]
 #[traced_test]
+fn test_property_naming_camel_case_tagged_union_plain_internal_golden() {
+    let config: toml::value::Table = toml::from_str(
+        r#"
+property_naming = "camelCase"
+"#,
+    )
+    .unwrap();
+    let generator = TypeScriptFetchCodeGenerator::new(config);
+    run_golden_test(
+        &generator,
+        golden_dir(),
+        "ts-property-naming-camel-case-tagged-union-plain-internal",
+        "valid/type-aliases/discriminated-union-plain-internal.yaml",
+        UPDATE_HINT,
+    );
+}
+
+#[test]
+#[traced_test]
 fn test_property_naming_camel_case_intersection_golden() {
     let config: toml::value::Table = toml::from_str(
         r#"
