@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3]
+
+### Added
+
+- Add `just publish` and `just publish-dry-run` recipes for publishing the
+  `openapi-nexus` crate to crates.io.
+
+### Fixed
+
+- Detect plain inline `oneOf` members with required single-value string enum
+  tags as internally tagged unions in OpenAPI 3.0, 3.1, and 3.2. This preserves
+  nested field conversion in TypeScript clients using camel-case properties.
+
 ## [0.2.2]
 
 ### Changed

@@ -149,6 +149,16 @@ golden-update: golden-typescript::update golden-go::update golden-rust::update g
 # Compile-check all goldens
 golden-build-all: golden-typescript::build golden-go::build golden-rust::build golden-python::build golden-java::build golden-kotlin::build
 
+# ---------- Publish ----------
+
+# Dry-run publish to verify packaging
+publish-dry-run:
+    cargo publish --dry-run -p openapi-nexus
+
+# Publish openapi-nexus to crates.io
+publish:
+    cargo publish -p openapi-nexus
+
 # ---------- CI (run everything locally) ----------
 
 # Run the full CI pipeline locally
