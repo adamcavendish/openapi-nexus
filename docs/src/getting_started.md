@@ -5,7 +5,7 @@
 **Shell installer (no Rust toolchain needed):**
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-codegen-group/openapi-nexus/releases/download/0.2.2/openapi-nexus-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-codegen-group/openapi-nexus/releases/download/0.2.3/openapi-nexus-installer.sh | sh
 ```
 
 **Nightly build (latest main):**
